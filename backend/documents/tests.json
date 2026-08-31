@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Список документов",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Загрузка без раздела",
+      "method": "POST",
+      "path": "/",
+      "body": { "objectId": "", "section": "" },
+      "expectedStatus": 400,
+      "expectedBody": { "error": "object_id_and_section_required" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

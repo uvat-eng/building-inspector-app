@@ -12,10 +12,14 @@ import { useTimesheet, monthEntries, dayHours, fmtHours } from '@/data/timesheet
 import { cn } from '@/lib/utils';
 import InspectorProfile from '@/components/desk/InspectorProfile';
 import { useUsers } from '@/data/users';
+import ObjectMenu from '@/components/desk/ObjectMenu';
+import DocsCabinet from '@/components/desk/DocsCabinet';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'photos' | 'profile';
 
 const VIEW_KEY = 'gsi-cabinet-view-v1';
+const OBJ_KEY = 'gsi-cabinet-object-v1';
+const OBJ_VIEW_KEY = 'gsi-cabinet-object-view-v1';
 
 const VIEW_TITLE: Record<View, string> = {
   home: 'Обзор',
@@ -38,6 +42,19 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   useEffect(() => {
     localStorage.setItem(VIEW_KEY, view);
   }, [view]);
+
+  const [openObject, setOpenObject] = useState<string | null>(
+    () => localStorage.getItem(OBJ_KEY),
+  );
+  const [objectView, setObjectView] = useState<'menu' | 'docs'>(
+    () => (localStorage.getItem(OBJ_VIEW_KEY) as 'menu' | 'docs') || 'menu',
+  );
+
+  useEffect(() => {
+    if (openObject) localStorage.setItem(OBJ_KEY, openObject);
+    else localStorage.removeItem(OBJ_KEY);
+    localStorage.setItem(OBJ_VIEW_KEY, objectView);
+  }, [openObject, objectView]);
 
   const { profile } = useProfile();
   const { list: objects } = useObjects();
@@ -71,11 +88,33 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
         />
       ) : (
         objects.map((o) => (
-          <Row key={o.id} title={o.title} sub={`${o.regionName} · ${o.stage}`} />
+          <Row
+            key={o.id}
+            title={o.title}
+            sub={`${o.regionName} · ${o.stage}`}
+            onClick={() => {
+              setOpenObject(o.id);
+              setObjectView('menu');
+            }}
+          />
         ))
       )}
     </Panel>
   );
+
+  const active = objects.find((o) => o.id === openObject);
+
+  if (active) {
+    return objectView === 'docs' ? (
+      <DocsCabinet object={active} onBack={() => setObjectView('menu')} />
+    ) : (
+      <ObjectMenu
+        object={active}
+        onBack={() => setOpenObject(null)}
+        onOpen={(id) => id === 'docs' && setObjectView('docs')}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
