@@ -53,7 +53,7 @@ const DocsCabinet = ({ object, onBack }: DocsCabinetProps) => {
   const [busy, setBusy] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const canUpload = profile.role === 'coordinator' || profile.role === 'director';
+  const canUpload = ['pm', 'coordinator', 'director'].includes(profile.role);
 
   const bySection = useMemo(() => {
     const map: Record<DocSection, ProjectDoc[]> = { project: [], working: [], masterplan: [] };

@@ -53,6 +53,7 @@ const CAN_EDIT: Role[] = ['pm'];
 
 export const ROLE_SECTIONS: Record<Role, string[]> = {
   director: [
+    'cabinet',
     'objects',
     'staff',
     'sites',
@@ -62,8 +63,18 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'documents',
     'reports',
   ],
-  coordinator: ['objects', 'staff', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
-  pm: ['objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
+  coordinator: [
+    'cabinet',
+    'objects',
+    'staff',
+    'sites',
+    'inspections',
+    'defects',
+    'photos',
+    'documents',
+    'reports',
+  ],
+  pm: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
   manager: ['objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
   engineer: ['objects', 'sites', 'defects', 'photos', 'documents', 'reports'],
   inspector: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents'],

@@ -13,6 +13,7 @@ import ReportsSection from '@/components/desk/sections/ReportsSection';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import LoginDialog from '@/components/desk/LoginDialog';
 import InspectorCabinet from '@/components/desk/sections/InspectorCabinet';
+import ManagerCabinet from '@/components/desk/sections/ManagerCabinet';
 import StaffSection from '@/components/desk/sections/StaffSection';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
@@ -114,7 +115,14 @@ const Desk = () => {
 
 
   const content = {
-    cabinet: (
+    cabinet: ['pm', 'coordinator', 'director'].includes(profile.role) ? (
+      <ManagerCabinet
+        onExit={() => {
+          leaveOk.current = true;
+          select('objects');
+        }}
+      />
+    ) : (
       <InspectorCabinet
         onExit={() => {
           leaveOk.current = true;
@@ -202,7 +210,9 @@ const Desk = () => {
       <LoginDialog
         open={loginOpen}
         onOpenChange={setLoginOpen}
-        onEntered={(r) => r === 'inspector' && select('cabinet')}
+        onEntered={(r) =>
+          ['inspector', 'pm', 'coordinator', 'director'].includes(r) && select('cabinet')
+        }
       />
     </div>
   );
