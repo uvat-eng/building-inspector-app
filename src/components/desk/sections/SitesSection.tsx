@@ -79,7 +79,7 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
     if (!canAddObject) {
       toast({
         title: 'Недостаточно прав',
-        description: `Добавлять объекты может только заместитель директора заказчика. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+        description: `Добавлять объекты могут директор, координатор и руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
         variant: 'destructive',
       });
       return;
@@ -128,7 +128,7 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
               list.length === 0
                 ? canAddObject
                   ? 'Добавьте объект и укажите месторождение — он встанет в свою группу.'
-                  : 'Объекты добавляет заместитель директора заказчика.'
+                  : 'Объекты добавляют директор, координатор и руководитель проекта.'
                 : 'Измените поисковый запрос.'
             }
           />

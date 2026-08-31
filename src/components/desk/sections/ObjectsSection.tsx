@@ -42,7 +42,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
     if (!canAddObject) {
       toast({
         title: 'Недостаточно прав',
-        description: `Добавлять объекты может только заместитель директора заказчика. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+        description: `Добавлять объекты могут директор, координатор и руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
         variant: 'destructive',
       });
       return;
@@ -72,7 +72,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
           <Button
             size="sm"
             onClick={tryAdd}
-            title={canAddObject ? undefined : 'Доступно заместителю директора заказчика'}
+            title={canAddObject ? undefined : 'Доступно директору, координатору и руководителю проекта'}
             className={`ml-3 h-8 gap-1.5 rounded-sm px-3 font-head text-[0.85em] uppercase tracking-[0.06em] ${
               canAddObject
                 ? 'bg-accent text-accent-foreground hover:bg-accent/90'
@@ -91,7 +91,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
             hint={
               canAddObject
                 ? 'Нажмите «Добавить объект»: заказчик, договор, точка на карте, ресурсы.'
-                : 'Объекты добавляет заместитель директора заказчика.'
+                : 'Объекты добавляют директор, координатор и руководитель проекта.'
             }
           />
         ) : (
@@ -180,7 +180,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
                       if (!canAddObject) {
                         toast({
                           title: 'Недостаточно прав',
-                          description: `Корректировать объект может только заместитель директора заказчика. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+                          description: `Корректировать объект могут директор, координатор и руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
                           variant: 'destructive',
                         });
                         return;

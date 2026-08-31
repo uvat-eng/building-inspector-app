@@ -80,7 +80,7 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
     if (!canAddObject) {
       toast({
         title: 'Недостаточно прав',
-        description: `Корректировать данные объекта может только заместитель директора заказчика. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+        description: `Корректировать данные объекта могут директор, координатор и руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
         variant: 'destructive',
       });
       return;

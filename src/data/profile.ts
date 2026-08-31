@@ -1,14 +1,44 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type Role = 'deputy' | 'chief' | 'inspector' | 'customer' | 'contractor';
+export type Role = 'director' | 'coordinator' | 'manager' | 'engineer' | 'inspector' | 'driver';
+
+export const ROLE_ORDER: Role[] = [
+  'director',
+  'coordinator',
+  'manager',
+  'engineer',
+  'inspector',
+  'driver',
+];
 
 export const ROLE_LABEL: Record<Role, string> = {
-  deputy: 'Заместитель директора заказчика',
-  chief: 'Руководитель группы',
-  inspector: 'Инспектор строительного контроля',
-  customer: 'Представитель заказчика',
-  contractor: 'Представитель подрядчика',
+  director: 'Директор',
+  coordinator: 'Координатор проекта',
+  manager: 'Руководитель проекта',
+  engineer: 'Старший инженер',
+  inspector: 'Инспектор СК',
+  driver: 'Водитель',
 };
+
+export const ROLE_NOTE: Record<Role, string> = {
+  director: 'Полный доступ, сводка по всем объектам и подписание документов',
+  coordinator: 'Координация работ, объекты и графики выездов',
+  manager: 'Управление объектом, персоналом и техникой',
+  engineer: 'Замечания, предписания, проверка исполнительной документации',
+  inspector: 'Выезды, фотофиксация и оформление замечаний на объекте',
+  driver: 'График выездов и маршруты, доступ только на просмотр',
+};
+
+export const ROLE_ICON: Record<Role, string> = {
+  director: 'Crown',
+  coordinator: 'Network',
+  manager: 'Briefcase',
+  engineer: 'Ruler',
+  inspector: 'HardHat',
+  driver: 'Truck',
+};
+
+const CAN_EDIT: Role[] = ['director', 'coordinator', 'manager'];
 
 export interface Profile {
   fio: string;
@@ -19,7 +49,7 @@ export interface Profile {
 
 const DEFAULT: Profile = {
   fio: '',
-  role: 'deputy',
+  role: 'inspector',
   group: '',
   org: 'ООО «Глобал-Стройинжиниринг»',
 };
@@ -54,7 +84,7 @@ export const useProfile = () => {
     window.dispatchEvent(new Event(EVENT));
   }, []);
 
-  return { profile, save, canAddObject: profile.role === 'deputy' };
+  return { profile, save, canAddObject: CAN_EDIT.includes(profile.role) };
 };
 
 export const shortFio = (fio: string) => {
