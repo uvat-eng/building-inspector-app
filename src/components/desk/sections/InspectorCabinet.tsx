@@ -143,7 +143,7 @@ const InspectorCabinet = ({ onNavigate }: InspectorCabinetProps) => {
               <Empty
                 icon="Building2"
                 title="Объекты не назначены"
-                hint="Обратитесь к руководителю проекта."
+                hint="Обратитесь к менеджеру проекта."
               />
             ) : (
               objects

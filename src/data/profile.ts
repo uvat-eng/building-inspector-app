@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type Role = 'director' | 'coordinator' | 'manager' | 'engineer' | 'inspector' | 'driver';
+export type Role =
+  | 'director'
+  | 'coordinator'
+  | 'pm'
+  | 'manager'
+  | 'engineer'
+  | 'inspector'
+  | 'driver';
 
 export const ROLE_ORDER: Role[] = [
   'director',
   'coordinator',
+  'pm',
   'manager',
   'engineer',
   'inspector',
@@ -14,6 +22,7 @@ export const ROLE_ORDER: Role[] = [
 export const ROLE_LABEL: Record<Role, string> = {
   director: 'Директор',
   coordinator: 'Координатор проекта',
+  pm: 'Менеджер проекта',
   manager: 'Руководитель проекта',
   engineer: 'Старший инженер',
   inspector: 'Инспектор СК',
@@ -22,7 +31,8 @@ export const ROLE_LABEL: Record<Role, string> = {
 
 export const ROLE_NOTE: Record<Role, string> = {
   director: 'Полный доступ, сводка по всем объектам и подписание документов',
-  coordinator: 'Координация работ, объекты и графики выездов',
+  coordinator: 'Координация работ и графики выездов',
+  pm: 'Договоры с заказчиком, месторождения, проекты и объекты — внесение и правка',
   manager: 'Управление объектом, персоналом и техникой',
   engineer: 'Замечания, предписания, проверка исполнительной документации',
   inspector: 'Выезды, фотофиксация и оформление замечаний на объекте',
@@ -32,13 +42,16 @@ export const ROLE_NOTE: Record<Role, string> = {
 export const ROLE_ICON: Record<Role, string> = {
   director: 'Crown',
   coordinator: 'Network',
+  pm: 'FileSignature',
   manager: 'Briefcase',
   engineer: 'Ruler',
   inspector: 'HardHat',
   driver: 'Truck',
 };
 
-const CAN_EDIT: Role[] = ['director', 'coordinator', 'manager'];
+const CAN_EDIT: Role[] = ['pm'];
+
+export const EDIT_HINT = 'Вносить и изменять месторождения, проекты и объекты может только менеджер проекта.';
 
 export const SPECIALTIES = [
   'Инженер-электрик',
