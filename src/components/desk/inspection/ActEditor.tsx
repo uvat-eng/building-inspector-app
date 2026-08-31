@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import PhotoButton from '@/components/desk/inspection/PhotoButton';
-import { Inspection, useDefects } from '@/data/inspections';
+import { Inspection, useDefects, suggestNorms } from '@/data/inspections';
 import { usePhotoQueue, flushQueue, isWifi } from '@/data/photoQueue';
 import { downloadAct } from '@/lib/actDoc';
 
@@ -31,6 +31,48 @@ const ActEditor = ({
   const { photos, pending, refresh } = usePhotoQueue(inspection.id);
   const [title, setTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  const [normBusy, setNormBusy] = useState<string | null>(null);
+
+  const findNorm = async (id: string, text: string) => {
+    if (!text.trim()) return;
+    setNormBusy(id);
+    try {
+      const [m] = await suggestNorms([text]);
+      if (m?.ref) {
+        await update(id, { normRef: `${m.ref} — ${m.name}` });
+        toast({
+          title: 'Норма подобрана',
+          description: m.source === 'ai' ? 'Найдено ИИ-агентом' : 'Найдено по базе норм',
+        });
+      }
+    } catch {
+      toast({ title: 'Не удалось подобрать норму', variant: 'destructive' });
+    } finally {
+      setNormBusy(null);
+    }
+  };
+
+  const findAll = async () => {
+    const empty = defects.filter((d) => !d.normRef && d.title.trim());
+    if (!empty.length) {
+      toast({ title: 'Все нормы уже проставлены' });
+      return;
+    }
+    setNormBusy('all');
+    try {
+      const res = await suggestNorms(empty.map((d) => d.title));
+      await Promise.all(
+        empty.map((d, i) =>
+          res[i]?.ref ? update(d.id, { normRef: `${res[i].ref} — ${res[i].name}` }) : null,
+        ),
+      );
+      toast({ title: `Подобрано норм: ${res.filter((r) => r.ref).length}` });
+    } catch {
+      toast({ title: 'Не удалось подобрать нормы', variant: 'destructive' });
+    } finally {
+      setNormBusy(null);
+    }
+  };
 
   useEffect(() => {
     const t = window.setInterval(() => {
@@ -52,8 +94,13 @@ const ActEditor = ({
     }
     setAdding(true);
     try {
-      await add(title.trim());
+      const created = await add(title.trim());
       setTitle('');
+      suggestNorms([created.title])
+        .then(([m]) => {
+          if (m?.ref) update(created.id, { normRef: `${m.ref} — ${m.name}` });
+        })
+        .catch(() => undefined);
     } catch {
       toast({ title: 'Не удалось добавить замечание', variant: 'destructive' });
     } finally {
@@ -118,7 +165,27 @@ const ActEditor = ({
           </div>
         </section>
 
-        <Panel title="Результаты осмотра" note={`${defects.length} замечаний`}>
+        <Panel
+          title="Результаты осмотра"
+          note={`${defects.length} замечаний`}
+          action={
+            defects.length > 0 ? (
+              <button
+                type="button"
+                onClick={findAll}
+                disabled={normBusy === 'all'}
+                className="ml-3 flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.76em] uppercase tracking-[0.06em] text-accent-foreground transition-colors hover:bg-accent/90"
+              >
+                <Icon
+                  name={normBusy === 'all' ? 'Loader2' : 'Sparkles'}
+                  size={13}
+                  className={normBusy === 'all' ? 'animate-spin' : ''}
+                />
+                Нормы
+              </button>
+            ) : undefined
+          }
+        >
           <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
             <Input
               value={title}
@@ -146,20 +213,49 @@ const ActEditor = ({
             <div className="divide-y divide-border">
               <div className="flex items-center gap-2 bg-secondary/60 px-3 py-2 text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
                 <span className="w-7 flex-none text-center">№</span>
-                <span className="min-w-0 flex-1">Наименование замечания</span>
+                <span className="min-w-0 flex-1">Замечание и ссылка на нормативы</span>
                 <span className="w-[52px] flex-none text-center">Фото</span>
                 <span className="w-8 flex-none" />
               </div>
               {defects.map((d, i) => (
-                <div key={d.id} className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="w-7 flex-none text-center font-head text-[0.9em]">{i + 1}</span>
-                  <Input
-                    defaultValue={d.title}
-                    onBlur={(e) =>
-                      e.target.value !== d.title && update(d.id, { title: e.target.value })
-                    }
-                    className="h-9 min-w-0 flex-1 rounded-sm border-transparent bg-transparent px-2 hover:border-border focus:border-border"
-                  />
+                <div key={d.id} className="flex items-start gap-2 px-3 py-2.5">
+                  <span className="w-7 flex-none pt-2 text-center font-head text-[0.9em]">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <Input
+                      defaultValue={d.title}
+                      onBlur={(e) =>
+                        e.target.value !== d.title && update(d.id, { title: e.target.value })
+                      }
+                      className="h-9 w-full rounded-sm border-transparent bg-transparent px-2 hover:border-border focus:border-border"
+                    />
+                    <div className="flex items-center gap-1.5 pl-2">
+                      <Icon name="BookMarked" size={13} className="flex-none text-accent" />
+                      <Input
+                        defaultValue={d.normRef}
+                        key={d.normRef}
+                        onBlur={(e) =>
+                          e.target.value !== d.normRef && update(d.id, { normRef: e.target.value })
+                        }
+                        placeholder="Пункт норм подбирается автоматически…"
+                        className="h-7 w-full rounded-sm border-transparent bg-transparent px-1 text-[0.8em] text-muted-foreground hover:border-border focus:border-border"
+                      />
+                      <button
+                        type="button"
+                        title="Подобрать норму заново"
+                        disabled={normBusy === d.id}
+                        onClick={() => findNorm(d.id, d.title)}
+                        className="flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-secondary transition-colors hover:bg-border"
+                      >
+                        <Icon
+                          name={normBusy === d.id ? 'Loader2' : 'Sparkles'}
+                          size={13}
+                          className={normBusy === d.id ? 'animate-spin' : ''}
+                        />
+                      </button>
+                    </div>
+                  </div>
                   <PhotoButton
                     inspectionId={inspection.id}
                     defectId={d.id}

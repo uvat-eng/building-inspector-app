@@ -25,8 +25,28 @@ export interface InspectionDefect {
   pos: number;
   title: string;
   deadline: string;
+  normRef: string;
   photos: string[];
 }
+
+const NORMS_API = 'https://functions.poehali.dev/b9b1a996-8cf5-4866-aae2-e1589553e231';
+
+export interface NormMatch {
+  ref: string;
+  name: string;
+  source: 'ai' | 'base';
+}
+
+export const suggestNorms = async (texts: string[]): Promise<NormMatch[]> => {
+  const res = await fetch(NORMS_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: texts }),
+  });
+  if (!res.ok) throw new Error('norms_failed');
+  const { items } = (await res.json()) as { items: NormMatch[] };
+  return items;
+};
 
 export const WORK_TYPES = [
   'Земляные работы',

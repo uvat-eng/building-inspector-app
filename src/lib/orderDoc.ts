@@ -17,11 +17,12 @@ export const buildOrderHtml = (order: Order, contractor?: Contractor | null) => 
       <tr>
         <td style="text-align:center">${i + 1}</td>
         <td>${esc(it.title)}</td>
+        <td>${esc(it.normRef || '—')}</td>
         <td style="text-align:center">${esc(order.deadline || '—')}</td>
       </tr>`,
         )
         .join('')
-    : '<tr><td colspan="3" style="text-align:center">—</td></tr>';
+    : '<tr><td colspan="4" style="text-align:center">—</td></tr>';
 
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
@@ -57,7 +58,7 @@ export const buildOrderHtml = (order: Order, contractor?: Contractor | null) => 
   <p style="margin-top:14pt">В ходе строительного контроля выявлены нарушения. Требую устранить:</p>
 
   <table>
-    <tr><th width="8%">№ п/п</th><th>Содержание нарушения</th><th width="22%">Срок устранения</th></tr>
+    <tr><th width="7%">№ п/п</th><th>Содержание нарушения</th><th width="28%">Ссылка на нормативы</th><th width="16%">Срок устранения</th></tr>
     ${rows}
   </table>
 

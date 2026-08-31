@@ -18,7 +18,7 @@ export interface Order {
     generalContractor?: string;
     subcontractor?: string;
     objectTitle?: string;
-    items?: { pos: number; title: string; photos: string[] }[];
+    items?: { pos: number; title: string; normRef?: string; photos: string[] }[];
   };
   fileUrl: string;
   createdAt: string;

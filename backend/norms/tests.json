@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Подбор нормы по замечанию",
+      "method": "POST",
+      "path": "/",
+      "body": { "items": ["Не выдержан защитный слой бетона арматуры"] },
+      "expectedStatus": 200
+    },
+    {
+      "name": "Пустой запрос",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 400,
+      "expectedBody": { "error": "items_required" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

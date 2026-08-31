@@ -70,7 +70,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
         `https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039?id=${insp.id}`,
       );
       const { defects } = (await res.json()) as {
-        defects: { pos: number; title: string; photos: string[] }[];
+        defects: { pos: number; title: string; normRef?: string; photos: string[] }[];
       };
       const order = await createOrder({
         objectId: object.id,
@@ -85,7 +85,12 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
           generalContractor: insp.generalContractor,
           subcontractor: insp.subcontractor,
           objectTitle: object.title,
-          items: defects.map((d) => ({ pos: d.pos, title: d.title, photos: d.photos })),
+          items: defects.map((d) => ({
+            pos: d.pos,
+            title: d.title,
+            normRef: d.normRef ?? '',
+            photos: d.photos,
+          })),
         },
       });
       toast({
