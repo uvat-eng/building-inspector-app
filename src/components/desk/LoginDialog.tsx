@@ -21,7 +21,7 @@ import {
   ROLE_ICON,
   SPECIALTIES,
 } from '@/data/profile';
-import { findByFio, registerUser, setSession, norm, readUsers, User } from '@/data/users';
+import { loginUser, registerUser, setSession, norm, User } from '@/data/users';
 
 interface LoginDialogProps {
   open: boolean;
@@ -45,6 +45,7 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
   const [phone, setPhone] = useState('');
   const [spec, setSpec] = useState<string[]>([]);
   const [specOpen, setSpecOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const reset = () => {
     setStep('login');
@@ -78,31 +79,33 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
     onEntered?.(user.role);
   };
 
-  const doLogin = () => {
-    const user = findByFio(fio);
-    if (!user) {
+  const doLogin = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const user = await loginUser(fio, pass);
+      enter(user);
+    } catch (e) {
+      const code = (e as Error).message;
       toast({
-        title: 'Пользователь не найден',
-        description: 'Проверьте ФИО или пройдите регистрацию.',
+        title:
+          code === 'not_found'
+            ? 'Пользователь не найден'
+            : code === 'wrong_password'
+              ? 'Неверный пароль'
+              : 'Не удалось войти',
+        description: code === 'not_found' ? 'Проверьте ФИО или пройдите регистрацию.' : undefined,
         variant: 'destructive',
       });
-      return;
+    } finally {
+      setBusy(false);
     }
-    if (user.password !== pass) {
-      toast({ title: 'Неверный пароль', variant: 'destructive' });
-      return;
-    }
-    enter(user);
   };
 
-  const doRegister = () => {
+  const doRegister = async () => {
     if (!role) return;
     if (norm(fio).split(' ').length < 2) {
       toast({ title: 'Укажите фамилию, имя и отчество', variant: 'destructive' });
-      return;
-    }
-    if (readUsers().some((u) => norm(u.fio) === norm(fio))) {
-      toast({ title: 'Такой пользователь уже зарегистрирован', variant: 'destructive' });
       return;
     }
     if (pass.length < 4) {
@@ -117,18 +120,31 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
       toast({ title: 'Выберите хотя бы одну специализацию', variant: 'destructive' });
       return;
     }
-    const user = registerUser({
-      fio: fio.trim().replace(/\s+/g, ' '),
-      password: pass,
-      role,
-      group: group.trim(),
-      org: 'ООО «Глобал-Стройинжиниринг»',
-      phone: phone.trim(),
-      specialties: spec,
-      certificates: [],
-      educations: [],
-    });
-    enter(user);
+    setBusy(true);
+    try {
+      const user = await registerUser({
+        fio: fio.trim().replace(/\s+/g, ' '),
+        password: pass,
+        role,
+        group: group.trim(),
+        org: 'ООО «Глобал-Стройинжиниринг»',
+        phone: phone.trim(),
+        specialties: spec,
+        certificates: [],
+        educations: [],
+      });
+      enter(user);
+    } catch (e) {
+      toast({
+        title:
+          (e as Error).message === 'exists'
+            ? 'Такой пользователь уже зарегистрирован'
+            : 'Не удалось зарегистрировать',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const toggleSpec = (s: string) =>
@@ -182,10 +198,11 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
 
             <Button
               onClick={doLogin}
+              disabled={busy}
               className="w-full gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
             >
-              <Icon name="LogIn" size={16} />
-              Войти
+              <Icon name={busy ? 'Loader2' : 'LogIn'} size={16} className={busy ? 'animate-spin' : ''} />
+              {busy ? 'Проверяем…' : 'Войти'}
             </Button>
 
             <button
@@ -385,10 +402,15 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
               </Button>
               <Button
                 onClick={doRegister}
+                disabled={busy}
                 className="flex-1 gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
               >
-                <Icon name="UserPlus" size={16} />
-                Зарегистрироваться
+                <Icon
+                  name={busy ? 'Loader2' : 'UserPlus'}
+                  size={16}
+                  className={busy ? 'animate-spin' : ''}
+                />
+                {busy ? 'Сохраняем…' : 'Зарегистрироваться'}
               </Button>
             </div>
           </>

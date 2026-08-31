@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Список пользователей",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Вход несуществующего пользователя",
+      "method": "POST",
+      "path": "/",
+      "body": { "action": "login", "fio": "Нет Такого Пользователя", "password": "1234" },
+      "expectedStatus": 404,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

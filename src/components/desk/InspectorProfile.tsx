@@ -63,7 +63,7 @@ const InspectorProfile = ({ user }: InspectorProfileProps) => {
     setEdus((p) => p.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   const removeEdu = (id: string) => setEdus((p) => p.filter((e) => e.id !== id));
 
-  const submit = () => {
+  const submit = async () => {
     if (!fio.trim()) {
       toast({ title: 'Укажите ФИО', variant: 'destructive' });
       return;
@@ -76,19 +76,23 @@ const InspectorProfile = ({ user }: InspectorProfileProps) => {
       toast({ title: 'Пароли не совпадают', variant: 'destructive' });
       return;
     }
-    updateUser(user.id, {
-      fio: fio.trim(),
-      group: group.trim(),
-      phone: phone.trim(),
-      specialties: spec,
-      certificates: certs.filter((c) => c.number.trim()),
-      educations: edus.filter((e) => e.institution.trim()),
-      ...(pass ? { password: pass } : {}),
-    });
-    save({ fio: fio.trim(), group: group.trim(), specialties: spec });
-    setPass('');
-    setPass2('');
-    toast({ title: 'Профиль сохранён' });
+    try {
+      await updateUser(user.id, {
+        fio: fio.trim(),
+        group: group.trim(),
+        phone: phone.trim(),
+        specialties: spec,
+        certificates: certs.filter((c) => c.number.trim()),
+        educations: edus.filter((e) => e.institution.trim()),
+        ...(pass ? { password: pass } : {}),
+      });
+      save({ fio: fio.trim(), group: group.trim(), specialties: spec });
+      setPass('');
+      setPass2('');
+      toast({ title: 'Профиль сохранён', description: 'Данные доступны с любого устройства.' });
+    } catch {
+      toast({ title: 'Не удалось сохранить профиль', variant: 'destructive' });
+    }
   };
 
   return (

@@ -28,16 +28,20 @@ const StaffSection = () => {
 
   const canManage = profile.role === 'coordinator' || profile.role === 'director';
 
-  const doReset = () => {
+  const doReset = async () => {
     if (!reset) return;
     if (pass.length < 4) {
       toast({ title: 'Пароль минимум 4 символа', variant: 'destructive' });
       return;
     }
-    updateUser(reset.id, { password: pass });
-    toast({ title: 'Пароль сброшен', description: `${reset.fio} — выдайте новый пароль лично.` });
-    setReset(null);
-    setPass('');
+    try {
+      await updateUser(reset.id, { password: pass });
+      toast({ title: 'Пароль сброшен', description: `${reset.fio} — выдайте новый пароль лично.` });
+      setReset(null);
+      setPass('');
+    } catch {
+      toast({ title: 'Не удалось сбросить пароль', variant: 'destructive' });
+    }
   };
 
   const inspectors = users.filter((u) => u.role === 'inspector');
