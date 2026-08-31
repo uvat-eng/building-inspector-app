@@ -34,7 +34,7 @@ export interface ProjectObject {
 }
 
 export const KIND_LABEL: Record<ProjectObject["kind"], string> = {
-  area: "Площадной объект",
+  area: "Площадочный объект",
   line: "Линейный объект",
 };
 
