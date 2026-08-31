@@ -60,7 +60,7 @@ const Desk = () => {
     });
   };
 
-  const canGoBack = !objectId && section !== 'objects';
+  const canGoBack = !objectId && section !== 'objects' && section !== 'cabinet';
   const backLabel = history.length
     ? `Назад · ${MENU.find((m) => m.id === history[history.length - 1])?.label ?? 'Главная'}`
     : 'На главную';
@@ -68,7 +68,7 @@ const Desk = () => {
 
 
   const content = {
-    cabinet: <InspectorCabinet onNavigate={select} />,
+    cabinet: <InspectorCabinet onExit={() => select('objects')} />,
     objects: <ObjectsSection onOpenObject={openObject} />,
     sites: objectId ? (
       <ObjectPage id={objectId} editOnOpen={objectEdit} onBack={closeObject} />
