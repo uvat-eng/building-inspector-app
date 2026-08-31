@@ -11,7 +11,7 @@ import PhotosSection from '@/components/desk/sections/PhotosSection';
 import DocumentsSection from '@/components/desk/sections/DocumentsSection';
 import ReportsSection from '@/components/desk/sections/ReportsSection';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { useToast } from '@/hooks/use-toast';
+import LoginDialog from '@/components/desk/LoginDialog';
 import { SectionId } from '@/data/mock';
 
 const Desk = () => {
@@ -19,7 +19,7 @@ const Desk = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [objectId, setObjectId] = useState<string | null>(null);
   const [objectEdit, setObjectEdit] = useState(false);
-  const { toast } = useToast();
+  const [loginOpen, setLoginOpen] = useState(false);
 
   const select = (id: SectionId) => {
     setSection(id);
@@ -39,13 +39,7 @@ const Desk = () => {
     setObjectEdit(false);
   };
 
-  const start = () => {
-    setSection('defects');
-    toast({
-      title: 'Проверка начата',
-      description: 'Время фиксируется в табеле, микрофон готов к диктовке замечания.',
-    });
-  };
+
 
   const content = {
     objects: <ObjectsSection onOpenObject={openObject} />,
@@ -67,7 +61,7 @@ const Desk = () => {
         <Topbar />
       </div>
       <div className="animate-rise [animation-delay:0.05s]">
-        <DeskHeader onStart={start} onMenu={() => setMenuOpen(true)} />
+        <DeskHeader onLogin={() => setLoginOpen(true)} onMenu={() => setMenuOpen(true)} />
       </div>
 
       <main className="grid min-h-0 flex-1 animate-rise gap-3.5 px-4 pb-4 pt-3.5 [animation-delay:0.1s] sm:px-[22px] lg:grid-cols-[236px_1fr]">
@@ -83,6 +77,8 @@ const Desk = () => {
           <SideMenu active={section} onSelect={select} className="h-full rounded-none" />
         </SheetContent>
       </Sheet>
+
+      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 };

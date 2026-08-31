@@ -1,7 +1,7 @@
 import Icon from '@/components/ui/icon';
 
 interface DeskHeaderProps {
-  onStart: () => void;
+  onLogin: () => void;
   onMenu: () => void;
 }
 
@@ -11,7 +11,7 @@ const DATE = new Intl.DateTimeFormat('ru-RU', {
   month: 'long',
 }).format(new Date());
 
-const DeskHeader = ({ onStart, onMenu }: DeskHeaderProps) => (
+const DeskHeader = ({ onLogin, onMenu }: DeskHeaderProps) => (
   <header className="flex h-[88px] flex-none items-center justify-between border-b border-border bg-card px-4 sm:px-[22px]">
     <div className="flex items-center gap-3">
       <button
@@ -24,7 +24,7 @@ const DeskHeader = ({ onStart, onMenu }: DeskHeaderProps) => (
       </button>
       <div className="flex items-baseline gap-3">
         <h1 className="font-head text-[26px] leading-[1.05] tracking-[-0.01em] sm:text-[38px]">
-          Инспектор <span className="text-accent">Технадзора</span>
+          ИНСПЕКТОР <span className="text-accent">СК</span>
         </h1>
         <span className="hidden text-[0.85em] uppercase tracking-[0.14em] text-muted-foreground xl:inline">
           рабочий стол
@@ -37,12 +37,12 @@ const DeskHeader = ({ onStart, onMenu }: DeskHeaderProps) => (
       </span>
       <button
         type="button"
-        onClick={onStart}
+        onClick={onLogin}
         className="flex items-center gap-2 rounded-sm bg-accent px-4 py-3 font-head text-[0.9em] uppercase tracking-[0.06em] text-accent-foreground transition-opacity hover:opacity-90 sm:px-[26px]"
       >
-        <Icon name="Mic" size={16} />
-        <span className="hidden sm:inline">Начать проверку</span>
-        <span className="sm:hidden">Проверка</span>
+        <Icon name="LogIn" size={16} />
+        <span className="hidden sm:inline">Войти в систему</span>
+        <span className="sm:hidden">Войти</span>
       </button>
     </div>
   </header>
