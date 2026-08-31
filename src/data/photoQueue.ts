@@ -13,7 +13,10 @@ export interface QueuedPhoto {
   createdAt: string;
   sent: boolean;
   url?: string;
+  target?: 'defect' | 'folder';
 }
+
+const FOLDERS_API = 'https://functions.poehali.dev/99297b13-e7b3-4f26-a80c-d3ec99913480';
 
 const openDb = () =>
   new Promise<IDBDatabase>((resolve, reject) => {
@@ -60,7 +63,12 @@ export const compressPhoto = (file: File, maxSide = 1280, quality = 0.62) =>
     reader.readAsDataURL(file);
   });
 
-export const queuePhoto = async (inspectionId: string, defectId: string, file: File) => {
+export const queuePhoto = async (
+  inspectionId: string,
+  defectId: string,
+  file: File,
+  target: 'defect' | 'folder' = 'defect',
+) => {
   const dataUrl = await compressPhoto(file);
   const photo: QueuedPhoto = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -69,6 +77,7 @@ export const queuePhoto = async (inspectionId: string, defectId: string, file: F
     dataUrl,
     createdAt: new Date().toISOString(),
     sent: false,
+    target,
   };
   await tx('readwrite', (s) => s.put(photo));
   window.dispatchEvent(new Event(EVENT));
@@ -110,15 +119,20 @@ export const flushQueue = async (force = false) => {
   let sent = 0;
   for (const p of pending) {
     try {
-      const res = await fetch(`${API}?action=photo`, {
+      const folder = p.target === 'folder';
+      const res = await fetch(`${folder ? FOLDERS_API : API}?action=photo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'photo',
-          inspectionId: p.inspectionId,
-          defectId: p.defectId,
-          content: p.dataUrl,
-        }),
+        body: JSON.stringify(
+          folder
+            ? { action: 'photo', folderId: p.defectId, content: p.dataUrl }
+            : {
+                action: 'photo',
+                inspectionId: p.inspectionId,
+                defectId: p.defectId,
+                content: p.dataUrl,
+              },
+        ),
       });
       if (!res.ok) continue;
       const { url } = (await res.json()) as { url: string };

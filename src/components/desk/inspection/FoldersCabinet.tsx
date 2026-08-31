@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import Panel from '@/components/desk/Panel';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
@@ -32,8 +33,16 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
   const { photos: queued, pending, refresh } = usePhotoQueue();
 
   const subs = SUBSECTIONS[section];
-  const [sub, setSub] = useState<string | null>(subs.length ? null : '');
-  const [open, setOpen] = useState<PhotoFolder | null>(null);
+  const [sub, setSub] = usePersistedState<string | null>(
+    `gsi-fold-sub-${object.id}-${section}`,
+    subs.length ? null : '',
+  );
+  const [openId, setOpenId] = usePersistedState<string | null>(
+    `gsi-fold-open-${object.id}-${section}`,
+    null,
+  );
+  const open = items.find((f) => f.id === openId) ?? null;
+  const setOpen = (f: PhotoFolder | null) => setOpenId(f?.id ?? null);
   const [newOpen, setNewOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
@@ -85,7 +94,7 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
         flushQueue()
           .then(() => {
             refresh();
-            reload().then((l) => setOpen(l.find((x) => x.id === open.id) ?? open));
+            reload();
           })
           .catch(() => undefined);
     } catch {
@@ -99,8 +108,7 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
   const sendNow = async () => {
     const { sent } = await flushQueue(true);
     refresh();
-    const l = await reload();
-    if (open) setOpen(l.find((x) => x.id === open.id) ?? open);
+    await reload();
     toast({ title: sent ? `Отправлено фото: ${sent}` : 'Нет связи с сервером' });
   };
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import Panel from '@/components/desk/Panel';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
@@ -33,8 +34,12 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
   const { general: contractor, subs } = useContractor(object.id);
   const { create: createOrder } = useOrders(object.id);
 
-  const [view, setView] = useState<View>('menu');
-  const [active, setActive] = useState<Inspection | null>(null);
+  const [view, setView] = usePersistedState<View>(`gsi-insp-view-${object.id}`, 'menu');
+  const [activeId, setActiveId] = usePersistedState<string | null>(
+    `gsi-insp-active-${object.id}`,
+    null,
+  );
+  const active = items.find((i) => i.id === activeId) ?? null;
   const [ask, setAsk] = useState<Inspection | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -49,7 +54,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
     setBusy(true);
     try {
       const item = await create(data);
-      setActive(item);
+      setActiveId(item.id);
       setView('act');
     } catch {
       toast({ title: 'Не удалось создать осмотр', variant: 'destructive' });
@@ -110,13 +115,25 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
     );
   }
 
+  if (view === 'act' && !active && loading) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center gap-2 text-muted-foreground">
+        <Icon name="Loader2" size={18} className="animate-spin" />
+        Открываем акт…
+      </div>
+    );
+  }
+
   if (view === 'act' && active) {
     return (
       <ActEditor
         inspection={active}
         objectTitle={object.title}
         contractorName={contractor?.name}
-        onBack={() => setView('menu')}
+        onBack={() => {
+          setActiveId(null);
+          setView('menu');
+        }}
         onFinish={(i) => update(i.id, { status: 'done' })}
         onOrder={(i) => makeOrder(i)}
       />
@@ -237,7 +254,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
             <Button
               onClick={() => {
                 if (ask) {
-                  setActive(ask);
+                  setActiveId(ask.id);
                   setAsk(null);
                   setView('act');
                 }
