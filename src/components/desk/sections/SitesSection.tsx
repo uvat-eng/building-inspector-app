@@ -49,7 +49,7 @@ const cell = (o: ProjectObject, key: (typeof COLS)[number]['key']) => {
 };
 
 const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
-  const { list, add } = useObjects();
+  const { list, add, loading } = useObjects();
   const { profile, canAddObject } = useProfile();
   const { toast } = useToast();
   const [inner, setInner] = useState<string | null>(null);
@@ -118,7 +118,9 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
           />
         </div>
 
-        {shown.length === 0 ? (
+        {loading && list.length === 0 ? (
+          <Empty icon="Loader" title="Загружаем данные с сервера" hint="Секунду…" />
+        ) : shown.length === 0 ? (
           <Empty
             icon="Building2"
             title={list.length === 0 ? 'Объектов пока нет' : 'Ничего не найдено'}

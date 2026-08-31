@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS objects (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL DEFAULT '',
+  field TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'area',
+  capacity TEXT NOT NULL DEFAULT '',
+  start_year TEXT NOT NULL DEFAULT '',
+  end_year TEXT NOT NULL DEFAULT '',
+  inspectors INTEGER NOT NULL DEFAULT 0,
+  vehicles INTEGER NOT NULL DEFAULT 0,
+  cabins INTEGER NOT NULL DEFAULT 0,
+  customer TEXT NOT NULL DEFAULT '',
+  customer_logo TEXT NOT NULL DEFAULT '',
+  contract_no TEXT NOT NULL DEFAULT '',
+  contract_sum BIGINT NOT NULL DEFAULT 0,
+  region_id TEXT NOT NULL DEFAULT '',
+  region_name TEXT NOT NULL DEFAULT '',
+  district TEXT NOT NULL DEFAULT '',
+  lon DOUBLE PRECISION NOT NULL DEFAULT 0,
+  lat DOUBLE PRECISION NOT NULL DEFAULT 0,
+  stage TEXT NOT NULL DEFAULT '',
+  progress INTEGER NOT NULL DEFAULT 0,
+  start_date TEXT NOT NULL DEFAULT '',
+  deadline TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'work',
+  staff_plan INTEGER NOT NULL DEFAULT 0,
+  staff_fact INTEGER NOT NULL DEFAULT 0,
+  tech_plan INTEGER NOT NULL DEFAULT 0,
+  tech_fact INTEGER NOT NULL DEFAULT 0,
+  orders INTEGER NOT NULL DEFAULT 0,
+  orders_open INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_objects_field ON objects(field);
+CREATE INDEX IF NOT EXISTS idx_objects_district ON objects(district);

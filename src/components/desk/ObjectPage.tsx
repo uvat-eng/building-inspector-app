@@ -90,10 +90,18 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
     setTab('info');
   };
 
-  const save = () => {
-    update(object.id, draft);
+  const save = async () => {
     setEdit(false);
-    toast({ title: 'Изменения сохранены', description: 'Сводка на главной пересчитана.' });
+    try {
+      await update(object.id, draft);
+      toast({ title: 'Изменения сохранены', description: 'Данные обновлены на сервере.' });
+    } catch {
+      toast({
+        title: 'Не удалось сохранить на сервере',
+        description: 'Проверьте соединение и повторите.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const num = (v: string) => Number(v.replace(/\s/g, '')) || 0;
