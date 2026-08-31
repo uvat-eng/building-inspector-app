@@ -1,7 +1,9 @@
 import json
 import os
 import re
+import ssl
 import urllib.request
+import uuid
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -62,6 +64,32 @@ RULES = [
      'СП 50.13330.2012, п. 5.1', 'Тепловая защита конструкций'),
     (['штукатур', 'отделк', 'облицов', 'плитк', 'ровност'],
      'СП 71.13330.2017, п. 7.2', 'Качество отделочных покрытий'),
+    (['кабельн', 'сертификат', 'кабел', 'продукц', 'паспорт'],
+     'СП 76.13330.2016, п. 4.2', 'Входной контроль электротехнической продукции'),
+    (['знак', 'ограждени', 'сигнальн', 'лент', 'опасн', 'зона'],
+     'СП 49.13330.2010, п. 6.2.2', 'Ограждение опасных зон на стройплощадке'),
+    (['освещен', 'люкс', 'темно', 'прожектор'],
+     'ГОСТ 12.1.046-2014, п. 4.2', 'Нормы освещения строительных площадок'),
+    (['складир', 'хранен', 'штабел', 'навал', 'поддон'],
+     'СП 49.13330.2010, п. 6.1.6', 'Складирование материалов и конструкций'),
+    (['кран', 'строп', 'такелаж', 'груз', 'подъем'],
+     'ФНП № 461, п. 23', 'Безопасность подъёмных сооружений'),
+    (['баллон', 'газ', 'ацетилен', 'кислород', 'редуктор'],
+     'ФНП № 536, п. 5.2', 'Обращение с газовыми баллонами'),
+    (['лестниц', 'ограждени', 'перил', 'проем', 'люк'],
+     'СП 49.13330.2010, п. 6.2.16', 'Ограждение проёмов и лестниц'),
+    (['резьб', 'соединен', 'фланц', 'прокладк', 'арматур', 'запорн'],
+     'СП 73.13330.2016, п. 4.4', 'Монтаж трубопроводов и арматуры'),
+    (['уклон', 'водоотвод', 'дренаж', 'ливнев'],
+     'СП 32.13330.2018, п. 6.2', 'Уклоны и водоотвод'),
+    (['вентиляц', 'воздуховод', 'решетк', 'кратност'],
+     'СП 73.13330.2016, п. 6.3', 'Монтаж систем вентиляции'),
+    (['маркировк', 'бирк', 'обозначен', 'таблич'],
+     'СП 76.13330.2016, п. 5.4', 'Маркировка оборудования и линий'),
+    (['мусор', 'отход', 'уборк', 'захламл', 'чистот'],
+     'СП 48.13330.2019, п. 6.3.4', 'Содержание строительной площадки'),
+    (['проект', 'отступлен', 'несоответств', 'самовольн', 'изменен'],
+     'ГрК РФ, ст. 52 ч. 6', 'Соответствие работ проектной документации'),
 ]
 
 FALLBACK = ('СП 48.13330.2019, п. 5.5', 'Строительный контроль при строительстве')
@@ -83,36 +111,97 @@ def match_local(text: str):
     return {'ref': best[0], 'name': best[1], 'source': 'base', 'score': score}
 
 
-def ask_ai(items):
-    key = os.environ.get('GEMINI_API_KEY', '')
-    if not key:
-        return None
-    listing = '\n'.join(f'{i + 1}. {t}' for i, t in enumerate(items))
-    prompt = (
-        'Ты инженер строительного контроля в России. Для каждого замечания укажи нарушенный '
-        'пункт действующих норм РФ (СП, ГОСТ, ПУЭ, приказы Минтруда) и краткое название документа. '
-        'Ответ строго JSON-массивом вида '
-        '[{"ref":"СП 70.13330.2012, п. 5.3.7","name":"Уплотнение бетонной смеси"}] '
-        'без пояснений, по одному объекту на каждое замечание в том же порядке.\n\n'
-        f'Замечания:\n{listing}'
-    )
-    url = (
-        'https://generativelanguage.googleapis.com/v1beta/models/'
-        f'gemini-2.0-flash:generateContent?key={key}'
-    )
-    payload = json.dumps({'contents': [{'parts': [{'text': prompt}]}]}).encode()
-    req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        data = json.loads(r.read())
-    text = data['candidates'][0]['content']['parts'][0]['text']
+PROMPT_HEAD = (
+    'Ты инженер строительного контроля в России. Для каждого замечания укажи нарушенный '
+    'пункт действующих норм РФ (СП, ГОСТ, ПУЭ, приказы Минтруда) и краткое название документа. '
+    'Ответ строго JSON-массивом вида '
+    '[{"ref":"СП 70.13330.2012, п. 5.3.7","name":"Уплотнение бетонной смеси"}] '
+    'без пояснений, по одному объекту на каждое замечание в том же порядке.\n\nЗамечания:\n'
+)
+
+
+def parse_ai(text, count):
     m = re.search(r'\[.*\]', text, re.S)
     if not m:
         return None
     parsed = json.loads(m.group(0))
+    if len(parsed) != count:
+        return None
     return [
         {'ref': str(p.get('ref', '')), 'name': str(p.get('name', '')), 'source': 'ai', 'score': 9}
         for p in parsed
     ]
+
+
+def ask_gigachat(prompt, count):
+    auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
+    if not auth:
+        return None
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    token_req = urllib.request.Request(
+        'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
+        data=b'scope=GIGACHAT_API_PERS',
+        headers={
+            'Authorization': f'Basic {auth}',
+            'RqUID': str(uuid.uuid4()),
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        },
+    )
+    with urllib.request.urlopen(token_req, timeout=15, context=ctx) as r:
+        token = json.loads(r.read())['access_token']
+
+    chat_req = urllib.request.Request(
+        'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
+        data=json.dumps(
+            {
+                'model': 'GigaChat',
+                'temperature': 0.1,
+                'messages': [{'role': 'user', 'content': prompt}],
+            },
+            ensure_ascii=False,
+        ).encode(),
+        headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+    )
+    with urllib.request.urlopen(chat_req, timeout=25, context=ctx) as r:
+        data = json.loads(r.read())
+    return parse_ai(data['choices'][0]['message']['content'], count)
+
+
+def ask_openrouter(prompt, count):
+    key = os.environ.get('OPENROUTER_API_KEY', '')
+    if not key:
+        return None
+    req = urllib.request.Request(
+        'https://openrouter.ai/api/v1/chat/completions',
+        data=json.dumps(
+            {
+                'model': 'meta-llama/llama-3.3-70b-instruct:free',
+                'temperature': 0.1,
+                'messages': [{'role': 'user', 'content': prompt}],
+            },
+            ensure_ascii=False,
+        ).encode(),
+        headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+    )
+    with urllib.request.urlopen(req, timeout=25) as r:
+        data = json.loads(r.read())
+    return parse_ai(data['choices'][0]['message']['content'], count)
+
+
+def ask_ai(items):
+    prompt = PROMPT_HEAD + '\n'.join(f'{i + 1}. {t}' for i, t in enumerate(items))
+    for fn in (ask_gigachat, ask_openrouter):
+        try:
+            res = fn(prompt, len(items))
+            if res:
+                return res
+        except Exception:
+            continue
+    return None
 
 
 def handler(event: dict, context) -> dict:
@@ -129,11 +218,8 @@ def handler(event: dict, context) -> dict:
 
     results = [match_local(t) for t in items]
 
-    try:
-        ai = ask_ai(items)
-        if ai and len(ai) == len(items):
-            results = [a if a['ref'] else b for a, b in zip(ai, results)]
-    except Exception:
-        pass
+    ai = ask_ai(items)
+    if ai:
+        results = [a if a['ref'] else b for a, b in zip(ai, results)]
 
     return resp(200, {'items': results})
