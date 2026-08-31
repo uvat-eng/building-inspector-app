@@ -14,7 +14,7 @@ export interface MenuItem {
 }
 
 export const MENU: MenuItem[] = [
-  { id: 'objects', label: 'Объекты', short: 'Объекты строительства', icon: 'Building2' },
+  { id: 'objects', label: 'Главная · карта', short: 'Карта и объекты', icon: 'Map' },
   { id: 'inspections', label: 'Проверки и выезды', short: 'Проверки и выезды', icon: 'ClipboardCheck' },
   { id: 'defects', label: 'Замечания', short: 'Замечания и дефекты', icon: 'TriangleAlert' },
   { id: 'photos', label: 'Фотоотчёты', short: 'Фотоотчёты', icon: 'Camera' },

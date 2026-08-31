@@ -4,19 +4,19 @@ import Row from '@/components/desk/Row';
 import Tag from '@/components/desk/Tag';
 import Icon from '@/components/ui/icon';
 import Empty from '@/components/desk/Empty';
-import { REGIONS, INSPECTORS, OBJECTS, INSPECTIONS } from '@/data/mock';
+import { REGIONS, INSPECTORS, INSPECTIONS } from '@/data/mock';
+import { useObjects, summarize, money, STATUS_LABEL } from '@/data/store';
 
 const ReportsSection = () => {
+  const { list: OBJECTS } = useObjects();
+  const s = summarize(OBJECTS);
   const [region, setRegion] = useState<string | null>(REGIONS[0]?.id ?? null);
   const active = REGIONS.find((r) => r.id === region) ?? null;
 
-  const orders = INSPECTORS.reduce((s, n) => s + n.orders, 0);
-  const closed = INSPECTORS.reduce((s, n) => s + n.closed, 0);
-
   const KPI = [
-    { label: 'Объектов в работе', value: String(OBJECTS.length), note: 'всего', icon: 'Building2' },
-    { label: 'Выездов', value: String(INSPECTIONS.length), note: 'за период', icon: 'Route' },
-    { label: 'Предписаний выдано', value: String(orders), note: `снято ${closed}`, icon: 'FileWarning' },
+    { label: 'Портфель контрактов', value: money(s.portfolio), note: `${s.total} объектов`, icon: 'Wallet' },
+    { label: 'Объектов в работе', value: String(s.inWork), note: `выездов ${INSPECTIONS.length}`, icon: 'Building2' },
+    { label: 'Предписаний выдано', value: String(s.orders), note: `не устранено ${s.ordersOpen}`, icon: 'FileWarning' },
     { label: 'Инспекторов в штате', value: String(INSPECTORS.length), note: 'по группам', icon: 'Users' },
   ];
 
@@ -117,12 +117,12 @@ const ReportsSection = () => {
 
       <Panel title="Сроки договоров" note="риск срыва">
         {OBJECTS.length === 0 && <Empty icon="CalendarRange" title="Договоров нет" />}
-        {OBJECTS.slice(0, 5).map((o) => (
+        {OBJECTS.slice(0, 6).map((o) => (
           <Row
             key={o.id}
             title={o.title}
-            sub={`Срок ${o.deadline} · готовность ${o.progress}% · ${o.customer}`}
-            right={<Tag tone={o.tone}>{o.tag}</Tag>}
+            sub={`Срок ${o.deadline || '—'} · готовность ${o.progress}% · ${o.customer}`}
+            right={<Tag tone={o.status === 'done' ? 'ok' : o.status === 'plan' ? 'wait' : 'hot'}>{STATUS_LABEL[o.status]}</Tag>}
           />
         ))}
       </Panel>
