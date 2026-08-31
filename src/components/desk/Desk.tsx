@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Topbar from '@/components/desk/Topbar';
 import DeskHeader from '@/components/desk/DeskHeader';
 import SideMenu from '@/components/desk/SideMenu';
@@ -28,8 +28,12 @@ import { useProfile, ROLE_SECTIONS, ROLE_LABEL } from '@/data/profile';
 import { useUsers } from '@/data/users';
 import { useToast } from '@/hooks/use-toast';
 
+const SECTION_KEY = 'gsi-section-v1';
+
 const Desk = () => {
-  const [section, setSection] = useState<SectionId>('objects');
+  const [section, setSection] = useState<SectionId>(
+    () => (localStorage.getItem(SECTION_KEY) as SectionId) || 'objects',
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [objectId, setObjectId] = useState<string | null>(null);
   const [objectEdit, setObjectEdit] = useState(false);
@@ -37,6 +41,10 @@ const Desk = () => {
   const { profile } = useProfile();
   const { current } = useUsers();
   const { toast } = useToast();
+
+  useEffect(() => {
+    localStorage.setItem(SECTION_KEY, section);
+  }, [section]);
 
   const [history, setHistory] = useState<SectionId[]>([]);
   const [leaveTo, setLeaveTo] = useState<SectionId | null>(null);

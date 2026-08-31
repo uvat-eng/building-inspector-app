@@ -212,7 +212,11 @@ const Timesheet = () => {
       </Panel>
 
       <Dialog open={pick !== null} onOpenChange={(v) => !v && setPick(null)}>
-        <DialogContent className="max-w-lg rounded-sm">
+        <DialogContent
+          className="max-w-lg rounded-sm"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="font-head text-[1.25em] uppercase tracking-[0.03em]">
               {pick} {MONTHS[month].toLowerCase()} {year}
@@ -329,6 +333,7 @@ const Timesheet = () => {
                           type="time"
                           value={r.from}
                           onChange={(e) => patch(i, { from: e.target.value })}
+                          onWheel={(e) => e.currentTarget.blur()}
                           className="h-9 rounded-sm"
                         />
                       </div>
@@ -340,6 +345,7 @@ const Timesheet = () => {
                           type="time"
                           value={r.to}
                           onChange={(e) => patch(i, { to: e.target.value })}
+                          onWheel={(e) => e.currentTarget.blur()}
                           className="h-9 rounded-sm"
                         />
                       </div>

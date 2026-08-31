@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Row from '@/components/desk/Row';
 import Empty from '@/components/desk/Empty';
@@ -15,6 +15,8 @@ import { useUsers } from '@/data/users';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'photos' | 'profile';
 
+const VIEW_KEY = 'gsi-cabinet-view-v1';
+
 const VIEW_TITLE: Record<View, string> = {
   home: 'Обзор',
   objects: 'Мои объекты',
@@ -29,7 +31,14 @@ interface InspectorCabinetProps {
 }
 
 const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
-  const [view, setView] = useState<View>('home');
+  const [view, setView] = useState<View>(
+    () => (localStorage.getItem(VIEW_KEY) as View) || 'home',
+  );
+
+  useEffect(() => {
+    localStorage.setItem(VIEW_KEY, view);
+  }, [view]);
+
   const { profile } = useProfile();
   const { list: objects } = useObjects();
   const { sheet } = useTimesheet();
