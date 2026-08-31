@@ -20,7 +20,7 @@ const InspectorCabinet = () => {
 
   const stats = [
     { icon: 'Building2', label: 'Объектов', value: objects.length },
-    { icon: 'Clock', label: 'Часов за месяц', value: fmtHours(monthHours) },
+    { icon: 'Clock', label: 'Табель учёта времени', value: `${fmtHours(monthHours)} ч` },
     { icon: 'TriangleAlert', label: 'Замечаний', value: DEFECTS.length },
     { icon: 'Camera', label: 'Фотоотчётов', value: PHOTOS.length },
   ];
