@@ -60,6 +60,7 @@ def to_defect(r):
         'title': r['title'],
         'deadline': r['deadline'],
         'normRef': r.get('norm_ref') or '',
+        'severity': r.get('severity') or 'normal',
         'photos': photos if isinstance(photos, list) else json.loads(photos or '[]'),
     }
 
@@ -167,6 +168,8 @@ def handler(event: dict, context) -> dict:
                 sets.append(f"deadline = '{esc(body['deadline'])}'")
             if 'normRef' in body:
                 sets.append(f"norm_ref = '{esc(body['normRef'])}'")
+            if 'severity' in body:
+                sets.append(f"severity = '{esc(body['severity'])}'")
             if 'photos' in body:
                 sets.append(f"photos = '{esc(json.dumps(body['photos']))}'::jsonb")
             if not sets or not did:

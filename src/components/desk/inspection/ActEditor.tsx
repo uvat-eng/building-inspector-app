@@ -5,7 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import PhotoButton from '@/components/desk/inspection/PhotoButton';
-import { Inspection, useDefects, suggestNorms } from '@/data/inspections';
+import {
+  Inspection,
+  useDefects,
+  suggestNorms,
+  NormMatch,
+  Severity,
+  SEVERITY,
+  deadlineFor,
+} from '@/data/inspections';
+import { cn } from '@/lib/utils';
 import { usePhotoQueue, flushQueue, isWifi } from '@/data/photoQueue';
 import { downloadAct } from '@/lib/actDoc';
 
@@ -32,17 +41,23 @@ const ActEditor = ({
   const [title, setTitle] = useState('');
   const [adding, setAdding] = useState(false);
   const [normBusy, setNormBusy] = useState<string | null>(null);
+  const [altsFor, setAltsFor] = useState<Map<string, { ref: string; name: string }[]>>(new Map());
+
+  const applyMatch = async (id: string, m: NormMatch) => {
+    if (m.ref) await update(id, { normRef: `${m.ref} — ${m.name}` });
+    if (m.alts?.length) setAltsFor((p) => new Map(p).set(id, m.alts ?? []));
+  };
 
   const findNorm = async (id: string, text: string) => {
     if (!text.trim()) return;
     setNormBusy(id);
     try {
-      const [m] = await suggestNorms([text]);
+      const [m] = await suggestNorms([text], true);
       if (m?.ref) {
-        await update(id, { normRef: `${m.ref} — ${m.name}` });
+        await applyMatch(id, m);
         toast({
-          title: 'Норма подобрана',
-          description: m.source === 'ai' ? 'Найдено ИИ-агентом' : 'Найдено по базе норм',
+          title: 'Норма уточнена',
+          description: m.source === 'ai' ? 'Подобрано ИИ-агентом' : 'Подобрано по базе норм',
         });
       }
     } catch {
@@ -60,12 +75,8 @@ const ActEditor = ({
     }
     setNormBusy('all');
     try {
-      const res = await suggestNorms(empty.map((d) => d.title));
-      await Promise.all(
-        empty.map((d, i) =>
-          res[i]?.ref ? update(d.id, { normRef: `${res[i].ref} — ${res[i].name}` }) : null,
-        ),
-      );
+      const res = await suggestNorms(empty.map((d) => d.title), true);
+      await Promise.all(empty.map((d, i) => (res[i] ? applyMatch(d.id, res[i]) : null)));
       toast({ title: `Подобрано норм: ${res.filter((r) => r.ref).length}` });
     } catch {
       toast({ title: 'Не удалось подобрать нормы', variant: 'destructive' });
@@ -96,9 +107,10 @@ const ActEditor = ({
     try {
       const created = await add(title.trim());
       setTitle('');
+      update(created.id, { severity: 'normal', deadline: deadlineFor('normal') });
       suggestNorms([created.title])
         .then(([m]) => {
-          if (m?.ref) update(created.id, { normRef: `${m.ref} — ${m.name}` });
+          if (m) applyMatch(created.id, m);
         })
         .catch(() => undefined);
     } catch {
@@ -243,7 +255,7 @@ const ActEditor = ({
                       />
                       <button
                         type="button"
-                        title="Подобрать норму заново"
+                        title="Уточнить норму (ИИ)"
                         disabled={normBusy === d.id}
                         onClick={() => findNorm(d.id, d.title)}
                         className="flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-secondary transition-colors hover:bg-border"
@@ -255,6 +267,47 @@ const ActEditor = ({
                         />
                       </button>
                     </div>
+
+                    <div className="flex flex-wrap items-center gap-1 pl-2 pt-0.5">
+                      <Icon name="CalendarClock" size={13} className="flex-none text-accent" />
+                      {(['critical', 'normal', 'minor'] as Severity[]).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() =>
+                            update(d.id, { severity: s, deadline: deadlineFor(s) })
+                          }
+                          className={cn(
+                            'rounded-sm px-2 py-0.5 text-[0.72em] uppercase tracking-[0.06em] transition-colors',
+                            (d.severity || 'normal') === s
+                              ? 'bg-accent text-accent-foreground'
+                              : 'bg-secondary text-muted-foreground hover:bg-border',
+                          )}
+                        >
+                          {SEVERITY[s].label}
+                        </button>
+                      ))}
+                      <span className="text-[0.74em] text-muted-foreground">
+                        до {d.deadline || deadlineFor(d.severity || 'normal')}
+                      </span>
+                    </div>
+
+                    {(altsFor.get(d.id) ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-1 pl-2 pt-0.5">
+                        {(altsFor.get(d.id) ?? []).map((a) => (
+                          <button
+                            key={a.ref}
+                            type="button"
+                            onClick={() =>
+                              update(d.id, { normRef: `${a.ref} — ${a.name}` })
+                            }
+                            className="rounded-sm border border-border px-1.5 py-0.5 text-[0.7em] text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
+                          >
+                            {a.ref}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <PhotoButton
                     inspectionId={inspection.id}

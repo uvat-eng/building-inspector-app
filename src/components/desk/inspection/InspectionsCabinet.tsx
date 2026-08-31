@@ -81,14 +81,28 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
         `https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039?id=${insp.id}`,
       );
       const { defects } = (await res.json()) as {
-        defects: { pos: number; title: string; normRef?: string; photos: string[] }[];
+        defects: {
+          pos: number;
+          title: string;
+          normRef?: string;
+          deadline?: string;
+          photos: string[];
+        }[];
       };
       const order = await createOrder({
         objectId: object.id,
         inspectionId: insp.id,
         issuedTo: insp.subcontractor || insp.generalContractor || contractor?.name || '',
         inspector: insp.inspector || profile.fio,
-        deadline: '',
+        deadline:
+          defects
+            .map((d) => d.deadline || '')
+            .filter(Boolean)
+            .sort(
+              (a, b) =>
+                new Date(a.split('.').reverse().join('-')).getTime() -
+                new Date(b.split('.').reverse().join('-')).getTime(),
+            )[0] ?? '',
         body: {
           workType: insp.workType,
           docRef: insp.docRef,
@@ -100,6 +114,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
             pos: d.pos,
             title: d.title,
             normRef: d.normRef ?? '',
+            deadline: d.deadline ?? '',
             photos: d.photos,
           })),
         },

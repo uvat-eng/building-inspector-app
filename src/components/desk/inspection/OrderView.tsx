@@ -99,6 +99,10 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
                       <Icon name="BookMarked" size={12} className="flex-none text-accent" />
                       {it.normRef || 'норматив не указан'}
                     </p>
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[0.78em] text-muted-foreground">
+                      <Icon name="CalendarClock" size={12} className="flex-none text-accent" />
+                      Устранить до: {it.deadline || order.deadline || 'срок не задан'}
+                    </p>
                     {it.photos?.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {it.photos.map((p, k) => (

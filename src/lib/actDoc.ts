@@ -24,11 +24,12 @@ export const buildActHtml = ({ inspection, defects, objectTitle, contractorName 
         <td style="text-align:center">${i + 1}</td>
         <td>${esc(d.title)}</td>
         <td>${esc(d.normRef || '—')}</td>
+        <td style="text-align:center">${esc(d.deadline || '—')}</td>
         <td style="text-align:center">${d.photos.length ? `фото — ${d.photos.length} шт.` : '—'}</td>
       </tr>`,
         )
         .join('')
-    : '<tr><td colspan="4" style="text-align:center">Замечаний не выявлено</td></tr>';
+    : '<tr><td colspan="5" style="text-align:center">Замечаний не выявлено</td></tr>';
 
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
@@ -60,7 +61,7 @@ export const buildActHtml = ({ inspection, defects, objectTitle, contractorName 
   <p style="margin-top:14pt">Результаты осмотра и выявленные замечания:</p>
 
   <table>
-    <tr><th width="7%">№ п/п</th><th>Наименование замечания</th><th width="28%">Ссылка на нормативы</th><th width="15%">Фото</th></tr>
+    <tr><th width="6%">№ п/п</th><th>Наименование замечания</th><th width="26%">Ссылка на нормативы</th><th width="14%">Срок устранения</th><th width="12%">Фото</th></tr>
     ${rows}
   </table>
 

@@ -18,7 +18,7 @@ export const buildOrderHtml = (order: Order, contractor?: Contractor | null) => 
         <td style="text-align:center">${i + 1}</td>
         <td>${esc(it.title)}</td>
         <td>${esc(it.normRef || '—')}</td>
-        <td style="text-align:center">${esc(order.deadline || '—')}</td>
+        <td style="text-align:center">${esc(it.deadline || order.deadline || '—')}</td>
       </tr>`,
         )
         .join('')

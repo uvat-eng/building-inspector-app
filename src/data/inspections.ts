@@ -26,8 +26,23 @@ export interface InspectionDefect {
   title: string;
   deadline: string;
   normRef: string;
+  severity: Severity;
   photos: string[];
 }
+
+export type Severity = 'critical' | 'normal' | 'minor';
+
+export const SEVERITY: Record<Severity, { label: string; days: number; tone: string }> = {
+  critical: { label: 'Немедленно', days: 0, tone: 'hot' },
+  normal: { label: '7 дней', days: 7, tone: 'wait' },
+  minor: { label: '30 дней', days: 30, tone: 'dim' },
+};
+
+export const deadlineFor = (severity: Severity, from = new Date()) => {
+  const d = new Date(from);
+  d.setDate(d.getDate() + SEVERITY[severity].days);
+  return d.toLocaleDateString('ru');
+};
 
 const NORMS_API = 'https://functions.poehali.dev/b9b1a996-8cf5-4866-aae2-e1589553e231';
 
@@ -35,13 +50,15 @@ export interface NormMatch {
   ref: string;
   name: string;
   source: 'ai' | 'base';
+  score: number;
+  alts?: { ref: string; name: string }[];
 }
 
-export const suggestNorms = async (texts: string[]): Promise<NormMatch[]> => {
+export const suggestNorms = async (texts: string[], ai = false): Promise<NormMatch[]> => {
   const res = await fetch(NORMS_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items: texts }),
+    body: JSON.stringify({ items: texts, ai }),
   });
   if (!res.ok) throw new Error('norms_failed');
   const { items } = (await res.json()) as { items: NormMatch[] };
