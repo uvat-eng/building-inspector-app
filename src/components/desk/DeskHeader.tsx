@@ -23,8 +23,8 @@ const DeskHeader = ({ onStart, onMenu }: DeskHeaderProps) => (
         <Icon name="Menu" size={22} />
       </button>
       <div className="flex items-baseline gap-3">
-        <h1 className="font-head text-[26px] uppercase leading-[1.05] tracking-[-0.01em] sm:text-[38px]">
-          Инспектор <span className="text-accent">технадзор</span>
+        <h1 className="font-head text-[26px] leading-[1.05] tracking-[-0.01em] sm:text-[38px]">
+          Инспектор <span className="text-accent">Технадзора</span>
         </h1>
         <span className="hidden text-[0.85em] uppercase tracking-[0.14em] text-muted-foreground xl:inline">
           рабочий стол
