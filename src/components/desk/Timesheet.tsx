@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useObjects } from '@/data/store';
 import { useProfile } from '@/data/profile';
+import ShareMenu from '@/components/desk/ShareMenu';
 import {
   useTimesheet,
   dayKey,
@@ -43,6 +44,7 @@ const Timesheet = () => {
   const [month, setMonth] = useState(today.getMonth());
   const [pick, setPick] = useState<number | null>(null);
   const [report, setReport] = useState(false);
+  const [share, setShare] = useState(false);
 
   const [rows, setRows] = useState<TimeEntry[]>([]);
   const [objOpen, setObjOpen] = useState<number | null>(null);
@@ -54,6 +56,50 @@ const Timesheet = () => {
   const totalHours = entries.reduce((s, [, list]) => s + dayHours(list), 0);
   const nightDays = entries.filter(([, list]) => shiftOf(list) === 'night').length;
   const rowsHours = dayHours(rows);
+
+  const shareDoc = useMemo(() => {
+    const period = `${MONTHS[month]} ${year}`;
+    const head = [
+      `ТАБЕЛЬ УЧЁТА РАБОЧЕГО ВРЕМЕНИ · ${period}`,
+      `Инспектор: ${profile.fio || '—'}`,
+      `Проект: ${profile.group || '—'}`,
+      `Организация: ${profile.org || '—'}`,
+      '',
+    ];
+    const lines = entries.flatMap(([k, list]) =>
+      list.map(
+        (e) =>
+          `${k.split('-').reverse().join('.')} · ${
+            shiftOf(list) === 'night' ? 'ночная' : 'дневная'
+          } · ${e.objectTitle} · ${e.from}–${e.to} · ${fmtHours(entryHours(e))} ч`,
+      ),
+    );
+    const total = `\nИтого: ${entries.length} смен (${nightDays} ноч. / ${
+      entries.length - nightDays
+    } дн.), ${fmtHours(totalHours)} ч`;
+
+    const csvRows = [
+      ['Дата', 'Смена', 'Объект', 'Начало', 'Окончание', 'Часы'],
+      ...entries.flatMap(([k, list]) =>
+        list.map((e) => [
+          k.split('-').reverse().join('.'),
+          shiftOf(list) === 'night' ? 'Ночная' : 'Дневная',
+          e.objectTitle,
+          e.from,
+          e.to,
+          fmtHours(entryHours(e)),
+        ]),
+      ),
+      ['Итого', '', '', '', '', fmtHours(totalHours)],
+    ];
+
+    return {
+      fileName: `Табель_${profile.fio.split(' ')[0] || 'инспектор'}_${MONTHS[month]}_${year}.csv`,
+      subject: `Табель учёта рабочего времени · ${period} · ${profile.fio || 'инспектор'}`,
+      text: [...head, ...lines, total].join('\n'),
+      csv: csvRows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n'),
+    };
+  }, [entries, month, year, profile, totalHours, nightDays]);
 
   const shift = (delta: number) => {
     const d = new Date(year, month + delta, 1);
@@ -469,15 +515,28 @@ const Timesheet = () => {
             )}
           </div>
 
-          <Button
-            onClick={() => window.print()}
-            className="gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
-          >
-            <Icon name="Printer" size={16} />
-            Печать / PDF
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => window.print()}
+              variant="outline"
+              className="flex-1 gap-2 rounded-sm font-head uppercase tracking-[0.06em]"
+            >
+              <Icon name="Printer" size={16} />
+              Печать / PDF
+            </Button>
+            <Button
+              onClick={() => setShare(true)}
+              disabled={entries.length === 0}
+              className="flex-1 gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+            >
+              <Icon name="Share2" size={16} />
+              Отправить
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
+
+      <ShareMenu open={share} onOpenChange={setShare} doc={shareDoc} />
     </>
   );
 };
