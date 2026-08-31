@@ -1,10 +1,17 @@
 {
   "tests": [
     {
-      "name": "Подбор нормы по замечанию",
+      "name": "Подбор нормы по базе",
       "method": "POST",
       "path": "/",
-      "body": { "items": ["Не выдержан защитный слой бетона арматуры"] },
+      "body": { "items": ["Не выдержан защитный слой бетона арматуры"], "ai": false },
+      "expectedStatus": 200
+    },
+    {
+      "name": "Проверка ключа ИИ",
+      "method": "POST",
+      "path": "/",
+      "body": { "action": "check" },
       "expectedStatus": 200
     },
     {

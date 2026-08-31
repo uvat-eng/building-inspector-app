@@ -2,6 +2,8 @@ import json
 import os
 import re
 import ssl
+import time
+import urllib.error
 import urllib.request
 import uuid
 
@@ -133,14 +135,12 @@ def parse_ai(text, count):
     ]
 
 
-def ask_gigachat(prompt, count):
-    auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
-    if not auth:
-        return None
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+_TOKEN = {'value': '', 'exp': 0}
 
+
+def giga_token(auth, ctx):
+    if _TOKEN['value'] and time.time() < _TOKEN['exp']:
+        return _TOKEN['value']
     token_req = urllib.request.Request(
         'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
         data=b'scope=GIGACHAT_API_PERS',
@@ -151,8 +151,25 @@ def ask_gigachat(prompt, count):
             'Accept': 'application/json',
         },
     )
-    with urllib.request.urlopen(token_req, timeout=15, context=ctx) as r:
+    with urllib.request.urlopen(token_req, timeout=6, context=ctx) as r:
         token = json.loads(r.read())['access_token']
+    _TOKEN['value'] = token
+    _TOKEN['exp'] = time.time() + 1500
+    return token
+
+
+def ask_gigachat(prompt, count, budget):
+    auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
+    if not auth:
+        return None
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    started = time.time()
+    token = giga_token(auth, ctx)
+    left = budget - (time.time() - started)
+    if left < 1:
+        raise TimeoutError('не хватило времени на запрос к ИИ')
 
     chat_req = urllib.request.Request(
         'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
@@ -166,12 +183,12 @@ def ask_gigachat(prompt, count):
         ).encode(),
         headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
     )
-    with urllib.request.urlopen(chat_req, timeout=25, context=ctx) as r:
+    with urllib.request.urlopen(chat_req, timeout=left, context=ctx) as r:
         data = json.loads(r.read())
     return parse_ai(data['choices'][0]['message']['content'], count)
 
 
-def ask_openrouter(prompt, count):
+def ask_openrouter(prompt, count, budget):
     key = os.environ.get('OPENROUTER_API_KEY', '')
     if not key:
         return None
@@ -187,21 +204,63 @@ def ask_openrouter(prompt, count):
         ).encode(),
         headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
     )
-    with urllib.request.urlopen(req, timeout=25) as r:
+    with urllib.request.urlopen(req, timeout=budget) as r:
         data = json.loads(r.read())
     return parse_ai(data['choices'][0]['message']['content'], count)
 
 
-def ask_ai(items):
+def ask_ai(items, budget):
     prompt = PROMPT_HEAD + '\n'.join(f'{i + 1}. {t}' for i, t in enumerate(items))
+    errors = []
+    deadline = time.time() + budget
     for fn in (ask_gigachat, ask_openrouter):
+        left = deadline - time.time()
+        if left < 1.5:
+            errors.append('время ожидания ИИ исчерпано')
+            break
         try:
-            res = fn(prompt, len(items))
+            res = fn(prompt, len(items), left)
             if res:
-                return res
-        except Exception:
-            continue
-    return None
+                return res, errors
+            errors.append(f'{fn.__name__}: нет ключа или пустой ответ')
+        except Exception as e:
+            errors.append(f'{fn.__name__}: {type(e).__name__} {e}')
+    return None, errors
+
+
+def check_key():
+    auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
+    if not auth:
+        return {'ok': False, 'stage': 'key', 'message': 'Ключ GigaChat не добавлен'}
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    try:
+        req = urllib.request.Request(
+            'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
+            data=b'scope=GIGACHAT_API_PERS',
+            headers={
+                'Authorization': f'Basic {auth}',
+                'RqUID': str(uuid.uuid4()),
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+            },
+        )
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+            data = json.loads(r.read())
+        return {
+            'ok': bool(data.get('access_token')),
+            'stage': 'token',
+            'message': 'Ключ действителен, токен получен',
+        }
+    except urllib.error.HTTPError as e:
+        return {
+            'ok': False,
+            'stage': 'token',
+            'message': f'GigaChat отклонил ключ: HTTP {e.code}',
+        }
+    except Exception as e:
+        return {'ok': False, 'stage': 'token', 'message': f'{type(e).__name__}: {e}'}
 
 
 def handler(event: dict, context) -> dict:
@@ -212,14 +271,24 @@ def handler(event: dict, context) -> dict:
         return resp(405, {'error': 'method_not_allowed'})
 
     body = json.loads(event.get('body') or '{}')
+
+    if body.get('action') == 'check':
+        return resp(200, check_key())
+
     items = body.get('items') or ([body['text']] if body.get('text') else [])
     if not items:
         return resp(400, {'error': 'items_required'})
 
     results = [match_local(t) for t in items]
+    debug = []
 
-    ai = ask_ai(items)
-    if ai:
-        results = [a if a['ref'] else b for a, b in zip(ai, results)]
+    if body.get('ai') is not False:
+        budget = float(body.get('budget') or 3.5)
+        ai, debug = ask_ai(items, budget)
+        if ai:
+            results = [a if a['ref'] else b for a, b in zip(ai, results)]
 
-    return resp(200, {'items': results})
+    out = {'items': results}
+    if body.get('debug'):
+        out['debug'] = debug
+    return resp(200, out)
