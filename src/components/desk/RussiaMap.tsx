@@ -114,7 +114,7 @@ const RussiaMap = ({
         ))}
       </div>
 
-      <div className="relative bg-[#cfe0ea]">
+      <div className="relative bg-[#f2f2f2]">
         <svg
           ref={svgRef}
           viewBox={view.join(' ')}
@@ -127,11 +127,11 @@ const RussiaMap = ({
         >
           <defs>
             <linearGradient id="land" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#d8e8c4" />
-              <stop offset="100%" stopColor="#bcd9a4" />
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="100%" stopColor="#e6e6e6" />
             </linearGradient>
             <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
-              <path d="M24 0 H0 V24" fill="none" stroke="#7fa06a" strokeWidth="0.3" opacity="0.35" />
+              <path d="M24 0 H0 V24" fill="none" stroke="#9a9a9a" strokeWidth="0.3" opacity="0.35" />
             </pattern>
             <clipPath id="land-clip">
               <path d={RUSSIA_PATH} fillRule="evenodd" />
@@ -154,9 +154,9 @@ const RussiaMap = ({
                 className={cn(
                   'transition-colors duration-300',
                   pickMode ? 'pointer-events-none' : 'cursor-pointer',
-                  on ? 'fill-accent/10' : 'fill-transparent hover:fill-[#8bb473]/25',
+                  on ? 'fill-accent/10' : 'fill-transparent hover:fill-black/[0.07]',
                 )}
-                stroke={on ? 'hsl(var(--accent))' : '#3f6b3a'}
+                stroke={on ? 'hsl(var(--accent))' : '#1a1a1a'}
                 strokeOpacity={on ? 1 : 0.75}
                 strokeWidth={(on ? 1.6 : 1) * k}
                 strokeDasharray={`${7 * k} ${3 * k} ${2 * k} ${3 * k}`}
@@ -183,7 +183,7 @@ const RussiaMap = ({
             d={RUSSIA_PATH}
             fillRule="evenodd"
             className="pointer-events-none fill-none"
-            stroke="#35502f"
+            stroke="#111111"
             strokeWidth={1.4 * k}
             strokeLinejoin="round"
           />
@@ -211,7 +211,7 @@ const RussiaMap = ({
                     x={x}
                     y={y}
                     textAnchor="middle"
-                    className="pointer-events-none fill-[#3f6b3a]/80 text-[11px] uppercase tracking-[0.14em]"
+                    className="pointer-events-none fill-black/55 text-[11px] uppercase tracking-[0.14em]"
                   >
                     {d.short}
                   </text>
@@ -230,14 +230,14 @@ const RussiaMap = ({
                     cx={x}
                     cy={y}
                     r={(big ? 2.6 : 1.7) * k}
-                    fill="#2f4a2a"
+                    fill="#1a1a1a"
                     fillOpacity={big ? 0.95 : 0.65}
                   />
                   <text
                     x={x + 4 * k}
                     y={y + 3.2 * k}
                     style={{ fontSize: `${(big ? 11 : 9) * k}px` }}
-                    fill="#22381f"
+                    fill="#111111"
                     fillOpacity={big ? 0.95 : 0.7}
                   >
                     {c.n}
@@ -270,7 +270,7 @@ const RussiaMap = ({
                   y={13}
                   textAnchor="middle"
                   style={{ fontSize: '10px' }}
-                  fill="#22381f"
+                  fill="#111111"
                   stroke="#fff"
                   strokeWidth={2.4}
                   paintOrder="stroke"
@@ -304,7 +304,7 @@ const RussiaMap = ({
         )}
 
         {active && !pickMode && (
-          <div className="absolute right-3 top-3 flex items-center gap-2 rounded-sm border border-[#3f6b3a]/30 bg-white/90 px-3 py-2 text-[0.8em] uppercase tracking-[0.08em] text-[#22381f]">
+          <div className="absolute right-3 top-3 flex items-center gap-2 rounded-sm border border-black/20 bg-white/90 px-3 py-2 text-[0.8em] uppercase tracking-[0.08em] text-foreground">
             <Icon name="ZoomIn" size={14} className="text-accent" />
             {active.name} · {cities.length} городов
             <button
@@ -346,7 +346,7 @@ const RussiaMap = ({
 
         {shown.length === 0 && !pickMode && (
           <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-            <span className="rounded-sm bg-white/90 px-4 py-2 text-[0.85em] uppercase tracking-[0.1em] text-[#22381f]">
+            <span className="rounded-sm bg-white/90 px-4 py-2 text-[0.85em] uppercase tracking-[0.1em] text-foreground">
               Объектов в этой зоне нет
             </span>
           </div>
