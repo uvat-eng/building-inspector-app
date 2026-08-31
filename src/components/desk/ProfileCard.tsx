@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
-import { useProfile, ROLE_LABEL, Role, shortFio } from '@/data/profile';
+import { cn } from '@/lib/utils';
+import { useProfile, ROLE_LABEL, Role, shortFio, SPECIALTIES } from '@/data/profile';
 
 const ProfileCard = () => {
   const { profile, save } = useProfile();
@@ -55,7 +56,7 @@ const ProfileCard = () => {
             <DialogDescription>ФИО, роль и группа определяют права доступа</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="scrollbar-thin max-h-[62vh] space-y-3 overflow-y-auto pr-1">
             <div className="space-y-1.5">
               <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
                 Фамилия Имя Отчество
@@ -96,6 +97,45 @@ const ProfileCard = () => {
                 placeholder="Якутия-Запад"
                 className="rounded-sm"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+                Специализация
+              </Label>
+              <div className="scrollbar-thin max-h-[150px] overflow-y-auto rounded-sm border border-input">
+                {SPECIALTIES.map((s) => {
+                  const on = (f.specialties ?? []).includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() =>
+                        setF({
+                          ...f,
+                          specialties: on
+                            ? (f.specialties ?? []).filter((x) => x !== s)
+                            : [...(f.specialties ?? []), s],
+                        })
+                      }
+                      className={cn(
+                        'flex w-full items-center gap-2.5 border-b border-border px-3 py-2 text-left text-[0.85em] last:border-b-0',
+                        on ? 'bg-secondary' : 'hover:bg-secondary/60',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'flex h-4 w-4 flex-none items-center justify-center rounded-[3px] border',
+                          on ? 'border-accent bg-accent text-accent-foreground' : 'border-input',
+                        )}
+                      >
+                        {on && <Icon name="Check" size={11} />}
+                      </span>
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="space-y-1.5">

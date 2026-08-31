@@ -12,23 +12,39 @@ import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useProfile, Role, ROLE_ORDER, ROLE_LABEL, ROLE_NOTE, ROLE_ICON } from '@/data/profile';
+import {
+  useProfile,
+  Role,
+  ROLE_ORDER,
+  ROLE_LABEL,
+  ROLE_NOTE,
+  ROLE_ICON,
+  SPECIALTIES,
+} from '@/data/profile';
 
 interface LoginDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onEntered?: (role: Role) => void;
 }
 
-const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
+const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
   const { profile, save } = useProfile();
   const [role, setRole] = useState<Role | null>(null);
   const [fio, setFio] = useState(profile.fio);
+  const [group, setGroup] = useState(profile.group);
+  const [spec, setSpec] = useState<string[]>(profile.specialties ?? []);
+  const [specOpen, setSpecOpen] = useState(false);
   const [pass, setPass] = useState('');
   const { toast } = useToast();
+
+  const toggleSpec = (s: string) =>
+    setSpec((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const back = () => {
     setRole(null);
     setPass('');
+    setSpecOpen(false);
   };
 
   const close = (v: boolean) => {
@@ -42,7 +58,11 @@ const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
       toast({ title: 'Укажите фамилию и имя', variant: 'destructive' });
       return;
     }
-    save({ fio: fio.trim(), role });
+    if (role === 'inspector' && spec.length === 0) {
+      toast({ title: 'Выберите хотя бы одну специализацию', variant: 'destructive' });
+      return;
+    }
+    save({ fio: fio.trim(), role, group: group.trim(), specialties: spec });
     toast({
       title: `Вход выполнен · ${ROLE_LABEL[role]}`,
       description: 'Права доступа применены к рабочему столу.',
@@ -50,6 +70,7 @@ const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
     setPass('');
     setRole(null);
     onOpenChange(false);
+    onEntered?.(role);
   };
 
   return (
@@ -91,7 +112,7 @@ const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
             ))}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="scrollbar-thin max-h-[58vh] space-y-3 overflow-y-auto pr-1">
             <div className="space-y-1.5">
               <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
                 Фамилия, имя, отчество
@@ -103,6 +124,72 @@ const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
                 placeholder="Иванов Иван Иванович"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+                Проект / группа
+              </Label>
+              <Input
+                value={group}
+                onChange={(e) => setGroup(e.target.value)}
+                className="rounded-sm"
+                placeholder="Якутия-Запад"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+                Специализация {role === 'inspector' && <span className="text-accent">·</span>}
+              </Label>
+              <button
+                type="button"
+                onClick={() => setSpecOpen((v) => !v)}
+                className="flex w-full items-center gap-2 rounded-sm border border-input bg-background px-3 py-2 text-left text-[0.9em]"
+              >
+                <span className={cn('min-w-0 flex-1 truncate', !spec.length && 'text-muted-foreground')}>
+                  {spec.length ? spec.join(', ') : 'Выберите одну или несколько'}
+                </span>
+                {!!spec.length && (
+                  <span className="flex-none rounded-sm bg-accent px-1.5 text-[0.75em] text-accent-foreground">
+                    {spec.length}
+                  </span>
+                )}
+                <Icon
+                  name="ChevronDown"
+                  size={16}
+                  className={cn('flex-none transition-transform', specOpen && 'rotate-180')}
+                />
+              </button>
+
+              {specOpen && (
+                <div className="scrollbar-thin max-h-[188px] overflow-y-auto rounded-sm border border-input">
+                  {SPECIALTIES.map((s) => {
+                    const on = spec.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleSpec(s)}
+                        className={cn(
+                          'flex w-full items-center gap-2.5 border-b border-border px-3 py-2 text-left text-[0.88em] last:border-b-0',
+                          on ? 'bg-secondary' : 'hover:bg-secondary/60',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex h-4 w-4 flex-none items-center justify-center rounded-[3px] border',
+                            on ? 'border-accent bg-accent text-accent-foreground' : 'border-input',
+                          )}
+                        >
+                          {on && <Icon name="Check" size={11} />}
+                        </span>
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className="space-y-1.5">
               <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
                 Пароль

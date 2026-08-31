@@ -12,6 +12,7 @@ import DocumentsSection from '@/components/desk/sections/DocumentsSection';
 import ReportsSection from '@/components/desk/sections/ReportsSection';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import LoginDialog from '@/components/desk/LoginDialog';
+import InspectorCabinet from '@/components/desk/sections/InspectorCabinet';
 import { SectionId } from '@/data/mock';
 
 const Desk = () => {
@@ -42,6 +43,7 @@ const Desk = () => {
 
 
   const content = {
+    cabinet: <InspectorCabinet />,
     objects: <ObjectsSection onOpenObject={openObject} />,
     sites: objectId ? (
       <ObjectPage id={objectId} editOnOpen={objectEdit} onBack={closeObject} />
@@ -78,7 +80,11 @@ const Desk = () => {
         </SheetContent>
       </Sheet>
 
-      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
+      <LoginDialog
+        open={loginOpen}
+        onOpenChange={setLoginOpen}
+        onEntered={(r) => r === 'inspector' && select('cabinet')}
+      />
     </div>
   );
 };

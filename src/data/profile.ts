@@ -40,11 +40,25 @@ export const ROLE_ICON: Record<Role, string> = {
 
 const CAN_EDIT: Role[] = ['director', 'coordinator', 'manager'];
 
+export const SPECIALTIES = [
+  'Инженер-электрик',
+  'Инженер-общестроитель',
+  'Инженер КИП и слаботочных систем',
+  'Инженер-сварщик',
+  'Инженер по НК',
+  'Инженер-геодезист',
+  'Инженер-маркшейдер',
+  'Инженер беспилотных систем',
+  'Инженер-энергетик',
+  'Супер-мозг всех направлений',
+];
+
 export interface Profile {
   fio: string;
   role: Role;
   group: string;
   org: string;
+  specialties: string[];
 }
 
 const DEFAULT: Profile = {
@@ -52,6 +66,7 @@ const DEFAULT: Profile = {
   role: 'inspector',
   group: '',
   org: 'ООО «Глобал-Стройинжиниринг»',
+  specialties: [],
 };
 
 const KEY = 'gsi-profile-v1';
