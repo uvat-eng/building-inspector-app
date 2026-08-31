@@ -27,8 +27,12 @@ const TONE: Record<ProjectObject['status'], TagTone> = {
   risk: 'hot',
 };
 
-const ObjectsSection = () => {
-  const { list, add, remove } = useObjects();
+interface ObjectsSectionProps {
+  onOpenObject?: (id: string, edit?: boolean) => void;
+}
+
+const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
+  const { list, add } = useObjects();
   const { profile, canAddObject } = useProfile();
   const { toast } = useToast();
   const [open, setOpen] = useState<ProjectObject | null>(null);
@@ -49,7 +53,7 @@ const ObjectsSection = () => {
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-0.5">
       <Panel title="Карта объектов России" note="упор на Якутию" className="flex-none">
-        <RussiaMap objects={list} onPick={setOpen} />
+        <RussiaMap objects={list} onPick={(o) => setOpen(o)} />
       </Panel>
 
       <Panel title="Сводная информация" note="суммируется по всем объектам" className="flex-none">
@@ -92,7 +96,7 @@ const ObjectsSection = () => {
               key={o.id}
               title={o.title}
               sub={`${o.regionName} · ${o.customer} · ${o.stage} · готовность ${o.progress}%`}
-              onClick={() => setOpen(o)}
+              onClick={() => onOpenObject?.(o.id)}
               right={<Tag tone={TONE[o.status]}>{STATUS_LABEL[o.status]}</Tag>}
             />
           ))
@@ -146,23 +150,45 @@ const ObjectsSection = () => {
                   />
                 </div>
               </div>
-              <div className="flex justify-between pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <span className="flex items-center gap-2 rounded-sm bg-secondary px-3 py-2 text-[0.8em] uppercase tracking-[0.08em]">
                   <Icon name="MapPin" size={14} className="text-accent" /> {open.regionName}
                 </span>
-                {canAddObject && (
+                <div className="flex gap-2">
                   <Button
-                    variant="ghost"
-                    className="rounded-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    variant="outline"
+                    className="rounded-sm"
                     onClick={() => {
-                      remove(open.id);
+                      onOpenObject?.(open.id);
                       setOpen(null);
                     }}
                   >
-                    <Icon name="Trash2" size={15} className="mr-1.5" />
-                    Удалить
+                    <Icon name="ExternalLink" size={15} className="mr-1.5" />
+                    Открыть объект
                   </Button>
-                )}
+                  <Button
+                    className={`rounded-sm font-head uppercase tracking-[0.06em] ${
+                      canAddObject
+                        ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+                        : 'bg-secondary text-muted-foreground hover:bg-secondary'
+                    }`}
+                    onClick={() => {
+                      if (!canAddObject) {
+                        toast({
+                          title: 'Недостаточно прав',
+                          description: `Корректировать объект может только заместитель директора заказчика. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+                      onOpenObject?.(open.id, true);
+                      setOpen(null);
+                    }}
+                  >
+                    <Icon name={canAddObject ? 'Pencil' : 'Lock'} size={15} className="mr-1.5" />
+                    Корректировать
+                  </Button>
+                </div>
               </div>
             </>
           )}
