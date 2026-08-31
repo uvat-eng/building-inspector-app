@@ -70,13 +70,15 @@ export const buildOrderHtml = (order: Order, contractor?: Contractor | null) => 
 };
 
 export const downloadOrder = (order: Order, contractor?: Contractor | null) => {
-  const blob = new Blob(['\ufeff', buildOrderHtml(order, contractor)], {
-    type: 'application/msword',
+  const blob = new Blob([`\ufeff${buildOrderHtml(order, contractor)}`], {
+    type: 'application/msword;charset=utf-8',
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Предписание ${order.number.replace('/', '-')}.doc`;
+  a.download = `Предписание ${order.number.replace(/[/\\:*?"<>|]/g, '-')}.doc`;
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 };

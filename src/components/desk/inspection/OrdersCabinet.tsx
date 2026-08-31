@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useOrders, useContractor, Order } from '@/data/orders';
 import { downloadOrder } from '@/lib/orderDoc';
+import { usePersistedState } from '@/hooks/usePersistedState';
+import OrderView from '@/components/desk/inspection/OrderView';
 
 interface OrdersCabinetProps {
   object: ProjectObject;
@@ -15,12 +17,21 @@ interface OrdersCabinetProps {
 const OrdersCabinet = ({ object, onBack }: OrdersCabinetProps) => {
   const { toast } = useToast();
   const { items, loading, update } = useOrders(object.id);
-  const { contractor } = useContractor(object.id);
+  const { general: contractor } = useContractor(object.id);
+  const [openId, setOpenId] = usePersistedState<string | null>(
+    `gsi-order-open-${object.id}`,
+    null,
+  );
+  const open = items.find((o) => o.id === openId) ?? null;
 
   const save = (o: Order) => {
     downloadOrder(o, contractor);
     toast({ title: `Предписание № ${o.number} сохранено`, description: 'Файл Word' });
   };
+
+  if (open) {
+    return <OrderView order={open} contractor={contractor} onBack={() => setOpenId(null)} />;
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
@@ -64,7 +75,7 @@ const OrdersCabinet = ({ object, onBack }: OrdersCabinetProps) => {
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-sm bg-secondary text-muted-foreground">
                   <Icon name={o.status === 'done' ? 'FileCheck' : 'FileWarning'} size={17} />
                 </span>
-                <button type="button" onClick={() => save(o)} className="min-w-0 flex-1 text-left">
+                <button type="button" onClick={() => setOpenId(o.id)} className="min-w-0 flex-1 text-left">
                   <span className="block truncate font-head text-[0.95em] uppercase tracking-[0.02em]">
                     Предписание № {o.number}
                   </span>

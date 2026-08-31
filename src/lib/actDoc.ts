@@ -74,12 +74,15 @@ export const buildActHtml = ({ inspection, defects, objectTitle, contractorName 
 };
 
 export const downloadAct = (data: ActData) => {
-  const html = buildActHtml(data);
-  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const blob = new Blob([`\ufeff${buildActHtml(data)}`], {
+    type: 'application/msword;charset=utf-8',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Акт осмотра ${data.inspection.number}.doc`;
+  a.download = `Акт осмотра ${data.inspection.number.replace(/[/\\:*?"<>|]/g, '-')}.doc`;
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 };
