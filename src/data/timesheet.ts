@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 export interface TimeEntry {
   objectId: string;
@@ -93,8 +93,41 @@ export const MONTHS = [
 
 export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
+const API = 'https://functions.poehali.dev/02136fbd-3016-43a0-8cb2-91ae5a7afa63';
+
+const writeLocal = (sheet: Timesheet) => {
+  localStorage.setItem(KEY, JSON.stringify(sheet));
+  window.dispatchEvent(new Event(EVENT));
+};
+
+const fetchSheet = async (userId: string): Promise<Timesheet> => {
+  const res = await fetch(`${API}?user_id=${encodeURIComponent(userId)}`);
+  if (!res.ok) throw new Error('load_failed');
+  const { sheet } = (await res.json()) as { sheet: Timesheet };
+  return sheet;
+};
+
+const pushDay = (userId: string, day: string, entries: TimeEntry[]) =>
+  fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, day, entries }),
+  });
+
 export const useTimesheet = () => {
   const [sheet, setSheet] = useState<Timesheet>(read);
+  const [loading, setLoading] = useState(false);
+  const userId = useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('gsi-users-changed', cb);
+      window.addEventListener('storage', cb);
+      return () => {
+        window.removeEventListener('gsi-users-changed', cb);
+        window.removeEventListener('storage', cb);
+      };
+    },
+    () => localStorage.getItem('gsi-session-v1'),
+  );
 
   useEffect(() => {
     const sync = () => setSheet(read());
@@ -106,15 +139,39 @@ export const useTimesheet = () => {
     };
   }, []);
 
-  const setDay = useCallback((key: string, list: TimeEntry[] | null) => {
-    const next = read();
-    if (list && list.length) next[key] = list;
-    else delete next[key];
-    localStorage.setItem(KEY, JSON.stringify(next));
-    window.dispatchEvent(new Event(EVENT));
-  }, []);
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    setLoading(true);
+    fetchSheet(userId)
+      .then(async (server) => {
+        if (!alive) return;
+        const local = read();
+        const merged: Timesheet = { ...local, ...server };
+        const pending = Object.entries(local).filter(([k]) => !server[k]);
+        writeLocal(merged);
+        setSheet(merged);
+        await Promise.all(pending.map(([k, v]) => pushDay(userId, k, v)));
+      })
+      .catch(() => undefined)
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
 
-  return { sheet, setDay };
+  const setDay = useCallback(
+    (key: string, list: TimeEntry[] | null) => {
+      const next = read();
+      if (list && list.length) next[key] = list;
+      else delete next[key];
+      writeLocal(next);
+      if (userId) pushDay(userId, key, list ?? []).catch(() => undefined);
+    },
+    [userId],
+  );
+
+  return { sheet, setDay, loading, synced: !!userId };
 };
 
 export const monthEntries = (sheet: Timesheet, y: number, m: number) =>

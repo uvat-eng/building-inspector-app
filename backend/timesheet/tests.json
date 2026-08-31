@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Табель без user_id",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400,
+      "expectedBody": { "error": "user_id_required" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сохранение дня без данных",
+      "method": "POST",
+      "path": "/",
+      "body": { "user_id": "", "day": "" },
+      "expectedStatus": 400,
+      "expectedBody": { "error": "user_id_and_day_required" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -36,7 +36,7 @@ const blank: TimeEntry = { objectId: '', objectTitle: '', from: '08:00', to: '20
 const Timesheet = () => {
   const { profile } = useProfile();
   const { list: objects } = useObjects();
-  const { sheet, setDay } = useTimesheet();
+  const { sheet, setDay, loading, synced } = useTimesheet();
   const { toast } = useToast();
 
   const [year, setYear] = useState(today.getFullYear());
@@ -108,7 +108,9 @@ const Timesheet = () => {
     <>
       <Panel
         title="Табель учёта рабочего времени"
-        note={`${entries.length} дн. · ${fmtHours(totalHours)} ч`}
+        note={`${entries.length} дн. · ${fmtHours(totalHours)} ч${
+          loading ? ' · загрузка' : synced ? ' · в облаке' : ''
+        }`}
         action={
           <span className="ml-3 flex items-center gap-1">
             <button
