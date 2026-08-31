@@ -24,6 +24,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { SectionId, MENU } from '@/data/mock';
+import { useProfile, ROLE_SECTIONS, ROLE_LABEL } from '@/data/profile';
+import { useUsers } from '@/data/users';
+import { useToast } from '@/hooks/use-toast';
 
 const Desk = () => {
   const [section, setSection] = useState<SectionId>('objects');
@@ -31,6 +34,9 @@ const Desk = () => {
   const [objectId, setObjectId] = useState<string | null>(null);
   const [objectEdit, setObjectEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const { profile } = useProfile();
+  const { current } = useUsers();
+  const { toast } = useToast();
 
   const [history, setHistory] = useState<SectionId[]>([]);
   const [leaveTo, setLeaveTo] = useState<SectionId | null>(null);
@@ -45,6 +51,14 @@ const Desk = () => {
   };
 
   const select = (id: SectionId) => {
+    if (current && !ROLE_SECTIONS[profile.role].includes(id)) {
+      toast({
+        title: 'Раздел недоступен',
+        description: `Для роли «${ROLE_LABEL[profile.role]}» этот раздел закрыт.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     if (section === 'cabinet' && id !== 'cabinet' && !leaveOk.current) {
       setLeaveTo(id);
       return;

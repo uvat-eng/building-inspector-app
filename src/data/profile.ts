@@ -51,6 +51,25 @@ export const ROLE_ICON: Record<Role, string> = {
 
 const CAN_EDIT: Role[] = ['pm'];
 
+export const ROLE_SECTIONS: Record<Role, string[]> = {
+  director: [
+    'objects',
+    'staff',
+    'sites',
+    'inspections',
+    'defects',
+    'photos',
+    'documents',
+    'reports',
+  ],
+  coordinator: ['objects', 'staff', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
+  pm: ['objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
+  manager: ['objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
+  engineer: ['objects', 'sites', 'defects', 'photos', 'documents', 'reports'],
+  inspector: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents'],
+  driver: ['objects', 'inspections'],
+};
+
 export const EDIT_HINT = 'Вносить и изменять месторождения, проекты и объекты может только менеджер проекта.';
 
 export const SPECIALTIES = [
