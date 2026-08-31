@@ -3,17 +3,24 @@ import Row from '@/components/desk/Row';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
+import Timesheet from '@/components/desk/Timesheet';
 import { useObjects } from '@/data/store';
-import { DEFECTS, PHOTOS, INSPECTIONS } from '@/data/mock';
+import { DEFECTS, PHOTOS } from '@/data/mock';
+import { useTimesheet, monthEntries } from '@/data/timesheet';
 
 const InspectorCabinet = () => {
   const { profile } = useProfile();
   const { list: objects } = useObjects();
+  const { sheet } = useTimesheet();
   const spec = profile.specialties ?? [];
+
+  const now = new Date();
+  const month = monthEntries(sheet, now.getFullYear(), now.getMonth());
+  const monthHours = month.reduce((s, [, e]) => s + e.hours, 0);
 
   const stats = [
     { icon: 'Building2', label: 'Объектов', value: objects.length },
-    { icon: 'CalendarClock', label: 'Выездов', value: INSPECTIONS.length },
+    { icon: 'Clock', label: 'Часов за месяц', value: monthHours },
     { icon: 'TriangleAlert', label: 'Замечаний', value: DEFECTS.length },
     { icon: 'Camera', label: 'Фотоотчётов', value: PHOTOS.length },
   ];
@@ -94,15 +101,7 @@ const InspectorCabinet = () => {
           )}
         </Panel>
 
-        <Panel title="Ближайшие выезды" note={`${INSPECTIONS.length}`}>
-          {INSPECTIONS.length === 0 ? (
-            <Empty icon="CalendarClock" title="Выездов не запланировано" hint="График появится здесь." />
-          ) : (
-            INSPECTIONS.slice(0, 8).map((i) => (
-              <Row key={i.id} title={i.title} sub={`${i.sub} · ${i.time}`} />
-            ))
-          )}
-        </Panel>
+        <Timesheet />
       </div>
     </div>
   );

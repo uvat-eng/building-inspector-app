@@ -177,3 +177,22 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #timesheet-print,
+  #timesheet-print * {
+    visibility: visible;
+  }
+  #timesheet-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: none !important;
+    overflow: visible !important;
+    color: #000;
+  }
+}
