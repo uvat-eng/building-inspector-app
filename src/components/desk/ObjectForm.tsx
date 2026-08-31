@@ -20,7 +20,7 @@ import RussiaMap from '@/components/desk/RussiaMap';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { CITIES, DISTRICTS } from '@/data/geo';
-import { ProjectObject, STATUS_LABEL } from '@/data/store';
+import { ProjectObject, STATUS_LABEL, KIND_LABEL } from '@/data/store';
 
 interface ObjectFormProps {
   open: boolean;
@@ -30,6 +30,14 @@ interface ObjectFormProps {
 
 const EMPTY = {
   title: '',
+  field: '',
+  kind: 'area' as ProjectObject['kind'],
+  capacity: '',
+  startYear: '',
+  endYear: '',
+  inspectors: '0',
+  vehicles: '0',
+  cabins: '0',
   customer: '',
   customerLogo: '',
   contractNo: '',
@@ -82,6 +90,14 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
 
     onSave({
       title: f.title.trim(),
+      field: f.field.trim(),
+      kind: f.kind,
+      capacity: f.capacity.trim(),
+      startYear: f.startYear.trim(),
+      endYear: f.endYear.trim(),
+      inspectors: n(f.inspectors),
+      vehicles: n(f.vehicles),
+      cabins: n(f.cabins),
       customer: f.customer.trim(),
       customerLogo: f.customerLogo.trim() || undefined,
       contractNo: f.contractNo.trim(),
@@ -172,7 +188,40 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            {field('field', 'Месторождение', {
+              placeholder: 'напр. Чаяндинское НГКМ',
+            })}
+          </div>
           <div className="sm:col-span-2">{field('title', 'Название объекта')}</div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+              Тип объекта
+            </Label>
+            <Select value={f.kind} onValueChange={(v) => set('kind', v)}>
+              <SelectTrigger className="rounded-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(KIND_LABEL).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {field(
+            'capacity',
+            f.kind === 'line' ? 'Протяжённость' : 'Мощность / производительность',
+            { placeholder: f.kind === 'line' ? 'напр. 128,4 км' : 'напр. 4,5 млн т/год' },
+          )}
+          {field('startYear', 'Год начала строительства', { inputMode: 'numeric', placeholder: '2025' })}
+          {field('endYear', 'Плановый год завершения', { inputMode: 'numeric', placeholder: '2027' })}
+          {field('inspectors', 'Численность инспекторов', { inputMode: 'numeric' })}
+          {field('vehicles', 'Численность техники', { inputMode: 'numeric' })}
+          {field('cabins', 'Численность вагонов', { inputMode: 'numeric' })}
           {field('customer', 'Заказчик')}
           {field('customerLogo', 'Ссылка на эмблему заказчика', { placeholder: 'https://…' })}
           <div className="sm:col-span-2">

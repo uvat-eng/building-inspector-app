@@ -12,26 +12,26 @@ interface SideMenuProps {
 const SideMenu = ({ active, onSelect, className }: SideMenuProps) => (
   <nav
     className={cn(
-      'flex min-h-0 flex-col rounded-sm bg-deep py-[18px] pb-3.5',
+      'flex min-h-0 flex-col rounded-sm border border-foreground/85 bg-card pt-[18px]',
       className,
     )}
   >
-    <div className="px-[18px] pb-3.5 text-[0.72em] uppercase tracking-[0.18em] text-deep-dim">
+    <div className="border-b-2 border-foreground/85 px-[18px] pb-3 text-[0.72em] uppercase tracking-[0.18em] text-muted-foreground">
       Разделы
     </div>
     <ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
       {MENU.map((item) => {
         const on = item.id === active;
         return (
-          <li key={item.id}>
+          <li key={item.id} className="border-b border-foreground/85 last:border-b-0">
             <button
               type="button"
               onClick={() => onSelect(item.id)}
               className={cn(
-                'flex w-full items-center gap-2.5 border-l-[3px] border-transparent px-[18px] py-[11px] text-left text-[0.95em] text-deep-foreground transition-colors',
+                'group flex w-full items-center gap-2.5 border-l-[3px] px-[18px] py-[12px] text-left text-[0.95em] transition-colors duration-200',
                 on
-                  ? 'border-l-accent bg-deep-2 font-bold'
-                  : 'hover:bg-deep-2/60',
+                  ? 'border-l-accent bg-foreground font-bold text-background'
+                  : 'border-l-transparent text-foreground hover:bg-foreground hover:text-background',
               )}
             >
               <Icon name={item.icon} size={16} className="flex-none text-accent" />

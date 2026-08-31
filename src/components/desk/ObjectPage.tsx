@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useObjects, money, ProjectObject, STATUS_LABEL } from '@/data/store';
+import { useObjects, money, ProjectObject, STATUS_LABEL, KIND_LABEL } from '@/data/store';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { CITIES } from '@/data/geo';
 import type { TagTone } from '@/data/mock';
@@ -204,7 +204,41 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
         <div className="grid gap-3.5 lg:grid-cols-[1.15fr_1fr]">
           <Panel title="Паспорт объекта" note={edit ? 'режим правки' : 'просмотр'}>
             <div className="grid gap-3 p-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">{text('field', 'Месторождение')}</div>
               <div className="sm:col-span-2">{text('title', 'Название объекта')}</div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+                  Тип объекта
+                </Label>
+                {edit ? (
+                  <Select
+                    value={draft.kind}
+                    onValueChange={(v) => setDraft({ ...draft, kind: v as ProjectObject['kind'] })}
+                  >
+                    <SelectTrigger className="rounded-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(KIND_LABEL).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="px-1 py-2 text-[0.95em]">
+                    {KIND_LABEL[object.kind ?? 'area']}
+                  </div>
+                )}
+              </div>
+              {text(
+                'capacity',
+                object.kind === 'line' ? 'Протяжённость' : 'Мощность / производительность',
+              )}
+              {text('startYear', 'Год начала строительства', { inputMode: 'numeric' })}
+              {text('endYear', 'Плановый год завершения', { inputMode: 'numeric' })}
               {text('customer', 'Заказчик')}
               {text('customerLogo', 'Эмблема заказчика (ссылка)')}
               <div className="sm:col-span-2">{text('regionName', 'Адрес / привязка на местности')}</div>
@@ -313,6 +347,8 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
             <div className="grid gap-3 p-4 sm:grid-cols-2">
               {text('staffPlan', 'Персонал, план', { inputMode: 'numeric' }, true)}
               {text('staffFact', 'Персонал, факт', { inputMode: 'numeric' }, true)}
+              {text('inspectors', 'Инспекторов на объекте', { inputMode: 'numeric' }, true)}
+              {text('cabins', 'Вагонов (жильё)', { inputMode: 'numeric' }, true)}
             </div>
             <div className="border-t border-border p-4 text-[0.88em] text-muted-foreground">
               {object.staffFact < object.staffPlan
@@ -325,6 +361,7 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
             <div className="grid gap-3 p-4 sm:grid-cols-2">
               {text('techPlan', 'Техника, план', { inputMode: 'numeric' }, true)}
               {text('techFact', 'Техника, факт', { inputMode: 'numeric' }, true)}
+              {text('vehicles', 'Единиц техники в работе', { inputMode: 'numeric' }, true)}
             </div>
             <div className="border-t border-border p-4 text-[0.88em] text-muted-foreground">
               {object.techFact < object.techPlan

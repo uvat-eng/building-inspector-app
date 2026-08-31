@@ -52,7 +52,11 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-0.5">
-      <Panel title="Карта объектов России" note="упор на Якутию" className="flex-none">
+      <div className="flex-none rounded-sm border border-border border-l-2 border-l-accent bg-card px-4 py-3 font-head text-[0.95em] uppercase leading-snug tracking-[0.04em]">
+        Хорошая работа — хорошая зарплата. Плохая работа — <span className="text-accent">нет зарплаты, совсем</span>.
+      </div>
+
+      <Panel title="Карта объектов России" className="flex-none">
         <RussiaMap objects={list} onPick={(o) => setOpen(o)} />
       </Panel>
 
@@ -62,7 +66,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
 
       <Panel
         title="Объекты строительства"
-        note={`${list.length}`}
+        note={`${list.length} · сгруппированы в разделе «Объекты»`}
         className="flex-none"
         action={
           <Button

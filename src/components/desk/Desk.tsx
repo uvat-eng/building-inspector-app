@@ -78,7 +78,7 @@ const Desk = () => {
       </main>
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-        <SheetContent side="left" className="w-[260px] border-0 bg-deep p-0">
+        <SheetContent side="left" className="w-[260px] border-0 bg-card p-0">
           <SheetTitle className="sr-only">Разделы</SheetTitle>
           <SideMenu active={section} onSelect={select} className="h-full rounded-none" />
         </SheetContent>

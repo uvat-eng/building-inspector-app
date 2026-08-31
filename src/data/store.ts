@@ -3,6 +3,14 @@ import { useCallback, useEffect, useState } from 'react';
 export interface ProjectObject {
   id: string;
   title: string;
+  field: string;
+  kind: 'area' | 'line';
+  capacity: string;
+  startYear: string;
+  endYear: string;
+  inspectors: number;
+  vehicles: number;
+  cabins: number;
   customer: string;
   customerLogo?: string;
   contractNo: string;
@@ -24,6 +32,22 @@ export interface ProjectObject {
   orders: number;
   ordersOpen: number;
 }
+
+export const KIND_LABEL: Record<ProjectObject['kind'], string> = {
+  area: 'Площадной объект',
+  line: 'Линейный объект',
+};
+
+export const NO_FIELD = 'Без месторождения';
+
+export const groupByField = (list: ProjectObject[]) => {
+  const map = new Map<string, ProjectObject[]>();
+  list.forEach((o) => {
+    const key = o.field?.trim() || NO_FIELD;
+    map.set(key, [...(map.get(key) ?? []), o]);
+  });
+  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+};
 
 export const STATUS_LABEL: Record<ProjectObject['status'], string> = {
   work: 'В работе',

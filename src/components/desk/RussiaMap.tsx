@@ -1,14 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import {
-  DISTRICTS,
-  CITIES,
-  YAKUTIA_PATH,
-  RUSSIA_PATH,
-  MAP_W,
-  MAP_H,
-  project,
-  unproject,
-} from '@/data/geo';
+import { DISTRICTS, CITIES, RUSSIA_PATH, MAP_W, MAP_H, project, unproject } from '@/data/geo';
 import { ProjectObject, STATUS_LABEL } from '@/data/store';
 import { cn } from '@/lib/utils';
 import Icon from '@/components/ui/icon';
@@ -42,6 +33,7 @@ const RussiaMap = ({
   height = 'max-h-[46vh]',
 }: RussiaMapProps) => {
   const [district, setDistrict] = useState<string | null>(focusDistrict);
+  const [full, setFull] = useState(false);
   const [hover, setHover] = useState<ProjectObject | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -72,6 +64,11 @@ const RussiaMap = ({
     [district],
   );
 
+  const select = (id: string | null) => {
+    setDistrict(id);
+    if (!pickMode) setFull(!!id);
+  };
+
   const tap = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
     if (!pickMode || !onPoint || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -82,12 +79,12 @@ const RussiaMap = ({
     onPoint(lon, lat);
   };
 
-  return (
-    <div className="flex min-h-0 flex-col">
-      <div className="flex flex-wrap gap-1.5 border-b border-border px-4 py-3">
+  const body = (
+    <div className={cn('flex min-h-0 flex-col', full && 'h-full')}>
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-border bg-card px-4 py-3">
         <button
           type="button"
-          onClick={() => setDistrict(null)}
+          onClick={() => select(null)}
           className={cn(
             'rounded-sm px-2.5 py-1 text-[0.8em] uppercase tracking-[0.06em] transition-colors',
             district === null
@@ -101,37 +98,56 @@ const RussiaMap = ({
           <button
             key={d.id}
             type="button"
-            onClick={() => setDistrict(d.id === district ? null : d.id)}
+            onClick={() => select(d.id === district ? null : d.id)}
             className={cn(
               'rounded-sm px-2.5 py-1 text-[0.8em] uppercase tracking-[0.06em] transition-colors',
               district === d.id
                 ? 'bg-accent text-accent-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-border',
+                : d.accent
+                  ? 'bg-accent/15 text-accent hover:bg-accent/25'
+                  : 'bg-secondary text-secondary-foreground hover:bg-border',
             )}
           >
             {d.short}
           </button>
         ))}
+        {full && (
+          <button
+            type="button"
+            onClick={() => {
+              setFull(false);
+              setDistrict(null);
+            }}
+            className="ml-auto flex items-center gap-1.5 rounded-sm bg-foreground px-3 py-1 text-[0.8em] uppercase tracking-[0.06em] text-background"
+          >
+            <Icon name="X" size={14} />
+            Закрыть
+          </button>
+        )}
       </div>
 
-      <div className="relative bg-[#f2f2f2]">
+      <div className={cn('relative bg-[#cfe0ea]', full && 'min-h-0 flex-1')}>
         <svg
           ref={svgRef}
           viewBox={view.join(' ')}
           preserveAspectRatio="xMidYMid meet"
           onClick={tap}
           onTouchEnd={tap}
-          className={cn('block h-auto w-full', height, pickMode && 'cursor-crosshair touch-none')}
+          className={cn(
+            'block w-full',
+            full ? 'h-full' : cn('h-auto', height),
+            pickMode && 'cursor-crosshair touch-none',
+          )}
           role="img"
           aria-label="Карта объектов по России"
         >
           <defs>
             <linearGradient id="land" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="100%" stopColor="#e6e6e6" />
+              <stop offset="0%" stopColor="#dcecc8" />
+              <stop offset="100%" stopColor="#bed9a6" />
             </linearGradient>
             <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
-              <path d="M24 0 H0 V24" fill="none" stroke="#9a9a9a" strokeWidth="0.3" opacity="0.35" />
+              <path d="M24 0 H0 V24" fill="none" stroke="#7fa06a" strokeWidth="0.3" opacity="0.35" />
             </pattern>
             <clipPath id="land-clip">
               <path d={RUSSIA_PATH} fillRule="evenodd" />
@@ -150,15 +166,19 @@ const RussiaMap = ({
                 key={d.id}
                 d={d.d}
                 fillRule="evenodd"
-                onClick={() => !pickMode && setDistrict(on ? null : d.id)}
+                onClick={() => !pickMode && select(on ? null : d.id)}
                 className={cn(
                   'transition-colors duration-300',
                   pickMode ? 'pointer-events-none' : 'cursor-pointer',
-                  on ? 'fill-accent/10' : 'fill-transparent hover:fill-black/[0.07]',
+                  on
+                    ? 'fill-accent/25'
+                    : d.accent
+                      ? 'fill-accent/10 hover:fill-accent/20'
+                      : 'fill-transparent hover:fill-[#8bb473]/30',
                 )}
-                stroke={on ? 'hsl(var(--accent))' : '#1a1a1a'}
-                strokeOpacity={on ? 1 : 0.75}
-                strokeWidth={(on ? 1.6 : 1) * k}
+                stroke={on || d.accent ? 'hsl(var(--accent))' : '#3f6b3a'}
+                strokeOpacity={on || d.accent ? 1 : 0.75}
+                strokeWidth={(on || d.accent ? 1.6 : 1) * k}
                 strokeDasharray={`${7 * k} ${3 * k} ${2 * k} ${3 * k}`}
                 strokeLinejoin="round"
               />
@@ -166,59 +186,33 @@ const RussiaMap = ({
           })}
 
           <path
-            d={YAKUTIA_PATH}
-            fillRule="evenodd"
-            className={cn(
-              'pointer-events-none transition-opacity duration-300',
-              district && district !== 'fe' ? 'opacity-25' : 'opacity-100',
-            )}
-            fill="hsl(var(--accent) / 0.12)"
-            stroke="hsl(var(--accent))"
-            strokeWidth={1.4 * k}
-            strokeDasharray={`${7 * k} ${3 * k} ${2 * k} ${3 * k}`}
-            strokeLinejoin="round"
-          />
-
-          <path
             d={RUSSIA_PATH}
             fillRule="evenodd"
             className="pointer-events-none fill-none"
-            stroke="#111111"
+            stroke="#35502f"
             strokeWidth={1.4 * k}
             strokeLinejoin="round"
           />
 
-          {!district && (
-            <>
-              {(() => {
-                const [x, y] = project(125, 66.5);
-                return (
-                  <text
-                    x={x}
-                    y={y}
-                    textAnchor="middle"
-                    className="pointer-events-none fill-accent text-[13px] uppercase tracking-[0.2em]"
-                  >
-                    Якутия
-                  </text>
-                );
-              })()}
-              {DISTRICTS.map((d) => {
-                const [x, y] = project(d.label[0], d.label[1]);
-                return (
-                  <text
-                    key={d.id}
-                    x={x}
-                    y={y}
-                    textAnchor="middle"
-                    className="pointer-events-none fill-black/55 text-[11px] uppercase tracking-[0.14em]"
-                  >
-                    {d.short}
-                  </text>
-                );
-              })}
-            </>
-          )}
+          {!district &&
+            DISTRICTS.map((d) => {
+              const [x, y] = project(d.label[0], d.label[1]);
+              return (
+                <text
+                  key={d.id}
+                  x={x}
+                  y={y}
+                  textAnchor="middle"
+                  style={{ fontSize: `${11 * k}px` }}
+                  className={cn(
+                    'pointer-events-none uppercase tracking-[0.14em]',
+                    d.accent ? 'fill-accent' : 'fill-[#3f6b3a]/80',
+                  )}
+                >
+                  {d.short}
+                </text>
+              );
+            })}
 
           <g className="pointer-events-none">
             {cities.map((c) => {
@@ -230,15 +224,15 @@ const RussiaMap = ({
                     cx={x}
                     cy={y}
                     r={(big ? 2.6 : 1.7) * k}
-                    fill="#1a1a1a"
+                    fill="#2f4a2a"
                     fillOpacity={big ? 0.95 : 0.65}
                   />
                   <text
                     x={x + 4 * k}
                     y={y + 3.2 * k}
                     style={{ fontSize: `${(big ? 11 : 9) * k}px` }}
-                    fill="#111111"
-                    fillOpacity={big ? 0.95 : 0.7}
+                    fill="#22381f"
+                    fillOpacity={big ? 0.95 : 0.75}
                   >
                     {c.n}
                   </text>
@@ -267,12 +261,12 @@ const RussiaMap = ({
                 />
                 <circle cy={-11} r={2.4} fill="#fff" />
                 <text
-                  y={13}
+                  y={14}
                   textAnchor="middle"
-                  style={{ fontSize: '10px' }}
-                  fill="#111111"
+                  style={{ fontSize: '11px' }}
+                  fill="#111"
                   stroke="#fff"
-                  strokeWidth={2.4}
+                  strokeWidth={2.6}
                   paintOrder="stroke"
                 >
                   {o.title}
@@ -283,7 +277,7 @@ const RussiaMap = ({
 
           {marker && (
             <g transform={`translate(${project(marker.lon, marker.lat).join(' ')}) scale(${k})`}>
-              <circle r={18} className="fill-accent/25 animate-pulse" />
+              <circle r={18} className="animate-pulse fill-accent/25" />
               <path
                 d="M0 3 L-7 -9 A7.7 7.7 0 1 1 7 -9 Z"
                 className="fill-accent stroke-white"
@@ -296,7 +290,7 @@ const RussiaMap = ({
 
         {pickMode && (
           <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
-            <span className="rounded-sm bg-deep/90 px-4 py-2 text-[0.8em] uppercase tracking-[0.08em] text-deep-foreground">
+            <span className="rounded-sm bg-foreground/90 px-4 py-2 text-[0.8em] uppercase tracking-[0.08em] text-background">
               <Icon name="Hand" size={14} className="mr-1.5 inline text-accent" />
               Коснитесь карты, чтобы поставить объект
             </span>
@@ -304,16 +298,9 @@ const RussiaMap = ({
         )}
 
         {active && !pickMode && (
-          <div className="absolute right-3 top-3 flex items-center gap-2 rounded-sm border border-black/20 bg-white/90 px-3 py-2 text-[0.8em] uppercase tracking-[0.08em] text-foreground">
+          <div className="absolute right-3 top-3 flex items-center gap-2 rounded-sm border border-black/10 bg-white/90 px-3 py-2 text-[0.8em] uppercase tracking-[0.08em]">
             <Icon name="ZoomIn" size={14} className="text-accent" />
-            {active.name} · {cities.length} городов
-            <button
-              type="button"
-              onClick={() => setDistrict(null)}
-              className="ml-1 rounded-sm bg-accent px-2 py-0.5 text-accent-foreground"
-            >
-              Сброс
-            </button>
+            {active.name} · {cities.length} городов · объектов {shown.length}
           </div>
         )}
 
@@ -346,14 +333,14 @@ const RussiaMap = ({
 
         {shown.length === 0 && !pickMode && (
           <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-            <span className="rounded-sm bg-white/90 px-4 py-2 text-[0.85em] uppercase tracking-[0.1em] text-foreground">
+            <span className="rounded-sm bg-white/90 px-4 py-2 text-[0.85em] uppercase tracking-[0.1em]">
               Объектов в этой зоне нет
             </span>
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-4 border-t border-border px-4 py-2.5 text-[0.78em] uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="flex flex-wrap gap-4 border-t border-border bg-card px-4 py-2.5 text-[0.78em] uppercase tracking-[0.08em] text-muted-foreground">
         {(
           [
             ['work', 'bg-accent'],
@@ -371,6 +358,23 @@ const RussiaMap = ({
       </div>
     </div>
   );
+
+  if (full) {
+    return (
+      <>
+        <div className="flex h-[46vh] items-center justify-center bg-secondary/40 text-[0.85em] uppercase tracking-[0.1em] text-muted-foreground">
+          Карта открыта на весь экран
+        </div>
+        <div className="fixed inset-0 z-50 flex flex-col bg-background p-3 sm:p-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border border-border">
+            {body}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return body;
 };
 
 export default RussiaMap;

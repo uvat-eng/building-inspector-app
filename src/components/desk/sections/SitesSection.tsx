@@ -1,37 +1,52 @@
 import { useState } from 'react';
 import Panel from '@/components/desk/Panel';
-import Row from '@/components/desk/Row';
-import Tag from '@/components/desk/Tag';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import ObjectForm from '@/components/desk/ObjectForm';
 import ObjectPage from '@/components/desk/ObjectPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useObjects, money, ProjectObject, STATUS_LABEL } from '@/data/store';
+import { useObjects, ProjectObject, groupByField, NO_FIELD } from '@/data/store';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { useToast } from '@/hooks/use-toast';
-import type { TagTone } from '@/data/mock';
-
-const TONE: Record<ProjectObject['status'], TagTone> = {
-  work: 'hot',
-  plan: 'wait',
-  done: 'ok',
-  risk: 'hot',
-};
-
-const FILTERS = [
-  { id: 'all', label: 'Все' },
-  { id: 'work', label: 'В работе' },
-  { id: 'plan', label: 'Подготовка' },
-  { id: 'risk', label: 'Риск срыва' },
-  { id: 'done', label: 'Завершённые' },
-] as const;
+import { cn } from '@/lib/utils';
 
 interface SitesSectionProps {
   openId?: string | null;
   onOpen?: (id: string | null) => void;
 }
+
+const COLS = [
+  { key: 'capacity', label: 'Мощность / протяжённость', w: 'w-[190px]' },
+  { key: 'startYear', label: 'Год начала', w: 'w-[92px]' },
+  { key: 'inspectors', label: 'Инспекторы', w: 'w-[100px]' },
+  { key: 'vehicles', label: 'Техника', w: 'w-[86px]' },
+  { key: 'cabins', label: 'Вагоны', w: 'w-[80px]' },
+  { key: 'orders', label: 'Выдано предп.', w: 'w-[118px]' },
+  { key: 'closed', label: 'Устранено', w: 'w-[96px]' },
+  { key: 'endYear', label: 'План завершения', w: 'w-[130px]' },
+] as const;
+
+const cell = (o: ProjectObject, key: (typeof COLS)[number]['key']) => {
+  switch (key) {
+    case 'capacity':
+      return o.capacity || '—';
+    case 'startYear':
+      return o.startYear || '—';
+    case 'inspectors':
+      return o.inspectors ?? 0;
+    case 'vehicles':
+      return o.vehicles ?? 0;
+    case 'cabins':
+      return o.cabins ?? 0;
+    case 'orders':
+      return o.orders ?? 0;
+    case 'closed':
+      return Math.max(0, (o.orders ?? 0) - (o.ordersOpen ?? 0));
+    case 'endYear':
+      return o.endYear || '—';
+  }
+};
 
 const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
   const { list, add } = useObjects();
@@ -39,7 +54,6 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
   const { toast } = useToast();
   const [inner, setInner] = useState<string | null>(null);
   const [form, setForm] = useState(false);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
   const [query, setQuery] = useState('');
 
   const current = openId ?? inner;
@@ -52,15 +66,14 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
     return <ObjectPage id={current} onBack={() => setCurrent(null)} />;
   }
 
-  const shown = list
-    .filter((o) => (filter === 'all' ? true : o.status === filter))
-    .filter((o) =>
-      query.trim()
-        ? `${o.title} ${o.customer} ${o.regionName} ${o.contractNo}`
-            .toLowerCase()
-            .includes(query.trim().toLowerCase())
-        : true,
-    );
+  const shown = list.filter((o) =>
+    query.trim()
+      ? `${o.title} ${o.field} ${o.customer} ${o.regionName}`
+          .toLowerCase()
+          .includes(query.trim().toLowerCase())
+      : true,
+  );
+  const groups = groupByField(shown);
 
   const tryAdd = () => {
     if (!canAddObject) {
@@ -77,44 +90,31 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-0.5">
       <Panel
-        title="Объекты строительства"
-        note={`${shown.length} из ${list.length}`}
+        title="Объекты по месторождениям"
+        note={`${shown.length} объектов · ${groups.length} месторождений`}
         className="min-h-0 flex-1"
         action={
           <Button
             size="sm"
             onClick={tryAdd}
-            className={`ml-3 h-8 gap-1.5 rounded-sm px-3 font-head text-[0.85em] uppercase tracking-[0.06em] ${
+            className={cn(
+              'ml-3 h-8 gap-1.5 rounded-sm px-3 font-head text-[0.85em] uppercase tracking-[0.06em]',
               canAddObject
                 ? 'bg-accent text-accent-foreground hover:bg-accent/90'
-                : 'bg-secondary text-muted-foreground hover:bg-secondary'
-            }`}
+                : 'bg-secondary text-muted-foreground hover:bg-secondary',
+            )}
           >
             <Icon name={canAddObject ? 'Plus' : 'Lock'} size={14} />
             Добавить объект
           </Button>
         }
       >
-        <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className={`rounded-sm px-2.5 py-1 text-[0.8em] uppercase tracking-[0.06em] transition-colors ${
-                filter === f.id
-                  ? 'bg-accent text-accent-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-border'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="border-b border-border p-3">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск по названию, заказчику, договору"
-            className="ml-auto h-8 w-full rounded-sm sm:w-72"
+            placeholder="Поиск по месторождению, объекту, заказчику"
+            className="h-9 w-full rounded-sm sm:w-96"
           />
         </div>
 
@@ -125,21 +125,89 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
             hint={
               list.length === 0
                 ? canAddObject
-                  ? 'Нажмите «Добавить объект»: заказчик, договор, точка на карте, ресурсы.'
+                  ? 'Добавьте объект и укажите месторождение — он встанет в свою группу.'
                   : 'Объекты добавляет заместитель директора заказчика.'
-                : 'Измените фильтр или поисковый запрос.'
+                : 'Измените поисковый запрос.'
             }
           />
         ) : (
-          shown.map((o) => (
-            <Row
-              key={o.id}
-              title={o.title}
-              sub={`${o.regionName} · ${o.customer} · ${o.stage} · ${money(o.contractSum)} · готовность ${o.progress}%`}
-              onClick={() => setCurrent(o.id)}
-              right={<Tag tone={TONE[o.status]}>{STATUS_LABEL[o.status]}</Tag>}
-            />
-          ))
+          <div className="min-w-full overflow-x-auto">
+            <div className="min-w-[1080px]">
+              <div className="flex items-end gap-3 border-b-2 border-foreground/85 bg-secondary/40 px-4 py-2 text-[0.7em] uppercase leading-tight tracking-[0.08em] text-muted-foreground">
+                <span className="min-w-0 flex-1">Объект контроля</span>
+                {COLS.map((c) => (
+                  <span key={c.key} className={cn('flex-none text-right', c.w)}>
+                    {c.label}
+                  </span>
+                ))}
+              </div>
+
+              {groups.map(([fieldName, items]) => {
+                const sum = (fn: (o: ProjectObject) => number) =>
+                  items.reduce((s, o) => s + (fn(o) || 0), 0);
+                return (
+                  <div key={fieldName}>
+                    <div className="flex items-end gap-3 border-b border-foreground/85 bg-foreground px-4 py-2.5 text-background">
+                      <span className="min-w-0 flex-1 truncate font-head text-[1.25em] uppercase tracking-[0.03em]">
+                        <Icon name="Mountain" size={16} className="mr-2 inline text-accent" />
+                        {fieldName === NO_FIELD ? fieldName : `Месторождение ${fieldName}`}
+                        <span className="ml-2 text-[0.6em] tracking-[0.1em] opacity-70">
+                          {items.length} об.
+                        </span>
+                      </span>
+                      {COLS.map((c) => (
+                        <span
+                          key={c.key}
+                          className={cn('flex-none text-right text-[0.85em] opacity-80', c.w)}
+                        >
+                          {c.key === 'inspectors'
+                            ? sum((o) => o.inspectors)
+                            : c.key === 'vehicles'
+                              ? sum((o) => o.vehicles)
+                              : c.key === 'cabins'
+                                ? sum((o) => o.cabins)
+                                : c.key === 'orders'
+                                  ? sum((o) => o.orders)
+                                  : c.key === 'closed'
+                                    ? sum((o) => o.orders - o.ordersOpen)
+                                    : ''}
+                        </span>
+                      ))}
+                    </div>
+
+                    {items.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => setCurrent(o.id)}
+                        className="flex w-full items-center gap-3 border-b border-border px-4 py-2.5 text-left transition-colors hover:bg-secondary/70"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[0.95em]">{o.title}</span>
+                          <span className="block truncate text-[0.78em] text-muted-foreground">
+                            {o.kind === 'line' ? 'Линейный' : 'Площадной'} · {o.regionName} ·{' '}
+                            {o.customer}
+                          </span>
+                        </span>
+                        {COLS.map((c) => (
+                          <span
+                            key={c.key}
+                            className={cn(
+                              'flex-none text-right text-[0.85em]',
+                              c.w,
+                              c.key === 'closed' && 'text-success',
+                            )}
+                          >
+                            {cell(o, c.key)}
+                          </span>
+                        ))}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </Panel>
 

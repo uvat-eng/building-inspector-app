@@ -34,9 +34,9 @@ const ProfileCard = () => {
       <button
         type="button"
         onClick={start}
-        className="mt-auto w-full border-t border-white/10 px-[18px] pt-3.5 text-left text-[0.8em] leading-[1.5] text-deep-dim transition-colors hover:bg-deep-2/60"
+        className="group mt-auto w-full border-t-2 border-foreground/85 px-[18px] py-3.5 text-left text-[0.8em] leading-[1.5] text-muted-foreground transition-colors hover:bg-foreground hover:text-background/80"
       >
-        <b className="flex items-center gap-1.5 text-[1.1em] font-bold text-deep-foreground">
+        <b className="flex items-center gap-1.5 text-[1.1em] font-bold text-foreground group-hover:text-background">
           {profile.fio ? shortFio(profile.fio) : 'Профиль не заполнен'}
           <Icon name="Pencil" size={12} className="text-accent" />
         </b>
