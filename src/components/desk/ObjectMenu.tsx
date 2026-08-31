@@ -5,6 +5,7 @@ import { ProjectObject, STATUS_LABEL } from '@/data/store';
 
 export type ObjectMenuId =
   | 'docs'
+  | 'contract'
   | 'inspections'
   | 'defects'
   | 'photos'
@@ -27,6 +28,13 @@ const ITEMS: MenuItem[] = [
     icon: 'FolderOpen',
     label: 'Проектная документация',
     note: 'Проект, рабочая документация, генплан',
+    ready: true,
+  },
+  {
+    id: 'contract',
+    icon: 'FileBadge',
+    label: 'Договор строительства',
+    note: 'Договор объекта в формате PDF',
     ready: true,
   },
   {

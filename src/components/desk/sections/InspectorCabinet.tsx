@@ -46,8 +46,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const [openObject, setOpenObject] = useState<string | null>(
     () => localStorage.getItem(OBJ_KEY),
   );
-  const [objectView, setObjectView] = useState<'menu' | 'docs'>(
-    () => (localStorage.getItem(OBJ_VIEW_KEY) as 'menu' | 'docs') || 'menu',
+  const [objectView, setObjectView] = useState<'menu' | 'docs' | 'contract'>(
+    () => (localStorage.getItem(OBJ_VIEW_KEY) as 'menu' | 'docs' | 'contract') || 'menu',
   );
 
   useEffect(() => {
@@ -105,13 +105,23 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const active = objects.find((o) => o.id === openObject);
 
   if (active) {
-    return objectView === 'docs' ? (
-      <DocsCabinet object={active} onBack={() => setObjectView('menu')} />
-    ) : (
+    if (objectView === 'docs' || objectView === 'contract') {
+      return (
+        <DocsCabinet
+          object={active}
+          onBack={() => setObjectView('menu')}
+          only={objectView === 'contract' ? 'contract' : undefined}
+        />
+      );
+    }
+    return (
       <ObjectMenu
         object={active}
         onBack={() => setOpenObject(null)}
-        onOpen={(id) => id === 'docs' && setObjectView('docs')}
+        onOpen={(id) => {
+          if (id === 'docs') setObjectView('docs');
+          if (id === 'contract') setObjectView('contract');
+        }}
       />
     );
   }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type DocSection = 'project' | 'working' | 'masterplan';
+export type DocSection = 'project' | 'working' | 'masterplan' | 'contract';
 
 export interface ProjectDoc {
   id: string;
@@ -20,12 +20,14 @@ export const SECTION_LABEL: Record<DocSection, string> = {
   project: 'Проектная документация',
   working: 'Рабочая документация',
   masterplan: 'Генплан объекта',
+  contract: 'Договор строительства',
 };
 
 export const SECTION_ICON: Record<DocSection, string> = {
   project: 'FileText',
   working: 'FileCog',
   masterplan: 'Map',
+  contract: 'FileBadge',
 };
 
 const API = 'https://functions.poehali.dev/aa8211f2-9533-4dd9-8004-3aa1a408b61a';

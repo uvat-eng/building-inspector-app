@@ -36,17 +36,18 @@ import {
 interface DocsCabinetProps {
   object: ProjectObject;
   onBack: () => void;
+  only?: DocSection;
 }
 
 const SECTIONS: DocSection[] = ['project', 'working', 'masterplan'];
 
-const DocsCabinet = ({ object, onBack }: DocsCabinetProps) => {
+const DocsCabinet = ({ object, onBack, only }: DocsCabinetProps) => {
   const { profile } = useProfile();
   const { toast } = useToast();
   const { items, loading, uploading, upload, remove } = useDocuments(object.id);
   const { ids: offlineIds, bytes: offlineBytes } = useOffline();
 
-  const [section, setSection] = useState<DocSection | null>(null);
+  const [section, setSection] = useState<DocSection | null>(only ?? null);
   const [uploadFor, setUploadFor] = useState<DocSection | null>(null);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
@@ -56,7 +57,12 @@ const DocsCabinet = ({ object, onBack }: DocsCabinetProps) => {
   const canUpload = ['pm', 'coordinator', 'director'].includes(profile.role);
 
   const bySection = useMemo(() => {
-    const map: Record<DocSection, ProjectDoc[]> = { project: [], working: [], masterplan: [] };
+    const map: Record<DocSection, ProjectDoc[]> = {
+      project: [],
+      working: [],
+      masterplan: [],
+      contract: [],
+    };
     items.forEach((d) => map[d.section]?.push(d));
     return map;
   }, [items]);
@@ -65,6 +71,10 @@ const DocsCabinet = ({ object, onBack }: DocsCabinetProps) => {
     const file = fileRef.current?.files?.[0];
     if (!file || !uploadFor) {
       toast({ title: 'Выберите файл', variant: 'destructive' });
+      return;
+    }
+    if (uploadFor === 'contract' && !/\.pdf$/i.test(file.name)) {
+      toast({ title: 'Договор загружается только в PDF', variant: 'destructive' });
       return;
     }
     if (file.size > 25 * 1024 * 1024) {
@@ -190,11 +200,11 @@ const DocsCabinet = ({ object, onBack }: DocsCabinetProps) => {
       <div className="flex flex-none flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => (section ? setSection(null) : onBack())}
+          onClick={() => (section && !only ? setSection(null) : onBack())}
           className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
         >
           <Icon name="ArrowLeft" size={14} className="text-accent" />
-          {section ? 'К разделам' : 'К меню объекта'}
+          {section && !only ? 'К разделам' : 'К меню объекта'}
         </button>
         {offlineBytes > 0 && (
           <button
@@ -211,7 +221,7 @@ const DocsCabinet = ({ object, onBack }: DocsCabinetProps) => {
       <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4">
           <p className="text-[0.72em] uppercase tracking-[0.14em] text-muted-foreground">
-            Проектный кабинет
+            {only ? SECTION_LABEL[only] : 'Проектный кабинет'}
           </p>
           <h1 className="mt-1 font-head text-[17px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[23px]">
             {object.title}
@@ -306,9 +316,14 @@ const DocsCabinet = ({ object, onBack }: DocsCabinetProps) => {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
-                Файл (до 25 МБ)
+                {uploadFor === 'contract' ? 'Файл PDF (до 25 МБ)' : 'Файл (до 25 МБ)'}
               </Label>
-              <Input ref={fileRef} type="file" className="h-9 rounded-sm" />
+              <Input
+                ref={fileRef}
+                type="file"
+                accept={uploadFor === 'contract' ? 'application/pdf,.pdf' : undefined}
+                className="h-9 rounded-sm"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">

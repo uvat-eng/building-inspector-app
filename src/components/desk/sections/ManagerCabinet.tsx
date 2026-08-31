@@ -19,7 +19,14 @@ import { useProfile } from '@/data/profile';
 import { useAllDocuments } from '@/data/allDocuments';
 import { DocSection, SECTION_LABEL, SECTION_ICON, fmtSize, ProjectDoc } from '@/data/documents';
 
-const SECTIONS: DocSection[] = ['project', 'working', 'masterplan'];
+const SECTIONS: DocSection[] = ['contract', 'project', 'working', 'masterplan'];
+
+const SHORT: Record<DocSection, string> = {
+  contract: 'Договор',
+  project: 'Проектная',
+  working: 'Рабочая',
+  masterplan: 'Генплан',
+};
 
 interface ManagerCabinetProps {
   onExit?: () => void;
@@ -62,6 +69,10 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
     }
     if (!target.length) {
       toast({ title: 'Выберите хотя бы один объект', variant: 'destructive' });
+      return;
+    }
+    if (section === 'contract' && files.some((f) => !/\.pdf$/i.test(f.name))) {
+      toast({ title: 'Договор загружается только в PDF', variant: 'destructive' });
       return;
     }
     const big = files.find((f) => f.size > 25 * 1024 * 1024);
@@ -182,9 +193,9 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
                     value: items.filter((d) => d.section === 'project').length,
                   },
                   {
-                    icon: 'Map',
-                    label: 'Генпланов',
-                    value: items.filter((d) => d.section === 'masterplan').length,
+                    icon: 'FileBadge',
+                    label: 'Договоров',
+                    value: items.filter((d) => d.section === 'contract').length,
                   },
                 ].map((s) => (
                   <div key={s.label} className="bg-card px-3 py-3">
@@ -290,7 +301,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
               <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
                 Раздел
               </Label>
-              <div className="grid grid-cols-3 gap-px bg-border">
+              <div className="grid grid-cols-4 gap-px bg-border">
                 {SECTIONS.map((s) => (
                   <button
                     key={s}
@@ -304,7 +315,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
                     )}
                   >
                     <Icon name={SECTION_ICON[s]} fallback="File" size={16} />
-                    {SECTION_LABEL[s].replace(' объекта', '').replace(' документация', '')}
+                    {SHORT[s]}
                   </button>
                 ))}
               </div>
@@ -340,9 +351,15 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
 
             <div className="space-y-1.5">
               <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
-                Файлы (до 25 МБ каждый)
+                {section === 'contract' ? 'Файлы PDF (до 25 МБ)' : 'Файлы (до 25 МБ каждый)'}
               </Label>
-              <Input ref={fileRef} type="file" multiple className="h-9 rounded-sm" />
+              <Input
+                ref={fileRef}
+                type="file"
+                multiple
+                accept={section === 'contract' ? 'application/pdf,.pdf' : undefined}
+                className="h-9 rounded-sm"
+              />
             </div>
 
             <div className="space-y-1.5">
