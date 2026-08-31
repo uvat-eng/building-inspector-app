@@ -19,8 +19,20 @@ export const minutes = (t: string) => {
 };
 
 export const entryHours = (e: TimeEntry) => {
-  const diff = minutes(e.to) - minutes(e.from);
-  return Math.max(0, diff) / 60;
+  let diff = minutes(e.to) - minutes(e.from);
+  if (diff <= 0) diff += 24 * 60;
+  return diff / 60;
+};
+
+export const SHIFTS = [
+  { id: 'day', label: 'Дневная 08:00–20:00', from: '08:00', to: '20:00' },
+  { id: 'night', label: 'Ночная 20:00–08:00', from: '20:00', to: '08:00' },
+] as const;
+
+export const shiftOf = (list: TimeEntry[] = []) => {
+  if (!list.length) return null;
+  const start = minutes(list[0].from);
+  return start >= 20 * 60 || start < 8 * 60 ? 'night' : 'day';
 };
 
 export const dayHours = (list: TimeEntry[] = []) =>

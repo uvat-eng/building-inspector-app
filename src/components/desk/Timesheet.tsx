@@ -25,10 +25,13 @@ import {
   dayHours,
   entryHours,
   fmtHours,
-  minutes,
+  SHIFTS,
+  shiftOf,
 } from '@/data/timesheet';
 
 const today = new Date();
+
+const blank: TimeEntry = { objectId: '', objectTitle: '', from: '08:00', to: '20:00' };
 
 const Timesheet = () => {
   const { profile } = useProfile();
@@ -49,6 +52,7 @@ const Timesheet = () => {
 
   const entries = useMemo(() => monthEntries(sheet, year, month), [sheet, year, month]);
   const totalHours = entries.reduce((s, [, list]) => s + dayHours(list), 0);
+  const nightDays = entries.filter(([, list]) => shiftOf(list) === 'night').length;
   const rowsHours = dayHours(rows);
 
   const shift = (delta: number) => {
@@ -59,7 +63,7 @@ const Timesheet = () => {
 
   const openDay = (d: number) => {
     const cur = sheet[dayKey(year, month, d)] ?? [];
-    setRows(cur.length ? [...cur] : [{ objectId: '', objectTitle: '', from: '08:00', to: '17:00' }]);
+    setRows(cur.length ? [...cur] : [{ ...blank }]);
     setObjOpen(cur.length ? null : 0);
     setPick(d);
   };
@@ -70,24 +74,24 @@ const Timesheet = () => {
   const addRow = () =>
     setRows((prev) => {
       const last = prev[prev.length - 1];
-      return [
-        ...prev,
-        { objectId: '', objectTitle: '', from: last?.to || '08:00', to: last?.to || '17:00' },
-      ];
+      const end = shiftOf(prev) === 'night' ? '08:00' : '20:00';
+      return [...prev, { objectId: '', objectTitle: '', from: last?.to || '08:00', to: end }];
     });
 
   const removeRow = (i: number) => setRows((prev) => prev.filter((_, idx) => idx !== i));
+
+  const shift0 = shiftOf(rows);
+
+  const applyShift = (from: string, to: string) =>
+    setRows((prev) =>
+      prev.length <= 1 ? [{ ...(prev[0] ?? blank), from, to }] : [{ ...prev[0], from }, ...prev.slice(1, -1), { ...prev[prev.length - 1], to }],
+    );
 
   const saveDay = () => {
     if (pick === null) return;
     const clean = rows.filter((r) => r.objectId);
     if (clean.length === 0) {
       toast({ title: 'Выберите объект хотя бы в одной строке', variant: 'destructive' });
-      return;
-    }
-    const bad = clean.find((r) => minutes(r.to) <= minutes(r.from));
-    if (bad) {
-      toast({ title: 'Время окончания должно быть позже начала', variant: 'destructive' });
       return;
     }
     setDay(dayKey(year, month, pick), clean);
@@ -163,8 +167,15 @@ const Timesheet = () => {
                 >
                   <span className="flex items-center gap-1">
                     <span className="font-head text-[0.95em] leading-none">{d}</span>
+                    {!!list?.length && (
+                      <Icon
+                        name={shiftOf(list) === 'night' ? 'Moon' : 'Sun'}
+                        size={11}
+                        className="text-accent"
+                      />
+                    )}
                     {(list?.length ?? 0) > 1 && (
-                      <span className="rounded-[2px] bg-accent px-1 text-[0.6em] leading-[1.4] text-accent-foreground">
+                      <span className="ml-auto rounded-[2px] bg-accent px-1 text-[0.6em] leading-[1.4] text-accent-foreground">
                         {list!.length}
                       </span>
                     )}
@@ -207,7 +218,7 @@ const Timesheet = () => {
               {pick} {MONTHS[month].toLowerCase()} {year}
             </DialogTitle>
             <DialogDescription className="text-[0.85em]">
-              Несколько объектов за день: укажите период времени на каждом. Итого{' '}
+              Смена 12 часов. Несколько объектов — разбейте смену по времени. Итого{' '}
               <b className="text-accent">{fmtHours(rowsHours)} ч</b>.
             </DialogDescription>
           </DialogHeader>
@@ -218,6 +229,28 @@ const Timesheet = () => {
             </p>
           ) : (
             <>
+              <div className="flex gap-2">
+                {SHIFTS.map((s) => {
+                  const on = shift0 === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => applyShift(s.from, s.to)}
+                      className={cn(
+                        'flex flex-1 items-center justify-center gap-2 rounded-sm border px-2 py-2 text-[0.8em] uppercase tracking-[0.06em] transition-colors',
+                        on
+                          ? 'border-accent bg-accent text-accent-foreground'
+                          : 'border-input hover:bg-secondary',
+                      )}
+                    >
+                      <Icon name={s.id === 'day' ? 'Sun' : 'Moon'} size={14} />
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="scrollbar-thin max-h-[52vh] space-y-2.5 overflow-y-auto pr-1">
                 {rows.map((r, i) => (
                   <div key={i} className="rounded-sm border border-border p-2.5">
@@ -378,6 +411,7 @@ const Timesheet = () => {
                 <thead>
                   <tr className="bg-secondary text-left uppercase tracking-[0.08em]">
                     <th className="border border-border px-2 py-1.5">Дата</th>
+                    <th className="border border-border px-2 py-1.5">Смена</th>
                     <th className="border border-border px-2 py-1.5">Объект</th>
                     <th className="border border-border px-2 py-1.5">Период</th>
                     <th className="border border-border px-2 py-1.5 text-right">Часы</th>
@@ -388,12 +422,20 @@ const Timesheet = () => {
                     list.map((e, i) => (
                       <tr key={`${k}-${i}`}>
                         {i === 0 && (
-                          <td
-                            className="border border-border px-2 py-1.5 align-top"
-                            rowSpan={list.length}
-                          >
-                            {k.split('-').reverse().join('.')}
-                          </td>
+                          <>
+                            <td
+                              className="border border-border px-2 py-1.5 align-top"
+                              rowSpan={list.length}
+                            >
+                              {k.split('-').reverse().join('.')}
+                            </td>
+                            <td
+                              className="border border-border px-2 py-1.5 align-top"
+                              rowSpan={list.length}
+                            >
+                              {shiftOf(list) === 'night' ? 'Ночная' : 'Дневная'}
+                            </td>
+                          </>
                         )}
                         <td className="border border-border px-2 py-1.5">{e.objectTitle}</td>
                         <td className="border border-border px-2 py-1.5">
@@ -406,8 +448,9 @@ const Timesheet = () => {
                     )),
                   )}
                   <tr className="font-bold">
-                    <td className="border border-border px-2 py-1.5" colSpan={3}>
-                      Итого: {entries.length} дн.
+                    <td className="border border-border px-2 py-1.5" colSpan={4}>
+                      Итого: {entries.length} смен ({nightDays} ноч. / {entries.length - nightDays}{' '}
+                      дн.)
                     </td>
                     <td className="border border-border px-2 py-1.5 text-right">
                       {fmtHours(totalHours)}
