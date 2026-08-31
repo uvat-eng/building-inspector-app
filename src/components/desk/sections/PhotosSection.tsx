@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Icon from '@/components/ui/icon';
+import Empty from '@/components/desk/Empty';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PHOTOS, Photo } from '@/data/mock';
 
@@ -12,7 +13,14 @@ const PhotosSection = () => {
   return (
     <>
       <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-[2fr_1fr]">
-        <Panel title="Фотоотчёты" note={`${PHOTOS.length} из 148`}>
+        <Panel title="Фотоотчёты" note={`${PHOTOS.length}`}>
+          {PHOTOS.length === 0 && (
+            <Empty
+              icon="Camera"
+              title="Снимков пока нет"
+              hint="Фото с объекта появятся здесь: с датой, координатами и привязкой к замечанию."
+            />
+          )}
           <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-3">
             {PHOTOS.map((p, i) => (
               <button

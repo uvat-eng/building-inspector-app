@@ -3,22 +3,26 @@ import Panel from '@/components/desk/Panel';
 import Row from '@/components/desk/Row';
 import Tag from '@/components/desk/Tag';
 import Icon from '@/components/ui/icon';
-import { REGIONS, INSPECTORS, OBJECTS } from '@/data/mock';
-
-const KPI = [
-  { label: 'Объектов в работе', value: '12', note: '+2 за месяц', icon: 'Building2' },
-  { label: 'Выездов за август', value: '148', note: 'план 140', icon: 'Route' },
-  { label: 'Предписаний выдано', value: '74', note: 'снято 54', icon: 'FileWarning' },
-  { label: 'Средний срок снятия', value: '4,6 дн', note: '−1,2 дня', icon: 'Timer' },
-];
+import Empty from '@/components/desk/Empty';
+import { REGIONS, INSPECTORS, OBJECTS, INSPECTIONS } from '@/data/mock';
 
 const ReportsSection = () => {
-  const [region, setRegion] = useState(REGIONS[0].id);
-  const active = REGIONS.find((r) => r.id === region)!;
+  const [region, setRegion] = useState<string | null>(REGIONS[0]?.id ?? null);
+  const active = REGIONS.find((r) => r.id === region) ?? null;
+
+  const orders = INSPECTORS.reduce((s, n) => s + n.orders, 0);
+  const closed = INSPECTORS.reduce((s, n) => s + n.closed, 0);
+
+  const KPI = [
+    { label: 'Объектов в работе', value: String(OBJECTS.length), note: 'всего', icon: 'Building2' },
+    { label: 'Выездов', value: String(INSPECTIONS.length), note: 'за период', icon: 'Route' },
+    { label: 'Предписаний выдано', value: String(orders), note: `снято ${closed}`, icon: 'FileWarning' },
+    { label: 'Инспекторов в штате', value: String(INSPECTORS.length), note: 'по группам', icon: 'Users' },
+  ];
 
   return (
     <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-2 lg:grid-rows-2">
-      <Panel title="Ключевые показатели" note="август 2026">
+      <Panel title="Ключевые показатели" note="за всё время">
         <div className="grid grid-cols-2 gap-3 p-3">
           {KPI.map((k, i) => (
             <div
@@ -38,7 +42,14 @@ const ReportsSection = () => {
       </Panel>
 
       <Panel title="Регионы и автономные группы" note="модуль руководителя">
-        <div className="p-3">
+        {REGIONS.length === 0 && (
+          <Empty
+            icon="Map"
+            title="Регионы не заведены"
+            hint="Добавьте автономную группу: проекты, инспекторы, автомобили."
+          />
+        )}
+        <div className={REGIONS.length === 0 ? 'hidden' : 'p-3'}>
           <div className="mb-3 flex flex-wrap gap-1.5">
             {REGIONS.map((r) => (
               <button
@@ -55,37 +66,40 @@ const ReportsSection = () => {
               </button>
             ))}
           </div>
-          <div className="animate-fade-in rounded-sm bg-deep p-4 text-deep-foreground" key={active.id}>
-            <div className="font-head text-lg uppercase tracking-[0.06em]">{active.name}</div>
-            <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-              {[
-                ['Проекты', active.projects],
-                ['Инспекторы', active.inspectors],
-                ['Автомобили', active.cars],
-              ].map(([k, v]) => (
-                <div key={k as string} className="rounded-sm bg-deep-2 py-3">
-                  <div className="font-head text-xl">{v}</div>
-                  <div className="text-[0.72em] uppercase tracking-[0.12em] text-deep-dim">{k}</div>
+          {active && (
+            <div className="animate-fade-in rounded-sm bg-deep p-4 text-deep-foreground" key={active.id}>
+              <div className="font-head text-lg uppercase tracking-[0.06em]">{active.name}</div>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+                {[
+                  ['Проекты', active.projects],
+                  ['Инспекторы', active.inspectors],
+                  ['Автомобили', active.cars],
+                ].map(([k, v]) => (
+                  <div key={k as string} className="rounded-sm bg-deep-2 py-3">
+                    <div className="font-head text-xl">{v}</div>
+                    <div className="text-[0.72em] uppercase tracking-[0.12em] text-deep-dim">{k}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4">
+                <div className="mb-1.5 flex justify-between text-[0.78em] uppercase tracking-[0.1em] text-deep-dim">
+                  <span>Загрузка группы</span>
+                  <span className="text-accent">{active.load}%</span>
                 </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <div className="mb-1.5 flex justify-between text-[0.78em] uppercase tracking-[0.1em] text-deep-dim">
-                <span>Загрузка группы</span>
-                <span className="text-accent">{active.load}%</span>
-              </div>
-              <div className="h-2 rounded-sm bg-deep-2">
-                <div
-                  className="h-2 rounded-sm bg-accent transition-all duration-700"
-                  style={{ width: `${active.load}%` }}
-                />
+                <div className="h-2 rounded-sm bg-deep-2">
+                  <div
+                    className="h-2 rounded-sm bg-accent transition-all duration-700"
+                    style={{ width: `${active.load}%` }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </Panel>
 
       <Panel title="Результативность инспекторов" note="снято / выдано">
+        {INSPECTORS.length === 0 && <Empty icon="Users" title="Данных по инспекторам нет" />}
         {INSPECTORS.map((n) => (
           <Row
             key={n.id}
@@ -102,6 +116,7 @@ const ReportsSection = () => {
       </Panel>
 
       <Panel title="Сроки договоров" note="риск срыва">
+        {OBJECTS.length === 0 && <Empty icon="CalendarRange" title="Договоров нет" />}
         {OBJECTS.slice(0, 5).map((o) => (
           <Row
             key={o.id}

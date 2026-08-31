@@ -3,6 +3,7 @@ import Panel from '@/components/desk/Panel';
 import Row from '@/components/desk/Row';
 import Tag from '@/components/desk/Tag';
 import Icon from '@/components/ui/icon';
+import Empty from '@/components/desk/Empty';
 import { INSPECTIONS, VEHICLES, INSPECTORS, REQUESTS } from '@/data/mock';
 
 const FILTERS = [
@@ -39,55 +40,70 @@ const InspectionsSection = () => {
           </span>
         }
       >
-        {list.map((i, idx) => (
-          <Row
-            key={i.id}
-            title={i.title}
-            sub={`${i.sub} · ${i.type}`}
-            unread={filter === 'today' && idx === 0}
-            right={
-              <span className="flex-none text-[0.8em] tracking-[0.03em] text-muted-foreground">
-                {i.time}
-              </span>
-            }
-          />
-        ))}
+        {list.length === 0 ? (
+          <Empty icon="CalendarClock" title="Записей нет" hint="Запланируйте выезд на объект." />
+        ) : (
+          list.map((i) => (
+            <Row
+              key={i.id}
+              title={i.title}
+              sub={`${i.sub} · ${i.type}`}
+              right={
+                <span className="flex-none text-[0.8em] tracking-[0.03em] text-muted-foreground">
+                  {i.time}
+                </span>
+              }
+            />
+          ))
+        )}
       </Panel>
 
-      <Panel title="Автомобили и водители" note="4 в группе">
-        {VEHICLES.map((v) => (
-          <Row
-            key={v.id}
-            title={`${v.plate} · ${v.model}`}
-            sub={`${v.driver} · ${v.fuel} · ${v.service}`}
-            right={
-              <Tag tone={v.status === 'На линии' ? 'ok' : v.status === 'ТО' ? 'wait' : 'dim'}>
-                {v.status}
-              </Tag>
-            }
-          />
-        ))}
+      <Panel title="Автомобили и водители" note={`${VEHICLES.length} в группе`}>
+        {VEHICLES.length === 0 ? (
+          <Empty icon="Truck" title="Автопарк пуст" hint="Добавьте автомобиль и закрепите водителя." />
+        ) : (
+          VEHICLES.map((v) => (
+            <Row
+              key={v.id}
+              title={`${v.plate} · ${v.model}`}
+              sub={`${v.driver} · ${v.fuel} · ${v.service}`}
+              right={
+                <Tag tone={v.status === 'На линии' ? 'ok' : v.status === 'ТО' ? 'wait' : 'dim'}>
+                  {v.status}
+                </Tag>
+              }
+            />
+          ))
+        )}
       </Panel>
 
-      <Panel title="Табель инспекторов" note="август">
-        {INSPECTORS.map((n) => (
-          <Row
-            key={n.id}
-            title={`${n.name} — ${n.role}`}
-            sub={`${n.project} · ${n.hours} ч · предписаний ${n.orders}`}
-            right={
-              <span className="flex-none text-[0.8em] text-muted-foreground">
-                снято {n.closed}
-              </span>
-            }
-          />
-        ))}
+      <Panel title="Табель инспекторов" note={`${INSPECTORS.length}`}>
+        {INSPECTORS.length === 0 ? (
+          <Empty icon="Users" title="Инспекторы не заведены" hint="Зарегистрируйте состав группы." />
+        ) : (
+          INSPECTORS.map((n) => (
+            <Row
+              key={n.id}
+              title={`${n.name} — ${n.role}`}
+              sub={`${n.project} · ${n.hours} ч · предписаний ${n.orders}`}
+              right={
+                <span className="flex-none text-[0.8em] text-muted-foreground">
+                  снято {n.closed}
+                </span>
+              }
+            />
+          ))
+        )}
       </Panel>
 
       <Panel title="Заявки: материалы, запчасти, проживание" note={`${REQUESTS.length}`}>
-        {REQUESTS.map((r) => (
-          <Row key={r.id} title={r.title} sub={r.who} right={<Tag tone={r.tone}>{r.tag}</Tag>} />
-        ))}
+        {REQUESTS.length === 0 ? (
+          <Empty icon="PackageSearch" title="Заявок нет" />
+        ) : (
+          REQUESTS.map((r) => (
+            <Row key={r.id} title={r.title} sub={r.who} right={<Tag tone={r.tone}>{r.tag}</Tag>} />
+          ))
+        )}
         <div className="flex items-center gap-2 px-4 py-3 text-[0.82em] text-muted-foreground">
           <Icon name="Info" size={14} className="text-accent" />
           Путевые листы формируются автоматически: сутки · месяц · год

@@ -3,6 +3,7 @@ import Panel from '@/components/desk/Panel';
 import Row from '@/components/desk/Row';
 import Tag from '@/components/desk/Tag';
 import Icon from '@/components/ui/icon';
+import Empty from '@/components/desk/Empty';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { DEFECTS, NORM_HINTS, Defect } from '@/data/mock';
@@ -13,7 +14,7 @@ const DefectsSection = () => {
   const [items, setItems] = useState<Defect[]>(DEFECTS);
   const [text, setText] = useState('');
   const [rec, setRec] = useState(false);
-  const [selected, setSelected] = useState<string | null>(DEFECTS[0].id);
+  const [selected, setSelected] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,7 +52,7 @@ const DefectsSection = () => {
   };
 
   const open = items.filter((d) => !d.fixed);
-  const current = items.find((d) => d.id === selected) ?? items[0];
+  const current = items.find((d) => d.id === selected) ?? items[0] ?? null;
 
   const save = () => {
     if (text.trim().length < 5) {
@@ -79,6 +80,13 @@ const DefectsSection = () => {
   return (
     <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-2 lg:grid-rows-2">
       <Panel title="Открытые замечания" note={`${open.length} в работе`} className="lg:row-span-2">
+        {items.length === 0 && (
+          <Empty
+            icon="TriangleAlert"
+            title="Замечаний нет"
+            hint="Продиктуйте замечание — оно появится здесь с пунктом нормы."
+          />
+        )}
         {items.map((d) => (
           <Row
             key={d.id}
@@ -146,6 +154,7 @@ const DefectsSection = () => {
       </Panel>
 
       <Panel title="Карточка замечания" note={current?.no}>
+        {!current && <Empty icon="FileText" title="Замечание не выбрано" />}
         {current && (
           <div className="flex flex-col gap-3 p-4 text-[0.92em]">
             <div className="font-bold">{current.title}</div>

@@ -35,25 +35,15 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => (
             >
               <Icon name={item.icon} size={16} className="flex-none text-accent" />
               <span className="truncate">{item.label}</span>
-              {item.count && (
-                <span
-                  className={cn(
-                    'ml-auto text-[0.85em]',
-                    on ? 'text-accent-foreground' : 'text-deep-dim',
-                  )}
-                >
-                  {item.count}
-                </span>
-              )}
             </button>
           </li>
         );
       })}
     </ul>
     <div className="mt-auto border-t border-white/10 px-[18px] pt-3.5 text-[0.8em] leading-[1.5] text-deep-dim">
-      <b className="block text-[1.1em] font-bold text-deep-foreground">А. Кузнецов</b>
+      <b className="block text-[1.1em] font-bold text-deep-foreground">Профиль не заполнен</b>
       Инспектор стройконтроля
-      <span className="mt-1 block text-[0.95em]">Группа «Тюмень-Север» · онлайн</span>
+      <span className="mt-1 block text-[0.95em]">Группа не назначена</span>
     </div>
   </nav>
 );

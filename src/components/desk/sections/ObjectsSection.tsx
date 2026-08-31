@@ -3,6 +3,7 @@ import Panel from '@/components/desk/Panel';
 import Row from '@/components/desk/Row';
 import Tag from '@/components/desk/Tag';
 import Icon from '@/components/ui/icon';
+import Empty from '@/components/desk/Empty';
 import {
   Dialog,
   DialogContent,
@@ -14,61 +15,81 @@ import { OBJECTS, INSPECTIONS, DEFECTS, DOCS, SiteObject } from '@/data/mock';
 
 const ObjectsSection = () => {
   const [open, setOpen] = useState<SiteObject | null>(null);
+  const today = INSPECTIONS.filter((i) => i.status === 'today');
 
   return (
     <>
       <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-2 lg:grid-rows-2">
-        <Panel title="Объекты строительства" note="12">
-          {OBJECTS.map((o) => (
-            <Row
-              key={o.id}
-              title={o.title}
-              sub={o.sub}
-              unread={o.unread}
-              onClick={() => setOpen(o)}
-              right={<Tag tone={o.tone}>{o.tag}</Tag>}
+        <Panel title="Объекты строительства" note={`${OBJECTS.length}`}>
+          {OBJECTS.length === 0 ? (
+            <Empty
+              icon="Building2"
+              title="Объектов пока нет"
+              hint="Добавьте первый объект: заказчик, сроки договора, инспектор."
             />
-          ))}
+          ) : (
+            OBJECTS.map((o) => (
+              <Row
+                key={o.id}
+                title={o.title}
+                sub={o.sub}
+                unread={o.unread}
+                onClick={() => setOpen(o)}
+                right={<Tag tone={o.tone}>{o.tag}</Tag>}
+              />
+            ))
+          )}
         </Panel>
 
-        <Panel title="Проверки и выезды" note="сегодня 4">
-          {INSPECTIONS.filter((i) => i.status === 'today').map((i, idx) => (
-            <Row
-              key={i.id}
-              title={i.title}
-              sub={i.sub}
-              unread={idx === 0}
-              right={
-                <span className="flex-none text-[0.8em] tracking-[0.03em] text-muted-foreground">
-                  {i.time}
-                </span>
-              }
-            />
-          ))}
+        <Panel title="Проверки и выезды" note={`сегодня ${today.length}`}>
+          {today.length === 0 ? (
+            <Empty icon="ClipboardCheck" title="На сегодня выездов нет" />
+          ) : (
+            today.map((i) => (
+              <Row
+                key={i.id}
+                title={i.title}
+                sub={i.sub}
+                right={
+                  <span className="flex-none text-[0.8em] tracking-[0.03em] text-muted-foreground">
+                    {i.time}
+                  </span>
+                }
+              />
+            ))
+          )}
         </Panel>
 
-        <Panel title="Замечания и дефекты" note="открыто 31">
-          {DEFECTS.map((d) => (
-            <Row
-              key={d.id}
-              title={d.title}
-              sub={d.sub}
-              unread={d.unread}
-              right={<Tag tone={d.tone}>{d.tag}</Tag>}
-            />
-          ))}
+        <Panel title="Замечания и дефекты" note={`открыто ${DEFECTS.length}`}>
+          {DEFECTS.length === 0 ? (
+            <Empty icon="TriangleAlert" title="Замечаний нет" />
+          ) : (
+            DEFECTS.map((d) => (
+              <Row
+                key={d.id}
+                title={d.title}
+                sub={d.sub}
+                unread={d.unread}
+                right={<Tag tone={d.tone}>{d.tag}</Tag>}
+              />
+            ))
+          )}
         </Panel>
 
-        <Panel title="Акты, документы, фото" note="на подпись 5">
-          {DOCS.map((d) => (
-            <Row
-              key={d.id}
-              title={d.title}
-              sub={d.sub}
-              unread={d.unread}
-              right={<Tag tone={d.tone}>{d.tag}</Tag>}
-            />
-          ))}
+        <Panel title="Акты, документы, фото" note={`${DOCS.length}`}>
+          {DOCS.length === 0 ? (
+            <Empty icon="FileSignature" title="Документов нет" />
+          ) : (
+            DOCS.map((d) => (
+              <Row
+                key={d.id}
+                title={d.title}
+                sub={d.sub}
+                unread={d.unread}
+                right={<Tag tone={d.tone}>{d.tag}</Tag>}
+              />
+            ))
+          )}
         </Panel>
       </div>
 
