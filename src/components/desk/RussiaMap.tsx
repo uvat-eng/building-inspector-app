@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DISTRICTS, YAKUTIA, RUSSIA, MAP_W, MAP_H, project, toPath } from '@/data/geo';
+import { DISTRICTS, YAKUTIA_PATH, RUSSIA_PATH, MAP_W, MAP_H, project } from '@/data/geo';
 import { ProjectObject, STATUS_LABEL } from '@/data/store';
 import { cn } from '@/lib/utils';
 import Icon from '@/components/ui/icon';
@@ -62,55 +62,53 @@ const RussiaMap = ({ objects, onPick }: RussiaMapProps) => {
           role="img"
           aria-label="Карта объектов по России"
         >
-          <defs>
-            <clipPath id="ru-clip">
-              <path d={toPath(RUSSIA)} />
-            </clipPath>
-          </defs>
+          <path d={RUSSIA_PATH} className="fill-white/[0.08]" fillRule="evenodd" />
 
-          <path d={toPath(RUSSIA)} className="fill-white/[0.07]" />
-
-          <g clipPath="url(#ru-clip)">
-            {DISTRICTS.map((d) => {
-              const on = district === d.id;
-              return (
-                <path
-                  key={d.id}
-                  d={toPath(d.points)}
-                  onClick={() => setDistrict(on ? null : d.id)}
-                  className={cn(
-                    'cursor-pointer transition-all duration-300',
-                    on
-                      ? 'fill-accent/30 stroke-accent'
-                      : 'fill-white/[0.04] stroke-white/25 hover:fill-white/[0.12]',
-                  )}
-                  strokeWidth={1.4}
-                />
-              );
-            })}
-
-            <path
-              d={toPath(YAKUTIA)}
-              className={cn(
-                'pointer-events-none transition-all duration-300',
-                district && district !== 'fe' ? 'opacity-30' : 'opacity-100',
-              )}
-              fill="hsl(var(--accent) / 0.18)"
-              stroke="hsl(var(--accent))"
-              strokeWidth={1.6}
-              strokeDasharray="5 4"
-            />
-          </g>
+          {DISTRICTS.map((d) => {
+            const on = district === d.id;
+            return (
+              <path
+                key={d.id}
+                d={d.d}
+                fillRule="evenodd"
+                onClick={() => setDistrict(on ? null : d.id)}
+                className={cn(
+                  'cursor-pointer transition-all duration-300',
+                  on
+                    ? 'fill-accent/30 stroke-accent'
+                    : 'fill-transparent stroke-white/40 hover:fill-white/[0.1]',
+                )}
+                strokeWidth={on ? 1.5 : 1}
+                strokeDasharray="7 3 2 3"
+                strokeLinejoin="round"
+              />
+            );
+          })}
 
           <path
-            d={toPath(RUSSIA)}
-            className="pointer-events-none fill-none stroke-white/55"
-            strokeWidth={1.8}
+            d={YAKUTIA_PATH}
+            fillRule="evenodd"
+            className={cn(
+              'pointer-events-none transition-all duration-300',
+              district && district !== 'fe' ? 'opacity-35' : 'opacity-100',
+            )}
+            fill="hsl(var(--accent) / 0.2)"
+            stroke="hsl(var(--accent))"
+            strokeWidth={1.4}
+            strokeDasharray="7 3 2 3"
+            strokeLinejoin="round"
+          />
+
+          <path
+            d={RUSSIA_PATH}
+            fillRule="evenodd"
+            className="pointer-events-none fill-none stroke-white/70"
+            strokeWidth={1.4}
             strokeLinejoin="round"
           />
 
           {(() => {
-            const [x, y] = project(126, 66);
+            const [x, y] = project(125, 66.5);
             return (
               <text
                 x={x}
