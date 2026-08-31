@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Чтение настроек",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "settings": {} },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сохранение почты менеджера",
+      "method": "POST",
+      "path": "/",
+      "body": { "manager_email": "test@example.com" },
+      "expectedStatus": 200,
+      "expectedBody": { "settings": { "manager_email": "test@example.com" } },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

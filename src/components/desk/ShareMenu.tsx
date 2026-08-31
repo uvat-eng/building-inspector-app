@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useSettings } from '@/data/settings';
 import {
   Dialog,
   DialogContent,
@@ -35,7 +39,26 @@ const download = (name: string, content: string, mime: string) => {
 
 const ShareMenu = ({ open, onOpenChange, doc }: ShareMenuProps) => {
   const { toast } = useToast();
+  const { settings, save } = useSettings();
   const [busy, setBusy] = useState(false);
+  const [editMail, setEditMail] = useState(false);
+  const [mail, setMail] = useState('');
+  const [name, setName] = useState('');
+
+  useEffect(() => {
+    setMail(settings.manager_email);
+    setName(settings.manager_name);
+  }, [settings]);
+
+  const saveManager = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail.trim())) {
+      toast({ title: 'Проверьте адрес почты', variant: 'destructive' });
+      return;
+    }
+    await save({ manager_email: mail.trim(), manager_name: name.trim() });
+    setEditMail(false);
+    toast({ title: 'Менеджер сохранён', description: 'Теперь табель уходит в один клик.' });
+  };
 
   const canShareFiles =
     typeof navigator !== 'undefined' && !!navigator.canShare && !!navigator.share;
@@ -65,7 +88,27 @@ const ShareMenu = ({ open, onOpenChange, doc }: ShareMenuProps) => {
     }
   };
 
+  const sendToManager = () => {
+    if (!settings.manager_email) {
+      setEditMail(true);
+      return;
+    }
+    window.location.href = `mailto:${encodeURIComponent(
+      settings.manager_email,
+    )}?subject=${encodeURIComponent(doc.subject)}&body=${encodeURIComponent(doc.text)}`;
+    toast({ title: 'Письмо подготовлено', description: settings.manager_email });
+    onOpenChange(false);
+  };
+
   const items: { icon: string; label: string; note: string; run: () => void }[] = [
+    {
+      icon: 'UserCheck',
+      label: settings.manager_email ? 'Менеджеру проекта' : 'Указать менеджера проекта',
+      note: settings.manager_email
+        ? `${settings.manager_name || 'Менеджер'} · ${settings.manager_email}`
+        : 'Сохраните адрес — дальше отправка в один клик',
+      run: sendToManager,
+    },
     {
       icon: 'Share2',
       label: canShareFiles ? 'Отправить в приложение' : 'Скачать файл',
@@ -169,6 +212,63 @@ const ShareMenu = ({ open, onOpenChange, doc }: ShareMenuProps) => {
             </button>
           ))}
         </div>
+
+        {editMail ? (
+          <div className="space-y-3 rounded-sm bg-secondary/60 p-3">
+            <p className="font-head text-[0.9em] uppercase tracking-[0.06em]">
+              Менеджер проекта
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
+                ФИО
+              </Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Петров Пётр Петрович"
+                className="h-9 rounded-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
+                Электронная почта
+              </Label>
+              <Input
+                value={mail}
+                onChange={(e) => setMail(e.target.value)}
+                placeholder="manager@company.ru"
+                type="email"
+                className="h-9 rounded-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setEditMail(false)}
+                className="rounded-sm font-head uppercase tracking-[0.06em]"
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={saveManager}
+                className="flex-1 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+              >
+                Сохранить
+              </Button>
+            </div>
+          </div>
+        ) : (
+          settings.manager_email && (
+            <button
+              type="button"
+              onClick={() => setEditMail(true)}
+              className="flex items-center justify-center gap-1.5 text-[0.78em] text-muted-foreground hover:text-foreground"
+            >
+              <Icon name="Pencil" size={13} />
+              Изменить менеджера проекта
+            </button>
+          )
+        )}
       </DialogContent>
     </Dialog>
   );
