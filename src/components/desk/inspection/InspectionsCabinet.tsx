@@ -30,7 +30,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
   const { toast } = useToast();
   const { profile } = useProfile();
   const { items, loading, create, update } = useInspections(object.id);
-  const { contractor } = useContractor(object.id);
+  const { general: contractor, subs } = useContractor(object.id);
   const { create: createOrder } = useOrders(object.id);
 
   const [view, setView] = useState<View>('menu');
@@ -43,6 +43,8 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
     docRef: string;
     contractorRep: string;
     inspector: string;
+    generalContractor: string;
+    subcontractor: string;
   }) => {
     setBusy(true);
     try {
@@ -68,13 +70,15 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
       const order = await createOrder({
         objectId: object.id,
         inspectionId: insp.id,
-        issuedTo: contractor?.name || '',
+        issuedTo: insp.subcontractor || insp.generalContractor || contractor?.name || '',
         inspector: insp.inspector || profile.fio,
         deadline: '',
         body: {
           workType: insp.workType,
           docRef: insp.docRef,
           contractorRep: insp.contractorRep,
+          generalContractor: insp.generalContractor,
+          subcontractor: insp.subcontractor,
           objectTitle: object.title,
           items: defects.map((d) => ({ pos: d.pos, title: d.title, photos: d.photos })),
         },
@@ -98,6 +102,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
         objectTitle={object.title}
         inspector={profile.fio}
         contractorName={contractor?.name}
+        subs={subs}
         busy={busy}
         onBack={() => setView('menu')}
         onCreate={startNew}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
@@ -7,11 +7,13 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { WORK_TYPES, DOC_SECTIONS } from '@/data/inspections';
+import { Contractor } from '@/data/orders';
 
 interface NewInspectionProps {
   objectTitle: string;
   inspector: string;
   contractorName?: string;
+  subs?: Contractor[];
   busy?: boolean;
   onBack: () => void;
   onCreate: (data: {
@@ -19,6 +21,8 @@ interface NewInspectionProps {
     docRef: string;
     contractorRep: string;
     inspector: string;
+    generalContractor: string;
+    subcontractor: string;
   }) => void;
 }
 
@@ -26,6 +30,7 @@ const NewInspection = ({
   objectTitle,
   inspector,
   contractorName,
+  subs = [],
   busy,
   onBack,
   onCreate,
@@ -35,6 +40,13 @@ const NewInspection = ({
   const [customWork, setCustomWork] = useState('');
   const [docRef, setDocRef] = useState('');
   const [rep, setRep] = useState('');
+  const [general, setGeneral] = useState(contractorName ?? '');
+  const [sub, setSub] = useState('');
+  const [customSub, setCustomSub] = useState('');
+
+  useEffect(() => {
+    if (contractorName) setGeneral(contractorName);
+  }, [contractorName]);
 
   const submit = () => {
     const wt = workType === '__other' ? customWork.trim() : workType;
@@ -46,7 +58,15 @@ const NewInspection = ({
       toast({ title: 'Укажите представителя подрядчика', variant: 'destructive' });
       return;
     }
-    onCreate({ workType: wt, docRef, contractorRep: rep.trim(), inspector });
+    const sc = sub === '__other' ? customSub.trim() : sub;
+    onCreate({
+      workType: wt,
+      docRef,
+      contractorRep: rep.trim(),
+      inspector,
+      generalContractor: general.trim(),
+      subcontractor: sc,
+    });
   };
 
   return (
@@ -140,6 +160,69 @@ const NewInspection = ({
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
+                Генеральный подрядчик
+              </Label>
+              <Input
+                value={general}
+                onChange={(e) => setGeneral(e.target.value)}
+                placeholder="Наименование генподрядчика"
+                className="h-9 rounded-sm"
+              />
+              {!contractorName && (
+                <p className="text-[0.74em] text-muted-foreground">
+                  В карточке предприятия генподрядчик не заполнен — впишите вручную.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
+                Субподрядчик, выполняющий проверяемые работы
+              </Label>
+              <div className="grid gap-px bg-border sm:grid-cols-2">
+                {subs.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSub(sub === s.name ? '' : s.name)}
+                    className={cn(
+                      'px-3 py-2.5 text-left text-[0.84em] transition-colors',
+                      sub === s.name
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-card hover:bg-secondary',
+                    )}
+                  >
+                    {s.name}
+                    {s.works && (
+                      <span className="block truncate text-[0.82em] opacity-70">{s.works}</span>
+                    )}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSub('__other')}
+                  className={cn(
+                    'px-3 py-2.5 text-left text-[0.84em] transition-colors',
+                    sub === '__other'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'bg-card hover:bg-secondary',
+                  )}
+                >
+                  Субподрядчика нет в списке — внести вручную
+                </button>
+              </div>
+              {sub === '__other' && (
+                <Input
+                  value={customSub}
+                  onChange={(e) => setCustomSub(e.target.value)}
+                  placeholder="ООО «Название организации»"
+                  className="mt-2 h-9 rounded-sm"
+                />
+              )}
             </div>
 
             <div className="space-y-1.5">

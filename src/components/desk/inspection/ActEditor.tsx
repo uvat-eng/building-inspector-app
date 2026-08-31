@@ -111,6 +111,8 @@ const ActEditor = ({
           <div className="mt-3 space-y-1 border-t border-border pt-2.5 text-[0.83em] text-muted-foreground">
             <p>Вид работ: {inspection.workType}</p>
             {inspection.docRef && <p>Раздел проекта: {inspection.docRef}</p>}
+            <p>Генподрядчик: {inspection.generalContractor || contractorName || '—'}</p>
+            {inspection.subcontractor && <p>Субподрядчик: {inspection.subcontractor}</p>}
             <p>Представитель подрядчика: {inspection.contractorRep}</p>
             <p>Инспектор: {inspection.inspector || '—'}</p>
           </div>

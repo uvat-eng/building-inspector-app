@@ -50,7 +50,8 @@ export const buildActHtml = ({ inspection, defects, objectTitle, contractorName 
     <tr><td width="38%">Объект:</td><td><b>${esc(objectTitle)}</b></td></tr>
     <tr><td>Вид контролируемых работ:</td><td>${esc(inspection.workType)}</td></tr>
     <tr><td>Раздел проекта:</td><td>${esc(inspection.docRef)}</td></tr>
-    <tr><td>Подрядная организация:</td><td>${esc(contractorName || '—')}</td></tr>
+    <tr><td>Генеральный подрядчик:</td><td>${esc(inspection.generalContractor || contractorName || '—')}</td></tr>
+    <tr><td>Субподрядная организация:</td><td>${esc(inspection.subcontractor || '—')}</td></tr>
     <tr><td>Представитель подрядчика:</td><td>${esc(inspection.contractorRep)}</td></tr>
     <tr><td>Инспектор строительного контроля:</td><td>${esc(inspection.inspector)}</td></tr>
   </table>

@@ -41,13 +41,16 @@ def to_order(r):
 
 def to_contractor(r):
     return {
+        'id': r['id'],
         'objectId': r['object_id'],
+        'kind': r['kind'],
         'name': r['name'],
         'inn': r['inn'],
         'address': r['address'],
         'director': r['director'],
         'phone': r['phone'],
         'email': r['email'],
+        'works': r['works'],
     }
 
 
@@ -68,26 +71,49 @@ def handler(event: dict, context) -> dict:
         if kind == 'contractor':
             object_id = params.get('object_id') or body.get('objectId') or ''
             if method == 'GET':
-                if object_id:
-                    cur.execute(f"SELECT * FROM contractors WHERE object_id = '{esc(object_id)}'")
-                    row = cur.fetchone()
-                    return resp(200, {'item': to_contractor(row) if row else None})
-                cur.execute('SELECT * FROM contractors')
-                return resp(200, {'items': [to_contractor(r) for r in cur.fetchall()]})
-            if method in ('POST', 'PUT'):
+                where = f"WHERE object_id = '{esc(object_id)}'" if object_id else ''
+                cur.execute(
+                    f"SELECT * FROM object_contractors {where} "
+                    "ORDER BY CASE WHEN kind = 'general' THEN 0 ELSE 1 END, created_at"
+                )
+                rows = [to_contractor(r) for r in cur.fetchall()]
+                general = next((r for r in rows if r['kind'] == 'general'), None)
+                return resp(200, {'items': rows, 'item': general})
+
+            if method == 'POST':
                 if not object_id:
                     return resp(400, {'error': 'object_required'})
+                cid = body.get('id') or uuid.uuid4().hex[:12]
+                ckind = 'general' if body.get('kind') == 'general' else 'sub'
+                if ckind == 'general':
+                    cur.execute(
+                        f"SELECT id FROM object_contractors WHERE object_id = '{esc(object_id)}' "
+                        "AND kind = 'general'"
+                    )
+                    exist = cur.fetchone()
+                    if exist and not body.get('id'):
+                        cid = exist['id']
                 cur.execute(
-                    'INSERT INTO contractors (object_id, name, inn, address, director, phone, email) '
-                    f"VALUES ('{esc(object_id)}', '{esc(body.get('name'))}', '{esc(body.get('inn'))}', "
+                    'INSERT INTO object_contractors (id, object_id, kind, name, inn, address, '
+                    f"director, phone, email, works) VALUES ('{esc(cid)}', '{esc(object_id)}', "
+                    f"'{esc(ckind)}', '{esc(body.get('name'))}', '{esc(body.get('inn'))}', "
                     f"'{esc(body.get('address'))}', '{esc(body.get('director'))}', "
-                    f"'{esc(body.get('phone'))}', '{esc(body.get('email'))}') "
-                    'ON CONFLICT (object_id) DO UPDATE SET name = EXCLUDED.name, inn = EXCLUDED.inn, '
-                    'address = EXCLUDED.address, director = EXCLUDED.director, phone = EXCLUDED.phone, '
-                    'email = EXCLUDED.email, updated_at = NOW() RETURNING *'
+                    f"'{esc(body.get('phone'))}', '{esc(body.get('email'))}', '{esc(body.get('works'))}') "
+                    'ON CONFLICT (id) DO UPDATE SET kind = EXCLUDED.kind, name = EXCLUDED.name, '
+                    'inn = EXCLUDED.inn, address = EXCLUDED.address, director = EXCLUDED.director, '
+                    'phone = EXCLUDED.phone, email = EXCLUDED.email, works = EXCLUDED.works RETURNING *'
                 )
                 conn.commit()
                 return resp(200, {'item': to_contractor(cur.fetchone())})
+
+            if method == 'DELETE':
+                cid = params.get('id', '')
+                if not cid:
+                    return resp(400, {'error': 'id_required'})
+                cur.execute(f"DELETE FROM object_contractors WHERE id = '{esc(cid)}'")
+                conn.commit()
+                return resp(200, {'ok': True})
+
             return resp(405, {'error': 'method_not_allowed'})
 
         if method == 'GET':

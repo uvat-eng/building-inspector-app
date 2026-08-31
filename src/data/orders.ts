@@ -15,6 +15,8 @@ export interface Order {
     workType?: string;
     docRef?: string;
     contractorRep?: string;
+    generalContractor?: string;
+    subcontractor?: string;
     objectTitle?: string;
     items?: { pos: number; title: string; photos: string[] }[];
   };
@@ -22,24 +24,32 @@ export interface Order {
   createdAt: string;
 }
 
+export type ContractorKind = 'general' | 'sub';
+
 export interface Contractor {
+  id: string;
   objectId: string;
+  kind: ContractorKind;
   name: string;
   inn: string;
   address: string;
   director: string;
   phone: string;
   email: string;
+  works: string;
 }
 
 export const EMPTY_CONTRACTOR: Contractor = {
+  id: '',
   objectId: '',
+  kind: 'sub',
   name: '',
   inn: '',
   address: '',
   director: '',
   phone: '',
   email: '',
+  works: '',
 };
 
 export const useOrders = (objectId?: string) => {
@@ -92,15 +102,15 @@ export const useOrders = (objectId?: string) => {
 };
 
 export const useContractor = (objectId: string) => {
-  const [contractor, setContractor] = useState<Contractor | null>(null);
+  const [list, setList] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     const res = await fetch(`${API}?kind=contractor&object_id=${encodeURIComponent(objectId)}`);
     if (!res.ok) throw new Error('load_failed');
-    const { item } = (await res.json()) as { item: Contractor | null };
-    setContractor(item);
-    return item;
+    const { items } = (await res.json()) as { items: Contractor[] };
+    setList(items ?? []);
+    return items ?? [];
   }, [objectId]);
 
   useEffect(() => {
@@ -120,11 +130,22 @@ export const useContractor = (objectId: string) => {
       });
       if (!res.ok) throw new Error('save_failed');
       const { item } = (await res.json()) as { item: Contractor };
-      setContractor(item);
+      setList((p) => {
+        const has = p.some((c) => c.id === item.id);
+        return has ? p.map((c) => (c.id === item.id ? item : c)) : [...p, item];
+      });
       return item;
     },
     [objectId],
   );
 
-  return { contractor, loading, save, reload };
+  const remove = useCallback(async (id: string) => {
+    setList((p) => p.filter((c) => c.id !== id));
+    await fetch(`${API}?kind=contractor&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }, []);
+
+  const general = list.find((c) => c.kind === 'general') ?? null;
+  const subs = list.filter((c) => c.kind === 'sub');
+
+  return { list, general, subs, contractor: general, loading, save, remove, reload };
 };

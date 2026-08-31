@@ -10,6 +10,8 @@ export interface Inspection {
   workType: string;
   docRef: string;
   contractorRep: string;
+  generalContractor: string;
+  subcontractor: string;
   inspector: string;
   status: 'draft' | 'done';
   note: string;

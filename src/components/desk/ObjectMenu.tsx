@@ -40,6 +40,13 @@ const ITEMS: MenuItem[] = [
     ready: true,
   },
   {
+    id: 'inspections',
+    icon: 'ClipboardCheck',
+    label: 'Проверки объекта',
+    note: 'Новый осмотр и реестр осмотров',
+    ready: true,
+  },
+  {
     id: 'orders',
     icon: 'FileWarning',
     label: 'Предписания',
@@ -50,14 +57,7 @@ const ITEMS: MenuItem[] = [
     id: 'company',
     icon: 'Landmark',
     label: 'Карточка предприятия',
-    note: 'Реквизиты подрядчика для предписаний',
-    ready: true,
-  },
-  {
-    id: 'inspections',
-    icon: 'ClipboardCheck',
-    label: 'Проверки объекта',
-    note: 'Новый осмотр и реестр осмотров',
+    note: 'Генподрядчик и субподрядные организации',
     ready: true,
   },
   {

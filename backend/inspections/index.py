@@ -41,6 +41,8 @@ def to_insp(r):
         'workType': r['work_type'],
         'docRef': r['doc_ref'],
         'contractorRep': r['contractor_rep'],
+        'generalContractor': r.get('general_contractor') or '',
+        'subcontractor': r.get('subcontractor') or '',
         'inspector': r['inspector'],
         'status': r['status'],
         'note': r['note'],
@@ -144,11 +146,13 @@ def handler(event: dict, context) -> dict:
             number = next_number(cur, 'inspections', object_id)
             cur.execute(
                 'INSERT INTO inspections (id, object_id, number, work_type, doc_ref, '
-                'contractor_rep, inspector, status, note) VALUES ('
+                'contractor_rep, inspector, status, note, general_contractor, subcontractor) VALUES ('
                 f"'{esc(insp_id)}', '{esc(object_id)}', '{esc(number)}', "
                 f"'{esc(body.get('workType', ''))}', '{esc(body.get('docRef', ''))}', "
                 f"'{esc(body.get('contractorRep', ''))}', '{esc(body.get('inspector', ''))}', "
-                f"'draft', '{esc(body.get('note', ''))}') RETURNING *"
+                f"'draft', '{esc(body.get('note', ''))}', "
+                f"'{esc(body.get('generalContractor', ''))}', "
+                f"'{esc(body.get('subcontractor', ''))}') RETURNING *"
             )
             conn.commit()
             return resp(200, {'item': to_insp(cur.fetchone())})
@@ -182,6 +186,8 @@ def handler(event: dict, context) -> dict:
                 'status': 'status',
                 'note': 'note',
                 'actUrl': 'act_url',
+                'generalContractor': 'general_contractor',
+                'subcontractor': 'subcontractor',
             }
             sets = [f"{cols[k]} = '{esc(v)}'" for k, v in patch.items() if k in cols]
             if not sets or not insp_id:

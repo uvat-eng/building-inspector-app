@@ -46,6 +46,8 @@ export const buildOrderHtml = (order: Order, contractor?: Contractor | null) => 
     ${contractor?.inn ? `<tr><td>ИНН:</td><td>${esc(contractor.inn)}</td></tr>` : ''}
     ${contractor?.address ? `<tr><td>Адрес:</td><td>${esc(contractor.address)}</td></tr>` : ''}
     ${contractor?.director ? `<tr><td>Руководитель:</td><td>${esc(contractor.director)}</td></tr>` : ''}
+    <tr><td>Генеральный подрядчик:</td><td>${esc(order.body.generalContractor || '—')}</td></tr>
+    ${order.body.subcontractor ? `<tr><td>Субподрядная организация:</td><td>${esc(order.body.subcontractor)}</td></tr>` : ''}
     <tr><td>Вид работ:</td><td>${esc(order.body.workType || '—')}</td></tr>
     <tr><td>Раздел проекта:</td><td>${esc(order.body.docRef || '—')}</td></tr>
     <tr><td>Представитель подрядчика:</td><td>${esc(order.body.contractorRep || '—')}</td></tr>
