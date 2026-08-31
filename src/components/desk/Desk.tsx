@@ -43,7 +43,7 @@ const Desk = () => {
 
 
   const content = {
-    cabinet: <InspectorCabinet />,
+    cabinet: <InspectorCabinet onNavigate={select} />,
     objects: <ObjectsSection onOpenObject={openObject} />,
     sites: objectId ? (
       <ObjectPage id={objectId} editOnOpen={objectEdit} onBack={closeObject} />

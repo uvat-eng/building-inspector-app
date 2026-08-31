@@ -1,14 +1,26 @@
-import Panel from '@/components/desk/Panel';
-import Row from '@/components/desk/Row';
-import Empty from '@/components/desk/Empty';
-import Icon from '@/components/ui/icon';
-import { useProfile, ROLE_LABEL } from '@/data/profile';
-import Timesheet from '@/components/desk/Timesheet';
-import { useObjects } from '@/data/store';
-import { DEFECTS, PHOTOS } from '@/data/mock';
-import { useTimesheet, monthEntries, dayHours, fmtHours } from '@/data/timesheet';
+import { useRef } from "react";
+import Panel from "@/components/desk/Panel";
+import Row from "@/components/desk/Row";
+import Empty from "@/components/desk/Empty";
+import Icon from "@/components/ui/icon";
+import { useProfile, ROLE_LABEL } from "@/data/profile";
+import Timesheet from "@/components/desk/Timesheet";
+import { useObjects } from "@/data/store";
+import { DEFECTS, PHOTOS, SectionId } from "@/data/mock";
+import {
+  useTimesheet,
+  monthEntries,
+  dayHours,
+  fmtHours,
+} from "@/data/timesheet";
 
-const InspectorCabinet = () => {
+interface InspectorCabinetProps {
+  onNavigate?: (id: SectionId) => void;
+}
+
+const InspectorCabinet = ({ onNavigate }: InspectorCabinetProps) => {
+  const timesheetRef = useRef<HTMLDivElement>(null);
+  const objectsRef = useRef<HTMLDivElement>(null);
   const { profile } = useProfile();
   const { list: objects } = useObjects();
   const { sheet } = useTimesheet();
@@ -18,15 +30,34 @@ const InspectorCabinet = () => {
   const month = monthEntries(sheet, now.getFullYear(), now.getMonth());
   const monthHours = month.reduce((s, [, list]) => s + dayHours(list), 0);
 
+  const scrollTo = (ref: React.RefObject<HTMLDivElement>) =>
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
   const stats = [
-    { icon: 'Building2', label: 'Объектов', value: objects.length },
     {
-      icon: 'Clock',
+      icon: "Building2",
+      label: "Объектов",
+      value: objects.length,
+      onClick: () => scrollTo(objectsRef),
+    },
+    {
+      icon: "Clock",
       label: `Табель · ${month.length} смен`,
       value: `${fmtHours(monthHours)} ч`,
+      onClick: () => scrollTo(timesheetRef),
     },
-    { icon: 'TriangleAlert', label: 'Замечаний', value: DEFECTS.length },
-    { icon: 'Camera', label: 'Фотоотчётов', value: PHOTOS.length },
+    {
+      icon: "TriangleAlert",
+      label: "Замечаний",
+      value: DEFECTS.length,
+      onClick: () => onNavigate?.("defects"),
+    },
+    {
+      icon: "Camera",
+      label: "Фотоотчётов",
+      value: PHOTOS.length,
+      onClick: () => onNavigate?.("photos"),
+    },
   ];
 
   return (
@@ -37,11 +68,12 @@ const InspectorCabinet = () => {
         </h1>
 
         <p className="mt-3 font-head text-[1.15em] uppercase tracking-[0.04em] sm:text-[1.35em]">
-          {profile.fio || 'ФИО не указано'}
+          {profile.fio || "ФИО не указано"}
         </p>
 
         <p className="mt-1 text-[0.9em] text-muted-foreground">
-          {profile.group ? `Проект «${profile.group}»` : 'Проект не назначен'} · {profile.org}
+          {profile.group ? `Проект «${profile.group}»` : "Проект не назначен"} ·{" "}
+          {profile.org}
         </p>
 
         <div className="mt-4 border-t border-border pt-3">
@@ -67,45 +99,69 @@ const InspectorCabinet = () => {
           )}
         </div>
 
-        {profile.role !== 'inspector' && (
+        {profile.role !== "inspector" && (
           <p className="mt-4 flex items-center gap-2 rounded-sm bg-secondary/60 p-3 text-[0.82em] text-muted-foreground">
             <Icon name="Info" size={14} className="flex-none text-accent" />
-            Вы вошли как «{ROLE_LABEL[profile.role]}» — кабинет показан в режиме просмотра.
+            Вы вошли как «{ROLE_LABEL[profile.role]}» — кабинет показан в режиме
+            просмотра.
           </p>
         )}
       </section>
 
       <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
-          <div
+          <button
             key={s.label}
-            className="flex items-center gap-3 rounded-sm border border-border bg-card px-4 py-3.5"
+            type="button"
+            onClick={s.onClick}
+            className="group flex items-center gap-3 rounded-sm border border-border bg-card px-4 py-3.5 text-left transition-colors hover:border-accent hover:bg-secondary/50"
           >
-            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-secondary text-accent">
+            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-secondary text-accent transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
               <Icon name={s.icon} fallback="Circle" size={19} />
             </span>
-            <span>
-              <span className="block font-head text-[1.5em] leading-none">{s.value}</span>
-              <span className="block text-[0.78em] uppercase tracking-[0.1em] text-muted-foreground">
+            <span className="min-w-0">
+              <span className="block font-head text-[1.5em] leading-none">
+                {s.value}
+              </span>
+              <span className="block truncate text-[0.78em] uppercase tracking-[0.1em] text-muted-foreground">
                 {s.label}
               </span>
             </span>
-          </div>
+            <Icon
+              name="ChevronRight"
+              size={16}
+              className="ml-auto flex-none text-muted-foreground/40 transition-colors group-hover:text-accent"
+            />
+          </button>
         ))}
       </div>
 
       <div className="grid min-h-0 gap-3.5 lg:grid-cols-2">
-        <Panel title="Мои объекты" note={`${objects.length}`}>
-          {objects.length === 0 ? (
-            <Empty icon="Building2" title="Объекты не назначены" hint="Обратитесь к руководителю проекта." />
-          ) : (
-            objects
-              .slice(0, 8)
-              .map((o) => <Row key={o.id} title={o.title} sub={`${o.regionName} · ${o.stage}`} />)
-          )}
-        </Panel>
+        <div ref={objectsRef} className="flex min-h-0 flex-col scroll-mt-3">
+          <Panel title="Мои объекты" note={`${objects.length}`}>
+            {objects.length === 0 ? (
+              <Empty
+                icon="Building2"
+                title="Объекты не назначены"
+                hint="Обратитесь к руководителю проекта."
+              />
+            ) : (
+              objects
+                .slice(0, 8)
+                .map((o) => (
+                  <Row
+                    key={o.id}
+                    title={o.title}
+                    sub={`${o.regionName} · ${o.stage}`}
+                  />
+                ))
+            )}
+          </Panel>
+        </div>
 
-        <Timesheet />
+        <div ref={timesheetRef} className="flex min-h-0 flex-col scroll-mt-3">
+          <Timesheet />
+        </div>
       </div>
     </div>
   );
