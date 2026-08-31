@@ -14,12 +14,17 @@ import InspectorProfile from '@/components/desk/InspectorProfile';
 import { useUsers } from '@/data/users';
 import ObjectMenu from '@/components/desk/ObjectMenu';
 import DocsCabinet from '@/components/desk/DocsCabinet';
+import InspectionsCabinet from '@/components/desk/inspection/InspectionsCabinet';
+import OrdersCabinet from '@/components/desk/inspection/OrdersCabinet';
+import ContractorCard from '@/components/desk/inspection/ContractorCard';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'photos' | 'profile';
 
 const VIEW_KEY = 'gsi-cabinet-view-v1';
 const OBJ_KEY = 'gsi-cabinet-object-v1';
 const OBJ_VIEW_KEY = 'gsi-cabinet-object-view-v1';
+
+type ObjView = 'menu' | 'docs' | 'contract' | 'inspections' | 'orders' | 'company';
 
 const VIEW_TITLE: Record<View, string> = {
   home: 'Обзор',
@@ -46,8 +51,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const [openObject, setOpenObject] = useState<string | null>(
     () => localStorage.getItem(OBJ_KEY),
   );
-  const [objectView, setObjectView] = useState<'menu' | 'docs' | 'contract'>(
-    () => (localStorage.getItem(OBJ_VIEW_KEY) as 'menu' | 'docs' | 'contract') || 'menu',
+  const [objectView, setObjectView] = useState<ObjView>(
+    () => (localStorage.getItem(OBJ_VIEW_KEY) as ObjView) || 'menu',
   );
 
   useEffect(() => {
@@ -114,13 +119,28 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
         />
       );
     }
+    if (objectView === 'inspections') {
+      return (
+        <InspectionsCabinet
+          object={active}
+          onBack={() => setObjectView('menu')}
+          onOrdersOpen={() => setObjectView('orders')}
+        />
+      );
+    }
+    if (objectView === 'orders') {
+      return <OrdersCabinet object={active} onBack={() => setObjectView('menu')} />;
+    }
+    if (objectView === 'company') {
+      return <ContractorCard object={active} onBack={() => setObjectView('menu')} />;
+    }
     return (
       <ObjectMenu
         object={active}
         onBack={() => setOpenObject(null)}
         onOpen={(id) => {
-          if (id === 'docs') setObjectView('docs');
-          if (id === 'contract') setObjectView('contract');
+          if (['docs', 'contract', 'inspections', 'orders', 'company'].includes(id))
+            setObjectView(id as ObjView);
         }}
       />
     );

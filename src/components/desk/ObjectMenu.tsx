@@ -6,6 +6,8 @@ import { ProjectObject, STATUS_LABEL } from '@/data/store';
 export type ObjectMenuId =
   | 'docs'
   | 'contract'
+  | 'orders'
+  | 'company'
   | 'inspections'
   | 'defects'
   | 'photos'
@@ -38,11 +40,25 @@ const ITEMS: MenuItem[] = [
     ready: true,
   },
   {
+    id: 'orders',
+    icon: 'FileWarning',
+    label: 'Предписания',
+    note: 'Сквозной перечень выданных предписаний',
+    ready: true,
+  },
+  {
+    id: 'company',
+    icon: 'Landmark',
+    label: 'Карточка предприятия',
+    note: 'Реквизиты подрядчика для предписаний',
+    ready: true,
+  },
+  {
     id: 'inspections',
     icon: 'ClipboardCheck',
-    label: 'Проверки и осмотры',
-    note: 'Плановые и внеплановые обследования',
-    ready: false,
+    label: 'Проверки объекта',
+    note: 'Новый осмотр и реестр осмотров',
+    ready: true,
   },
   {
     id: 'defects',
