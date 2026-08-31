@@ -16,6 +16,7 @@ import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
 import { Inspection, useInspections } from '@/data/inspections';
 import { useContractor, useOrders } from '@/data/orders';
+import { downloadRegistry } from '@/lib/registryXls';
 import NewInspection from '@/components/desk/inspection/NewInspection';
 import ActEditor from '@/components/desk/inspection/ActEditor';
 
@@ -61,6 +62,16 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
     } finally {
       setBusy(false);
     }
+  };
+
+  const exportRegistry = () => {
+    if (!items.length) {
+      toast({ title: 'Актов пока нет', variant: 'destructive' });
+      return;
+    }
+    downloadRegistry(items, object.title);
+    setAsk(null);
+    toast({ title: 'Реестр сформирован', description: `Excel · актов: ${items.length}` });
   };
 
   const makeOrder = async (insp: Inspection) => {
@@ -209,7 +220,22 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
             </div>
           </Panel>
         ) : (
-          <Panel title="Реестр осмотров" note={`${items.length}`}>
+          <Panel
+            title="Реестр осмотров"
+            note={`${items.length}`}
+            action={
+              items.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={exportRegistry}
+                  className="ml-3 flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.76em] uppercase tracking-[0.06em] text-accent-foreground transition-colors hover:bg-accent/90"
+                >
+                  <Icon name="FileSpreadsheet" size={13} />
+                  В Excel
+                </button>
+              ) : undefined
+            }
+          >
             {items.length === 0 ? (
               <Empty
                 icon="ClipboardList"
@@ -281,6 +307,14 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
                 className={busy ? 'animate-spin' : ''}
               />
               Оформить предписание
+            </Button>
+            <Button
+              variant="outline"
+              onClick={exportRegistry}
+              className="gap-2 rounded-sm font-head uppercase tracking-[0.06em]"
+            >
+              <Icon name="FileSpreadsheet" size={16} />
+              Реестр актов проверок
             </Button>
           </div>
         </DialogContent>
