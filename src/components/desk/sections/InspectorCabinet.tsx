@@ -10,8 +10,10 @@ import { useObjects } from '@/data/store';
 import { DEFECTS, PHOTOS } from '@/data/mock';
 import { useTimesheet, monthEntries, dayHours, fmtHours } from '@/data/timesheet';
 import { cn } from '@/lib/utils';
+import InspectorProfile from '@/components/desk/InspectorProfile';
+import { useUsers } from '@/data/users';
 
-type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'photos';
+type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'photos' | 'profile';
 
 const VIEW_TITLE: Record<View, string> = {
   home: 'Обзор',
@@ -19,6 +21,7 @@ const VIEW_TITLE: Record<View, string> = {
   timesheet: 'Табель учёта времени',
   defects: 'Мои замечания',
   photos: 'Мои фотоотчёты',
+  profile: 'Профиль инспектора',
 };
 
 interface InspectorCabinetProps {
@@ -30,6 +33,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const { profile } = useProfile();
   const { list: objects } = useObjects();
   const { sheet } = useTimesheet();
+  const { current } = useUsers();
   const spec = profile.specialties ?? [];
 
   const now = new Date();
@@ -102,14 +106,29 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={onExit}
-          className="ml-auto flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-destructive hover:text-destructive"
-        >
-          <Icon name="LogOut" size={14} />
-          Выйти из кабинета
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setView('profile')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors',
+              view === 'profile'
+                ? 'border-accent bg-accent text-accent-foreground'
+                : 'border-border bg-card hover:border-accent hover:bg-secondary',
+            )}
+          >
+            <Icon name="UserCog" size={14} />
+            Мой профиль
+          </button>
+          <button
+            type="button"
+            onClick={onExit}
+            className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-destructive hover:text-destructive"
+          >
+            <Icon name="LogOut" size={14} />
+            Выйти
+          </button>
+        </div>
       </div>
 
       {view === 'home' && (
@@ -149,6 +168,27 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
                 </div>
               )}
             </div>
+
+            {!!current && (
+              <div className="mt-3 flex flex-wrap gap-4 border-t border-border pt-3 text-[0.85em]">
+                <span className="flex items-center gap-1.5">
+                  <Icon name="ShieldCheck" size={14} className="text-accent" />
+                  Удостоверений: <b>{current.certificates?.length ?? 0}</b>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Icon name="GraduationCap" size={14} className="text-accent" />
+                  Документов об образовании: <b>{current.educations?.length ?? 0}</b>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setView('profile')}
+                  className="ml-auto flex items-center gap-1.5 text-accent hover:underline"
+                >
+                  Заполнить в профиле
+                  <Icon name="ArrowRight" size={13} />
+                </button>
+              </div>
+            )}
 
             {profile.role !== 'inspector' && (
               <p className="mt-4 flex items-center gap-2 rounded-sm bg-secondary/60 p-3 text-[0.82em] text-muted-foreground">
@@ -190,6 +230,19 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
           </div>
         </div>
       )}
+
+      {view === 'profile' &&
+        (current ? (
+          <InspectorProfile user={current} />
+        ) : (
+          <Panel title="Профиль инспектора">
+            <Empty
+              icon="UserCog"
+              title="Профиль недоступен"
+              hint="Войдите в систему под своей учётной записью."
+            />
+          </Panel>
+        ))}
 
       {view === 'objects' && <div className="flex min-h-0 flex-1 flex-col">{objectsPanel}</div>}
 

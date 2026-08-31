@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Topbar from '@/components/desk/Topbar';
 import DeskHeader from '@/components/desk/DeskHeader';
 import SideMenu from '@/components/desk/SideMenu';
@@ -13,7 +13,16 @@ import ReportsSection from '@/components/desk/sections/ReportsSection';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import LoginDialog from '@/components/desk/LoginDialog';
 import InspectorCabinet from '@/components/desk/sections/InspectorCabinet';
+import StaffSection from '@/components/desk/sections/StaffSection';
 import Icon from '@/components/ui/icon';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { SectionId, MENU } from '@/data/mock';
 
 const Desk = () => {
@@ -24,8 +33,23 @@ const Desk = () => {
   const [loginOpen, setLoginOpen] = useState(false);
 
   const [history, setHistory] = useState<SectionId[]>([]);
+  const [leaveTo, setLeaveTo] = useState<SectionId | null>(null);
+  const leaveOk = useRef(false);
+
+  const confirmLeave = () => {
+    if (!leaveTo) return;
+    leaveOk.current = true;
+    const target = leaveTo;
+    setLeaveTo(null);
+    select(target);
+  };
 
   const select = (id: SectionId) => {
+    if (section === 'cabinet' && id !== 'cabinet' && !leaveOk.current) {
+      setLeaveTo(id);
+      return;
+    }
+    leaveOk.current = false;
     if (id !== section) setHistory((h) => [...h, section]);
     setSection(id);
     setObjectId(null);
@@ -68,7 +92,15 @@ const Desk = () => {
 
 
   const content = {
-    cabinet: <InspectorCabinet onExit={() => select('objects')} />,
+    cabinet: (
+      <InspectorCabinet
+        onExit={() => {
+          leaveOk.current = true;
+          select('objects');
+        }}
+      />
+    ),
+    staff: <StaffSection />,
     objects: <ObjectsSection onOpenObject={openObject} />,
     sites: objectId ? (
       <ObjectPage id={objectId} editOnOpen={objectEdit} onBack={closeObject} />
@@ -119,6 +151,31 @@ const Desk = () => {
           <SideMenu active={section} onSelect={select} className="h-full rounded-none" />
         </SheetContent>
       </Sheet>
+
+      <Dialog open={!!leaveTo} onOpenChange={(v) => !v && setLeaveTo(null)}>
+        <DialogContent className="max-w-sm rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.2em] uppercase tracking-[0.03em]">
+              Выйти из кабинета?
+            </DialogTitle>
+            <DialogDescription className="text-[0.85em]">
+              Вы находитесь в кабинете инспектора. Перейти в раздел «
+              {MENU.find((m) => m.id === leaveTo)?.label}»?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 rounded-sm" onClick={() => setLeaveTo(null)}>
+              Остаться
+            </Button>
+            <Button
+              className="flex-1 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+              onClick={confirmLeave}
+            >
+              Выйти
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <LoginDialog
         open={loginOpen}

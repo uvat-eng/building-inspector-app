@@ -1,5 +1,6 @@
 export type SectionId =
   | 'cabinet'
+  | 'staff'
   | 'objects'
   | 'sites'
   | 'inspections'
@@ -18,6 +19,7 @@ export interface MenuItem {
 export const MENU: MenuItem[] = [
   { id: 'objects', label: 'Главная', short: 'Главная', icon: 'Map' },
   { id: 'cabinet', label: 'Мой кабинет', short: 'Кабинет инспектора', icon: 'IdCard' },
+  { id: 'staff', label: 'Инспекторы', short: 'Реестр инспекторов', icon: 'Users' },
   { id: 'sites', label: 'Объекты', short: 'Объекты строительства', icon: 'Building2' },
   { id: 'inspections', label: 'Проверки и выезды', short: 'Проверки и выезды', icon: 'ClipboardCheck' },
   { id: 'defects', label: 'Замечания', short: 'Замечания и дефекты', icon: 'TriangleAlert' },

@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import Icon from '@/components/ui/icon';
 import ProfileCard from '@/components/desk/ProfileCard';
 import { MENU, SectionId } from '@/data/mock';
+import { useProfile } from '@/data/profile';
 
 interface SideMenuProps {
   active: SectionId;
@@ -9,7 +10,9 @@ interface SideMenuProps {
   className?: string;
 }
 
-const SideMenu = ({ active, onSelect, className }: SideMenuProps) => (
+const SideMenu = ({ active, onSelect, className }: SideMenuProps) => {
+  const { profile } = useProfile();
+  return (
   <nav
     className={cn(
       'flex min-h-0 flex-col rounded-sm border border-foreground/85 bg-card pt-[18px]',
@@ -20,7 +23,9 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => (
       Разделы
     </div>
     <ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-      {MENU.map((item) => {
+      {MENU.filter(
+        (item) => item.id !== 'staff' || profile.role === 'coordinator' || profile.role === 'director',
+      ).map((item) => {
         const on = item.id === active;
         return (
           <li key={item.id} className="border-b border-foreground/85 last:border-b-0">
@@ -43,6 +48,7 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => (
     </ul>
     <ProfileCard />
   </nav>
-);
+  );
+};
 
 export default SideMenu;
