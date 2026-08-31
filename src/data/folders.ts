@@ -1,0 +1,99 @@
+import { useCallback, useEffect, useState } from 'react';
+
+const API = 'https://functions.poehali.dev/99297b13-e7b3-4f26-a80c-d3ec99913480';
+
+export type FolderSection = 'tests' | 'ks' | 'incoming';
+
+export interface FolderPhoto {
+  id: string;
+  url: string;
+}
+
+export interface PhotoFolder {
+  id: string;
+  objectId: string;
+  section: FolderSection;
+  subsection: string;
+  title: string;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+  photos: FolderPhoto[];
+}
+
+export const SECTION_TITLE: Record<FolderSection, string> = {
+  tests: 'Подписанные акты испытаний и иные важные документы',
+  ks: 'Подписанные акты ф. КС-2, КС-3, КС-6, КС-11',
+  incoming: 'Входной контроль',
+};
+
+export const SUBSECTIONS: Record<FolderSection, { id: string; label: string; icon: string }[]> = {
+  tests: [],
+  ks: [],
+  incoming: [
+    { id: 'acts', label: 'Акты входного контроля', icon: 'ClipboardCheck' },
+    { id: 'm19', label: 'Акты М-19, М-29', icon: 'FileSpreadsheet' },
+  ],
+};
+
+export const useFolders = (objectId: string, section: FolderSection) => {
+  const [items, setItems] = useState<PhotoFolder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    const res = await fetch(
+      `${API}?object_id=${encodeURIComponent(objectId)}&section=${encodeURIComponent(section)}`,
+    );
+    if (!res.ok) throw new Error('load_failed');
+    const { items: list } = (await res.json()) as { items: PhotoFolder[] };
+    setItems(list ?? []);
+    return list ?? [];
+  }, [objectId, section]);
+
+  useEffect(() => {
+    setLoading(true);
+    reload()
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, [reload]);
+
+  const create = useCallback(
+    async (title: string, subsection = '', note = '', createdBy = '') => {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectId, section, subsection, title, note, createdBy }),
+      });
+      if (!res.ok) throw new Error('create_failed');
+      const { item } = (await res.json()) as { item: PhotoFolder };
+      setItems((p) => [item, ...p]);
+      return item;
+    },
+    [objectId, section],
+  );
+
+  const rename = useCallback(async (id: string, title: string) => {
+    setItems((p) => p.map((f) => (f.id === id ? { ...f, title } : f)));
+    await fetch(API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, patch: { title } }),
+    });
+  }, []);
+
+  const remove = useCallback(async (id: string) => {
+    setItems((p) => p.filter((f) => f.id !== id));
+    await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }, []);
+
+  const removePhoto = useCallback(async (folderId: string, photoId: string) => {
+    setItems((p) =>
+      p.map((f) =>
+        f.id === folderId ? { ...f, photos: f.photos.filter((ph) => ph.id !== photoId) } : f,
+      ),
+    );
+    await fetch(`${API}?photo_id=${encodeURIComponent(photoId)}`, { method: 'DELETE' });
+  }, []);
+
+  return { items, loading, create, rename, remove, removePhoto, reload };
+};

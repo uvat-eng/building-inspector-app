@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Список папок",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Создание без названия",
+      "method": "POST",
+      "path": "/",
+      "body": { "objectId": "x", "section": "tests" },
+      "expectedStatus": 400,
+      "expectedBody": { "error": "object_section_title_required" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
