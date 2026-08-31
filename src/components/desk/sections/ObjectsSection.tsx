@@ -16,6 +16,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useObjects, money, ProjectObject, STATUS_LABEL } from '@/data/store';
+import { useProfile, ROLE_LABEL } from '@/data/profile';
+import { useToast } from '@/hooks/use-toast';
 import type { TagTone } from '@/data/mock';
 
 const TONE: Record<ProjectObject['status'], TagTone> = {
@@ -27,8 +29,22 @@ const TONE: Record<ProjectObject['status'], TagTone> = {
 
 const ObjectsSection = () => {
   const { list, add, remove } = useObjects();
+  const { profile, canAddObject } = useProfile();
+  const { toast } = useToast();
   const [open, setOpen] = useState<ProjectObject | null>(null);
   const [form, setForm] = useState(false);
+
+  const tryAdd = () => {
+    if (!canAddObject) {
+      toast({
+        title: 'Недостаточно прав',
+        description: `Добавлять объекты может только заместитель директора заказчика. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setForm(true);
+  };
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-0.5">
@@ -47,10 +63,15 @@ const ObjectsSection = () => {
         action={
           <Button
             size="sm"
-            onClick={() => setForm(true)}
-            className="ml-3 h-8 gap-1.5 rounded-sm bg-accent px-3 font-head text-[0.85em] uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+            onClick={tryAdd}
+            title={canAddObject ? undefined : 'Доступно заместителю директора заказчика'}
+            className={`ml-3 h-8 gap-1.5 rounded-sm px-3 font-head text-[0.85em] uppercase tracking-[0.06em] ${
+              canAddObject
+                ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+                : 'bg-secondary text-muted-foreground hover:bg-secondary'
+            }`}
           >
-            <Icon name="Plus" size={14} />
+            <Icon name={canAddObject ? 'Plus' : 'Lock'} size={14} />
             Добавить объект
           </Button>
         }
@@ -59,7 +80,11 @@ const ObjectsSection = () => {
           <Empty
             icon="Building2"
             title="Объектов пока нет"
-            hint="Нажмите «Добавить объект»: заказчик, договор, точка на карте, ресурсы."
+            hint={
+              canAddObject
+                ? 'Нажмите «Добавить объект»: заказчик, договор, точка на карте, ресурсы.'
+                : 'Объекты добавляет заместитель директора заказчика.'
+            }
           />
         ) : (
           list.map((o) => (
@@ -125,17 +150,19 @@ const ObjectsSection = () => {
                 <span className="flex items-center gap-2 rounded-sm bg-secondary px-3 py-2 text-[0.8em] uppercase tracking-[0.08em]">
                   <Icon name="MapPin" size={14} className="text-accent" /> {open.regionName}
                 </span>
-                <Button
-                  variant="ghost"
-                  className="rounded-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => {
-                    remove(open.id);
-                    setOpen(null);
-                  }}
-                >
-                  <Icon name="Trash2" size={15} className="mr-1.5" />
-                  Удалить
-                </Button>
+                {canAddObject && (
+                  <Button
+                    variant="ghost"
+                    className="rounded-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => {
+                      remove(open.id);
+                      setOpen(null);
+                    }}
+                  >
+                    <Icon name="Trash2" size={15} className="mr-1.5" />
+                    Удалить
+                  </Button>
+                )}
               </div>
             </>
           )}

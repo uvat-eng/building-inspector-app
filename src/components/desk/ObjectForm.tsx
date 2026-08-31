@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import RussiaMap from '@/components/desk/RussiaMap';
+import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
-import { REGION_POINTS } from '@/data/geo';
+import { CITIES, DISTRICTS } from '@/data/geo';
 import { ProjectObject, STATUS_LABEL } from '@/data/store';
 
 interface ObjectFormProps {
@@ -32,7 +34,7 @@ const EMPTY = {
   customerLogo: '',
   contractNo: '',
   contractSum: '',
-  regionId: 'yakutsk',
+  address: '',
   stage: '',
   progress: '0',
   start: '',
@@ -46,18 +48,37 @@ const EMPTY = {
   ordersOpen: '0',
 };
 
+const dist = (aLon: number, aLat: number, bLon: number, bLat: number) => {
+  const dx = (aLon - bLon) * Math.cos(((aLat + bLat) / 2) * (Math.PI / 180)) * 111;
+  const dy = (aLat - bLat) * 111;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
 const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
   const [f, setF] = useState(EMPTY);
+  const [point, setPoint] = useState<{ lon: number; lat: number } | null>(null);
   const { toast } = useToast();
   const set = (k: keyof typeof EMPTY, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  const near = useMemo(() => {
+    if (!point) return [];
+    return CITIES.map((c) => ({ ...c, km: dist(point.lon, point.lat, c.lon, c.lat) }))
+      .sort((a, b) => a.km - b.km)
+      .slice(0, 4);
+  }, [point]);
 
   const submit = () => {
     if (!f.title.trim() || !f.customer.trim()) {
       toast({ title: 'Заполните название объекта и заказчика', variant: 'destructive' });
       return;
     }
-    const point = REGION_POINTS.find((r) => r.id === f.regionId)!;
+    if (!point) {
+      toast({ title: 'Отметьте объект на карте', variant: 'destructive' });
+      return;
+    }
     const n = (v: string) => Number(v.replace(/\s/g, '')) || 0;
+    const anchor = near[0];
+    const districtId = anchor?.d ?? DISTRICTS[0].id;
 
     onSave({
       title: f.title.trim(),
@@ -65,11 +86,13 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
       customerLogo: f.customerLogo.trim() || undefined,
       contractNo: f.contractNo.trim(),
       contractSum: n(f.contractSum),
-      regionId: point.id,
-      regionName: point.name,
-      district: point.district,
-      lon: point.lon,
-      lat: point.lat,
+      regionId: anchor?.n ?? 'point',
+      regionName:
+        f.address.trim() ||
+        (anchor ? `${Math.round(anchor.km)} км от г. ${anchor.n}` : 'Точка на карте'),
+      district: districtId,
+      lon: Number(point.lon.toFixed(4)),
+      lat: Number(point.lat.toFixed(4)),
       stage: f.stage.trim() || 'Подготовительный этап',
       progress: Math.min(100, n(f.progress)),
       start: f.start,
@@ -84,6 +107,7 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
     });
     toast({ title: 'Объект добавлен', description: 'Метка появилась на карте, сводка пересчитана.' });
     setF(EMPTY);
+    setPoint(null);
     onOpenChange(false);
   };
 
@@ -103,40 +127,61 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto rounded-sm border-t-2 border-t-accent">
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto rounded-sm border-t-2 border-t-accent">
         <DialogHeader>
           <DialogTitle className="font-head text-xl uppercase tracking-[0.04em]">
             Новый объект
           </DialogTitle>
           <DialogDescription>
-            Данные попадут на карту и в сводку по портфелю
+            Отметьте место пальцем на карте — ближайшие города подскажут ориентир
           </DialogDescription>
         </DialogHeader>
+
+        <div className="overflow-hidden rounded-sm border border-border">
+          <RussiaMap
+            objects={[]}
+            pickMode
+            marker={point}
+            onPoint={(lon, lat) => setPoint({ lon, lat })}
+            height="max-h-[38vh]"
+          />
+        </div>
+
+        <div className="rounded-sm border border-border bg-secondary/50 p-3 text-[0.85em]">
+          {point ? (
+            <>
+              <div className="flex items-center gap-2 font-head uppercase tracking-[0.06em]">
+                <Icon name="MapPin" size={15} className="text-accent" />
+                {point.lat.toFixed(3)}° с.ш., {point.lon.toFixed(3)}° в.д.
+              </div>
+              <div className="mt-1.5 text-muted-foreground">
+                Ближайшие города:{' '}
+                {near.map((c, i) => (
+                  <span key={c.n}>
+                    {i > 0 && ', '}
+                    {c.n} — {Math.round(c.km)} км
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <span className="text-muted-foreground">
+              Точка не выбрана: приблизьте округ и коснитесь нужного места на карте.
+            </span>
+          )}
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">{field('title', 'Название объекта')}</div>
           {field('customer', 'Заказчик')}
           {field('customerLogo', 'Ссылка на эмблему заказчика', { placeholder: 'https://…' })}
+          <div className="sm:col-span-2">
+            {field('address', 'Адрес или привязка на местности', {
+              placeholder: 'напр. 42 км автодороги Ленск — Мирный',
+            })}
+          </div>
           {field('contractNo', 'Номер договора')}
           {field('contractSum', 'Сумма договора, ₽', { inputMode: 'numeric' })}
-
-          <div className="space-y-1.5">
-            <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
-              Точка на карте
-            </Label>
-            <Select value={f.regionId} onValueChange={(v) => set('regionId', v)}>
-              <SelectTrigger className="rounded-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
-                {REGION_POINTS.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="space-y-1.5">
             <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">

@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import Icon from '@/components/ui/icon';
+import ProfileCard from '@/components/desk/ProfileCard';
 import { MENU, SectionId } from '@/data/mock';
 
 interface SideMenuProps {
@@ -40,11 +41,7 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => (
         );
       })}
     </ul>
-    <div className="mt-auto border-t border-white/10 px-[18px] pt-3.5 text-[0.8em] leading-[1.5] text-deep-dim">
-      <b className="block text-[1.1em] font-bold text-deep-foreground">Профиль не заполнен</b>
-      Инспектор стройконтроля
-      <span className="mt-1 block text-[0.95em]">Группа не назначена</span>
-    </div>
+    <ProfileCard />
   </nav>
 );
 
