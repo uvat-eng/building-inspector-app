@@ -6,7 +6,7 @@ import { useProfile, ROLE_LABEL } from '@/data/profile';
 import Timesheet from '@/components/desk/Timesheet';
 import { useObjects } from '@/data/store';
 import { DEFECTS, PHOTOS } from '@/data/mock';
-import { useTimesheet, monthEntries } from '@/data/timesheet';
+import { useTimesheet, monthEntries, dayHours, fmtHours } from '@/data/timesheet';
 
 const InspectorCabinet = () => {
   const { profile } = useProfile();
@@ -16,11 +16,11 @@ const InspectorCabinet = () => {
 
   const now = new Date();
   const month = monthEntries(sheet, now.getFullYear(), now.getMonth());
-  const monthHours = month.reduce((s, [, e]) => s + e.hours, 0);
+  const monthHours = month.reduce((s, [, list]) => s + dayHours(list), 0);
 
   const stats = [
     { icon: 'Building2', label: 'Объектов', value: objects.length },
-    { icon: 'Clock', label: 'Часов за месяц', value: monthHours },
+    { icon: 'Clock', label: 'Часов за месяц', value: fmtHours(monthHours) },
     { icon: 'TriangleAlert', label: 'Замечаний', value: DEFECTS.length },
     { icon: 'Camera', label: 'Фотоотчётов', value: PHOTOS.length },
   ];

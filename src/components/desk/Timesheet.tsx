@@ -15,7 +15,18 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useObjects } from '@/data/store';
 import { useProfile } from '@/data/profile';
-import { useTimesheet, dayKey, MONTHS, WEEKDAYS, monthEntries, TimeEntry } from '@/data/timesheet';
+import {
+  useTimesheet,
+  dayKey,
+  MONTHS,
+  WEEKDAYS,
+  monthEntries,
+  TimeEntry,
+  dayHours,
+  entryHours,
+  fmtHours,
+  minutes,
+} from '@/data/timesheet';
 
 const today = new Date();
 
@@ -30,14 +41,15 @@ const Timesheet = () => {
   const [pick, setPick] = useState<number | null>(null);
   const [report, setReport] = useState(false);
 
-  const [objId, setObjId] = useState('');
-  const [hours, setHours] = useState('8');
+  const [rows, setRows] = useState<TimeEntry[]>([]);
+  const [objOpen, setObjOpen] = useState<number | null>(null);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstShift = (new Date(year, month, 1).getDay() + 6) % 7;
 
   const entries = useMemo(() => monthEntries(sheet, year, month), [sheet, year, month]);
-  const totalHours = entries.reduce((s, [, e]) => s + e.hours, 0);
+  const totalHours = entries.reduce((s, [, list]) => s + dayHours(list), 0);
+  const rowsHours = dayHours(rows);
 
   const shift = (delta: number) => {
     const d = new Date(year, month + delta, 1);
@@ -46,26 +58,39 @@ const Timesheet = () => {
   };
 
   const openDay = (d: number) => {
-    const cur = sheet[dayKey(year, month, d)];
-    setObjId(cur?.objectId ?? '');
-    setHours(cur ? String(cur.hours) : '8');
+    const cur = sheet[dayKey(year, month, d)] ?? [];
+    setRows(cur.length ? [...cur] : [{ objectId: '', objectTitle: '', from: '08:00', to: '17:00' }]);
+    setObjOpen(cur.length ? null : 0);
     setPick(d);
   };
 
+  const patch = (i: number, p: Partial<TimeEntry>) =>
+    setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
+
+  const addRow = () =>
+    setRows((prev) => {
+      const last = prev[prev.length - 1];
+      return [
+        ...prev,
+        { objectId: '', objectTitle: '', from: last?.to || '08:00', to: last?.to || '17:00' },
+      ];
+    });
+
+  const removeRow = (i: number) => setRows((prev) => prev.filter((_, idx) => idx !== i));
+
   const saveDay = () => {
     if (pick === null) return;
-    const obj = objects.find((o) => o.id === objId);
-    if (!obj) {
-      toast({ title: 'Выберите объект', variant: 'destructive' });
+    const clean = rows.filter((r) => r.objectId);
+    if (clean.length === 0) {
+      toast({ title: 'Выберите объект хотя бы в одной строке', variant: 'destructive' });
       return;
     }
-    const h = Number(hours.replace(',', '.'));
-    if (!h || h <= 0 || h > 24) {
-      toast({ title: 'Часы: от 1 до 24', variant: 'destructive' });
+    const bad = clean.find((r) => minutes(r.to) <= minutes(r.from));
+    if (bad) {
+      toast({ title: 'Время окончания должно быть позже начала', variant: 'destructive' });
       return;
     }
-    const entry: TimeEntry = { objectId: obj.id, objectTitle: obj.title, hours: h };
-    setDay(dayKey(year, month, pick), entry);
+    setDay(dayKey(year, month, pick), clean);
     setPick(null);
   };
 
@@ -75,13 +100,11 @@ const Timesheet = () => {
     setPick(null);
   };
 
-  const printReport = () => window.print();
-
   return (
     <>
       <Panel
         title="Табель учёта рабочего времени"
-        note={`${entries.length} дн. · ${totalHours} ч`}
+        note={`${entries.length} дн. · ${fmtHours(totalHours)} ч`}
         action={
           <span className="ml-3 flex items-center gap-1">
             <button
@@ -122,31 +145,38 @@ const Timesheet = () => {
             ))}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const d = i + 1;
-              const e = sheet[dayKey(year, month, d)];
+              const list = sheet[dayKey(year, month, d)];
               const isToday =
-                d === today.getDate() &&
-                month === today.getMonth() &&
-                year === today.getFullYear();
+                d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
               return (
                 <button
                   key={d}
                   type="button"
                   onClick={() => openDay(d)}
                   className={cn(
-                    'flex min-h-[58px] flex-col rounded-sm border p-1.5 text-left transition-colors',
-                    e
+                    'flex min-h-[62px] flex-col rounded-sm border p-1.5 text-left transition-colors',
+                    list?.length
                       ? 'border-accent bg-accent/10 hover:bg-accent/20'
                       : 'border-border hover:bg-secondary/60',
                     isToday && 'ring-1 ring-foreground',
                   )}
                 >
-                  <span className="font-head text-[0.95em] leading-none">{d}</span>
-                  {e ? (
-                    <>
-                      <span className="mt-1 line-clamp-2 text-[0.68em] leading-tight text-muted-foreground">
-                        {e.objectTitle}
+                  <span className="flex items-center gap-1">
+                    <span className="font-head text-[0.95em] leading-none">{d}</span>
+                    {(list?.length ?? 0) > 1 && (
+                      <span className="rounded-[2px] bg-accent px-1 text-[0.6em] leading-[1.4] text-accent-foreground">
+                        {list!.length}
                       </span>
-                      <span className="mt-auto font-head text-[0.75em] text-accent">{e.hours} ч</span>
+                    )}
+                  </span>
+                  {list?.length ? (
+                    <>
+                      <span className="mt-1 line-clamp-2 text-[0.66em] leading-tight text-muted-foreground">
+                        {list.map((e) => e.objectTitle).join(' · ')}
+                      </span>
+                      <span className="mt-auto font-head text-[0.72em] text-accent">
+                        {fmtHours(dayHours(list))} ч
+                      </span>
                     </>
                   ) : (
                     <Icon
@@ -171,13 +201,14 @@ const Timesheet = () => {
       </Panel>
 
       <Dialog open={pick !== null} onOpenChange={(v) => !v && setPick(null)}>
-        <DialogContent className="max-w-md rounded-sm">
+        <DialogContent className="max-w-lg rounded-sm">
           <DialogHeader>
             <DialogTitle className="font-head text-[1.25em] uppercase tracking-[0.03em]">
               {pick} {MONTHS[month].toLowerCase()} {year}
             </DialogTitle>
             <DialogDescription className="text-[0.85em]">
-              Выберите объект и укажите отработанные часы.
+              Несколько объектов за день: укажите период времени на каждом. Итого{' '}
+              <b className="text-accent">{fmtHours(rowsHours)} ч</b>.
             </DialogDescription>
           </DialogHeader>
 
@@ -186,49 +217,114 @@ const Timesheet = () => {
               Объектов пока нет. Добавьте объект в разделе «Объекты» — он появится в этом списке.
             </p>
           ) : (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
-                  Объект
-                </Label>
-                <div className="scrollbar-thin max-h-[190px] overflow-y-auto rounded-sm border border-input">
-                  {objects.map((o) => (
-                    <button
-                      key={o.id}
-                      type="button"
-                      onClick={() => setObjId(o.id)}
-                      className={cn(
-                        'flex w-full items-center gap-2.5 border-b border-border px-3 py-2 text-left text-[0.85em] last:border-b-0',
-                        objId === o.id ? 'bg-secondary' : 'hover:bg-secondary/60',
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'h-3 w-3 flex-none rounded-full border',
-                          objId === o.id ? 'border-accent bg-accent' : 'border-input',
-                        )}
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate">{o.title}</span>
-                        <span className="block truncate text-[0.85em] text-muted-foreground">
-                          {o.regionName}
-                        </span>
+            <>
+              <div className="scrollbar-thin max-h-[52vh] space-y-2.5 overflow-y-auto pr-1">
+                {rows.map((r, i) => (
+                  <div key={i} className="rounded-sm border border-border p-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-sm bg-secondary font-head text-[0.75em]">
+                        {i + 1}
                       </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      <button
+                        type="button"
+                        onClick={() => setObjOpen(objOpen === i ? null : i)}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-sm border border-input px-2.5 py-1.5 text-left text-[0.85em]"
+                      >
+                        <span
+                          className={cn(
+                            'min-w-0 flex-1 truncate',
+                            !r.objectId && 'text-muted-foreground',
+                          )}
+                        >
+                          {r.objectTitle || 'Выберите объект'}
+                        </span>
+                        <Icon
+                          name="ChevronDown"
+                          size={14}
+                          className={cn('flex-none transition-transform', objOpen === i && 'rotate-180')}
+                        />
+                      </button>
+                      {rows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeRow(i)}
+                          className="flex h-7 w-7 flex-none items-center justify-center rounded-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        >
+                          <Icon name="X" size={15} />
+                        </button>
+                      )}
+                    </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
-                  Отработано часов
-                </Label>
-                <Input
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
-                  inputMode="decimal"
-                  className="rounded-sm"
-                />
+                    {objOpen === i && (
+                      <div className="scrollbar-thin mt-2 max-h-[160px] overflow-y-auto rounded-sm border border-input">
+                        {objects.map((o) => (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => {
+                              patch(i, { objectId: o.id, objectTitle: o.title });
+                              setObjOpen(null);
+                            }}
+                            className={cn(
+                              'flex w-full items-center gap-2.5 border-b border-border px-3 py-2 text-left text-[0.85em] last:border-b-0',
+                              r.objectId === o.id ? 'bg-secondary' : 'hover:bg-secondary/60',
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'h-3 w-3 flex-none rounded-full border',
+                                r.objectId === o.id ? 'border-accent bg-accent' : 'border-input',
+                              )}
+                            />
+                            <span className="min-w-0">
+                              <span className="block truncate">{o.title}</span>
+                              <span className="block truncate text-[0.85em] text-muted-foreground">
+                                {o.regionName}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-2 flex items-end gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[0.68em] uppercase tracking-[0.1em] text-muted-foreground">
+                          С
+                        </Label>
+                        <Input
+                          type="time"
+                          value={r.from}
+                          onChange={(e) => patch(i, { from: e.target.value })}
+                          className="h-9 rounded-sm"
+                        />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[0.68em] uppercase tracking-[0.1em] text-muted-foreground">
+                          До
+                        </Label>
+                        <Input
+                          type="time"
+                          value={r.to}
+                          onChange={(e) => patch(i, { to: e.target.value })}
+                          className="h-9 rounded-sm"
+                        />
+                      </div>
+                      <span className="pb-2 font-head text-[0.85em] text-accent">
+                        {fmtHours(entryHours(r))} ч
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addRow}
+                  className="flex w-full items-center justify-center gap-2 rounded-sm border border-dashed border-input py-2 text-[0.85em] text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                >
+                  <Icon name="Plus" size={15} />
+                  Добавить объект
+                </button>
               </div>
 
               <div className="flex gap-2">
@@ -244,7 +340,7 @@ const Timesheet = () => {
                   Сохранить
                 </Button>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -283,24 +379,39 @@ const Timesheet = () => {
                   <tr className="bg-secondary text-left uppercase tracking-[0.08em]">
                     <th className="border border-border px-2 py-1.5">Дата</th>
                     <th className="border border-border px-2 py-1.5">Объект</th>
+                    <th className="border border-border px-2 py-1.5">Период</th>
                     <th className="border border-border px-2 py-1.5 text-right">Часы</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {entries.map(([k, e]) => (
-                    <tr key={k}>
-                      <td className="border border-border px-2 py-1.5">
-                        {k.split('-').reverse().join('.')}
-                      </td>
-                      <td className="border border-border px-2 py-1.5">{e.objectTitle}</td>
-                      <td className="border border-border px-2 py-1.5 text-right">{e.hours}</td>
-                    </tr>
-                  ))}
+                  {entries.map(([k, list]) =>
+                    list.map((e, i) => (
+                      <tr key={`${k}-${i}`}>
+                        {i === 0 && (
+                          <td
+                            className="border border-border px-2 py-1.5 align-top"
+                            rowSpan={list.length}
+                          >
+                            {k.split('-').reverse().join('.')}
+                          </td>
+                        )}
+                        <td className="border border-border px-2 py-1.5">{e.objectTitle}</td>
+                        <td className="border border-border px-2 py-1.5">
+                          {e.from}–{e.to}
+                        </td>
+                        <td className="border border-border px-2 py-1.5 text-right">
+                          {fmtHours(entryHours(e))}
+                        </td>
+                      </tr>
+                    )),
+                  )}
                   <tr className="font-bold">
-                    <td className="border border-border px-2 py-1.5" colSpan={2}>
+                    <td className="border border-border px-2 py-1.5" colSpan={3}>
                       Итого: {entries.length} дн.
                     </td>
-                    <td className="border border-border px-2 py-1.5 text-right">{totalHours}</td>
+                    <td className="border border-border px-2 py-1.5 text-right">
+                      {fmtHours(totalHours)}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -308,7 +419,7 @@ const Timesheet = () => {
           </div>
 
           <Button
-            onClick={printReport}
+            onClick={() => window.print()}
             className="gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
           >
             <Icon name="Printer" size={16} />

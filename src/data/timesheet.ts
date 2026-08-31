@@ -3,18 +3,59 @@ import { useCallback, useEffect, useState } from 'react';
 export interface TimeEntry {
   objectId: string;
   objectTitle: string;
-  hours: number;
+  from: string;
+  to: string;
 }
 
-export type Timesheet = Record<string, TimeEntry>;
+export type Timesheet = Record<string, TimeEntry[]>;
 
-const KEY = 'gsi-timesheet-v1';
+const KEY = 'gsi-timesheet-v2';
+const OLD_KEY = 'gsi-timesheet-v1';
 const EVENT = 'gsi-timesheet-changed';
+
+export const minutes = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+export const entryHours = (e: TimeEntry) => {
+  const diff = minutes(e.to) - minutes(e.from);
+  return Math.max(0, diff) / 60;
+};
+
+export const dayHours = (list: TimeEntry[] = []) =>
+  list.reduce((s, e) => s + entryHours(e), 0);
+
+export const fmtHours = (h: number) =>
+  Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/0$/, '').replace('.', ',');
+
+const migrate = (): Timesheet => {
+  try {
+    const old = localStorage.getItem(OLD_KEY);
+    if (!old) return {};
+    const parsed = JSON.parse(old) as Record<string, { objectId: string; objectTitle: string; hours: number }>;
+    const next: Timesheet = {};
+    Object.entries(parsed).forEach(([k, v]) => {
+      const end = Math.min(8 * 60 + Math.round((v.hours || 0) * 60), 24 * 60);
+      const hh = String(Math.floor(end / 60)).padStart(2, '0');
+      const mm = String(end % 60).padStart(2, '0');
+      next[k] = [
+        { objectId: v.objectId, objectTitle: v.objectTitle, from: '08:00', to: `${hh}:${mm}` },
+      ];
+    });
+    localStorage.setItem(KEY, JSON.stringify(next));
+    localStorage.removeItem(OLD_KEY);
+    return next;
+  } catch {
+    return {};
+  }
+};
 
 const read = (): Timesheet => {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Timesheet) : {};
+    if (raw) return JSON.parse(raw) as Timesheet;
+    return migrate();
   } catch {
     return {};
   }
@@ -53,9 +94,9 @@ export const useTimesheet = () => {
     };
   }, []);
 
-  const setDay = useCallback((key: string, entry: TimeEntry | null) => {
+  const setDay = useCallback((key: string, list: TimeEntry[] | null) => {
     const next = read();
-    if (entry) next[key] = entry;
+    if (list && list.length) next[key] = list;
     else delete next[key];
     localStorage.setItem(KEY, JSON.stringify(next));
     window.dispatchEvent(new Event(EVENT));
