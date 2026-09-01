@@ -109,7 +109,7 @@ const ActEditor = ({
       const created = await add(title.trim());
       setTitle('');
       update(created.id, { severity: 'normal', deadline: deadlineFor('normal') });
-      suggestNorms([created.title])
+      suggestNorms([created.title], true)
         .then(([m]) => {
           if (m) applyMatch(created.id, m);
         })
