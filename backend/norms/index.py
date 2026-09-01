@@ -7,7 +7,12 @@ import urllib.error
 import urllib.request
 import uuid
 
+import requests
+import urllib3
+
 from norms_db import RULES, FALLBACK
+
+urllib3.disable_warnings()
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -72,18 +77,19 @@ _TOKEN = {'value': '', 'exp': 0}
 def giga_token(auth, ctx):
     if _TOKEN['value'] and time.time() < _TOKEN['exp']:
         return _TOKEN['value']
-    token_req = urllib.request.Request(
+    r = requests.post(
         'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
-        data=b'scope=GIGACHAT_API_PERS',
+        data={'scope': 'GIGACHAT_API_PERS'},
         headers={
             'Authorization': f'Basic {auth}',
             'RqUID': str(uuid.uuid4()),
-            'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': 'application/json',
         },
+        timeout=8,
+        verify=False,
     )
-    with urllib.request.urlopen(token_req, timeout=6, context=ctx) as r:
-        token = json.loads(r.read())['access_token']
+    r.raise_for_status()
+    token = r.json()['access_token']
     _TOKEN['value'] = token
     _TOKEN['exp'] = time.time() + 1500
     return token
@@ -102,21 +108,20 @@ def ask_gigachat(prompt, count, budget):
     if left < 1:
         raise TimeoutError('не хватило времени на запрос к ИИ')
 
-    chat_req = urllib.request.Request(
+    r = requests.post(
         'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
-        data=json.dumps(
-            {
-                'model': 'GigaChat',
-                'temperature': 0.1,
-                'messages': [{'role': 'user', 'content': prompt}],
-            },
-            ensure_ascii=False,
-        ).encode(),
-        headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+        json={
+            'model': 'GigaChat-2',
+            'temperature': 0.1,
+            'max_tokens': 900,
+            'messages': [{'role': 'user', 'content': prompt}],
+        },
+        headers={'Authorization': f'Bearer {token}', 'Accept': 'application/json'},
+        timeout=left,
+        verify=False,
     )
-    with urllib.request.urlopen(chat_req, timeout=left, context=ctx) as r:
-        data = json.loads(r.read())
-    return parse_ai(data['choices'][0]['message']['content'], count)
+    r.raise_for_status()
+    return parse_ai(r.json()['choices'][0]['message']['content'], count)
 
 
 def ask_openrouter(prompt, count, budget):
@@ -183,23 +188,41 @@ def probe():
         log['models_sec'] = round(time.time() - t, 2)
         log['models'] = [m.get('id') for m in data.get('data', [])]
 
+        log['chat'] = {}
         t = time.time()
-        chat = urllib.request.Request(
-            'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
-            data=json.dumps(
-                {
-                    'model': log['models'][0] if log['models'] else 'GigaChat',
-                    'max_tokens': 20,
-                    'messages': [{'role': 'user', 'content': 'Ответь одним словом: привет'}],
+        try:
+            r = requests.post(
+                'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
+                json={
+                    'model': 'GigaChat-2',
+                    'max_tokens': 16,
+                    'stream': True,
+                    'messages': [{'role': 'user', 'content': 'Скажи: привет'}],
                 },
-                ensure_ascii=False,
-            ).encode(),
-            headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
-        )
-        with urllib.request.urlopen(chat, timeout=25, context=ctx) as r:
-            out = json.loads(r.read())
-        log['chat_sec'] = round(time.time() - t, 2)
-        log['answer'] = out['choices'][0]['message']['content'][:80]
+                headers={
+                    'Authorization': f'Bearer {token}',
+                    'Connection': 'close',
+                    'Accept': 'application/json',
+                    'User-Agent': 'GigaChat-Client/1.0',
+                },
+                timeout=(5, 15),
+                verify=False,
+                stream=True,
+            )
+            log['chat']['connect_ok'] = True
+            log['chat']['headers_sec'] = round(time.time() - t, 2)
+            log['chat']['code'] = r.status_code
+            chunks = []
+            for line in r.iter_lines(decode_unicode=True):
+                if line:
+                    chunks.append(line[:120])
+                if len(chunks) >= 3:
+                    break
+            log['chat']['first_sec'] = round(time.time() - t, 2)
+            log['chat']['chunks'] = chunks
+            r.close()
+        except Exception as e:
+            log['chat']['error'] = f'{type(e).__name__} за {round(time.time() - t, 1)}с: {e}'[:200]
     except urllib.error.HTTPError as e:
         log['error'] = f'HTTP {e.code}: {e.read()[:200].decode(errors="replace")}'
     except Exception as e:
