@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Список подписанных документов",
+      "method": "GET",
+      "path": "/?object_id=obj-test",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Запрос без объекта",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400
+    },
+    {
+      "name": "Загрузка без раздела",
+      "method": "POST",
+      "path": "/",
+      "body": { "objectId": "obj-test" },
+      "expectedStatus": 400
+    }
+  ]
+}
