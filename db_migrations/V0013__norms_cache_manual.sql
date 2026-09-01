@@ -1,0 +1,5 @@
+ALTER TABLE norms_cache ADD COLUMN IF NOT EXISTS manual BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE norms_cache ADD COLUMN IF NOT EXISTS author TEXT NOT NULL DEFAULT '';
+ALTER TABLE norms_cache ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT now();
+
+CREATE INDEX IF NOT EXISTS norms_cache_manual_idx ON norms_cache (manual DESC, hits DESC);

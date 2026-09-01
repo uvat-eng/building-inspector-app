@@ -27,7 +27,7 @@ def norm_phrase(text):
 
 
 def cache_get(texts):
-    """Готовые ответы, накопленные ИИ ранее."""
+    """Ранее накопленные ответы: правки инженеров важнее ответов ИИ."""
     found = {}
     phrases = {t: norm_phrase(t) for t in texts}
     keys = [p for p in phrases.values() if p]
@@ -38,46 +38,63 @@ def cache_get(texts):
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             lst = ','.join("'" + k.replace("'", "''") + "'" for k in keys)
             cur.execute(
-                f'SELECT phrase, ref, name FROM norms_cache '
-                f'WHERE phrase IN ({lst}) AND prompt_ver = {PROMPT_VER}'
+                f'SELECT phrase, ref, name, manual, author FROM norms_cache '
+                f'WHERE phrase IN ({lst}) '
+                f'AND (manual = true OR prompt_ver = {PROMPT_VER})'
             )
             by_phrase = {r['phrase']: r for r in cur.fetchall()}
             for t, p in phrases.items():
                 if p in by_phrase:
                     r = by_phrase[p]
-                    found[t] = {'ref': r['ref'], 'name': r['name'], 'source': 'ai', 'score': 9}
+                    found[t] = {
+                        'ref': r['ref'],
+                        'name': r['name'],
+                        'source': 'manual' if r['manual'] else 'ai',
+                        'author': r['author'] or '',
+                        'score': 10 if r['manual'] else 9,
+                    }
             if found:
-                cur.execute(
-                    f'UPDATE norms_cache SET hits = hits + 1 WHERE phrase IN ({lst})'
-                )
+                cur.execute(f'UPDATE norms_cache SET hits = hits + 1 WHERE phrase IN ({lst})')
     except Exception:
         pass
     return found
 
 
-def cache_put(pairs):
-    """Пополняем базу ответами ИИ, чтобы работало и без интернета."""
+def cache_put(pairs, manual=False, author=''):
+    """Пополняем базу. Ручные правки инженеров не затираются ответами ИИ."""
     rows = [(norm_phrase(t), m) for t, m in pairs if m and m.get('ref')]
     rows = [(p, m) for p, m in rows if p]
     if not rows:
         return
+    keep = (
+        'ON CONFLICT (phrase) DO UPDATE SET ref = EXCLUDED.ref, name = EXCLUDED.name, '
+        'manual = true, author = EXCLUDED.author, prompt_ver = EXCLUDED.prompt_ver, '
+        'updated_at = now(), hits = norms_cache.hits + 1'
+        if manual
+        else 'ON CONFLICT (phrase) DO UPDATE SET '
+        'ref = CASE WHEN norms_cache.manual THEN norms_cache.ref ELSE EXCLUDED.ref END, '
+        'name = CASE WHEN norms_cache.manual THEN norms_cache.name ELSE EXCLUDED.name END, '
+        'prompt_ver = CASE WHEN norms_cache.manual THEN norms_cache.prompt_ver '
+        'ELSE EXCLUDED.prompt_ver END, '
+        'hits = norms_cache.hits + 1'
+    )
     try:
         with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
             cur = conn.cursor()
             vals = ','.join(
-                "('{}','{}','{}',{})".format(
+                "('{}','{}','{}',{},{},'{}')".format(
                     p.replace("'", "''"),
                     str(m['ref']).replace("'", "''")[:300],
                     str(m.get('name', '')).replace("'", "''")[:300],
                     PROMPT_VER,
+                    'true' if manual else 'false',
+                    str(author).replace("'", "''")[:120],
                 )
                 for p, m in rows
             )
             cur.execute(
-                f'INSERT INTO norms_cache (phrase, ref, name, prompt_ver) VALUES {vals} '
-                'ON CONFLICT (phrase) DO UPDATE SET ref = EXCLUDED.ref, '
-                'name = EXCLUDED.name, prompt_ver = EXCLUDED.prompt_ver, '
-                'hits = norms_cache.hits + 1'
+                'INSERT INTO norms_cache (phrase, ref, name, prompt_ver, manual, author) '
+                f'VALUES {vals} {keep}'
             )
     except Exception:
         pass
@@ -350,13 +367,36 @@ def handler(event: dict, context) -> dict:
     if body.get('action') == 'providers':
         return resp(200, probe_providers())
 
+    if body.get('action') == 'learn':
+        text = str(body.get('text') or '').strip()
+        ref = str(body.get('ref') or '').strip()
+        if not text or not ref:
+            return resp(400, {'error': 'text_and_ref_required'})
+        cache_put(
+            [(text, {'ref': ref, 'name': str(body.get('name') or '')})],
+            manual=True,
+            author=str(body.get('author') or ''),
+        )
+        return resp(200, {'ok': True, 'phrase': norm_phrase(text)})
+
     if body.get('action') == 'stats':
         try:
             with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
                 cur = conn.cursor()
-                cur.execute('SELECT COUNT(*), COALESCE(SUM(hits), 0) FROM norms_cache')
-                total, hits = cur.fetchone()
-            return resp(200, {'learned': int(total), 'reuses': int(hits), 'builtin': len(RULES)})
+                cur.execute(
+                    'SELECT COUNT(*), COALESCE(SUM(hits), 0), '
+                    'COUNT(*) FILTER (WHERE manual) FROM norms_cache'
+                )
+                total, hits, manual = cur.fetchone()
+            return resp(
+                200,
+                {
+                    'learned': int(total),
+                    'reuses': int(hits),
+                    'manual': int(manual),
+                    'builtin': len(RULES),
+                },
+            )
         except Exception as e:
             return resp(200, {'error': f'{type(e).__name__}'})
 

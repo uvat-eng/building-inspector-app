@@ -60,10 +60,26 @@ const NORMS_API = 'https://functions.poehali.dev/b9b1a996-8cf5-4866-aae2-e158955
 export interface NormMatch {
   ref: string;
   name: string;
-  source: 'ai' | 'base';
+  source: 'ai' | 'base' | 'manual';
+  author?: string;
   score: number;
   alts?: { ref: string; name: string }[];
 }
+
+export const teachNorm = async (text: string, ref: string, author = '') => {
+  const [head, ...tail] = ref.split('—');
+  await fetch(NORMS_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'learn',
+      text,
+      ref: head.trim(),
+      name: tail.join('—').trim(),
+      author,
+    }),
+  });
+};
 
 export const suggestNorms = async (texts: string[], ai = false): Promise<NormMatch[]> => {
   const res = await fetch(NORMS_API, {

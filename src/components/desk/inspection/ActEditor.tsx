@@ -14,6 +14,7 @@ import {
   SEVERITY,
   deadlineFor,
   uploadAct,
+  teachNorm,
 } from '@/data/inspections';
 import { cn } from '@/lib/utils';
 import { usePhotoQueue, flushQueue, isWifi } from '@/data/photoQueue';
@@ -49,6 +50,22 @@ const ActEditor = ({
     if (m.alts?.length) setAltsFor((p) => new Map(p).set(id, m.alts ?? []));
   };
 
+  const saveOwnRef = async (id: string, title: string, was: string, now: string) => {
+    const val = now.trim();
+    if (val === was.trim()) return;
+    await update(id, { normRef: val });
+    if (!val || !title.trim()) return;
+    try {
+      await teachNorm(title, val, inspection.inspector);
+      toast({
+        title: 'Ссылка запомнена',
+        description: 'При похожем замечании подставится автоматически — у всех инженеров',
+      });
+    } catch {
+      /* правка сохранена в акте, обучение повторится позже */
+    }
+  };
+
   const findNorm = async (id: string, text: string) => {
     if (!text.trim()) return;
     setNormBusy(id);
@@ -58,7 +75,12 @@ const ActEditor = ({
         await applyMatch(id, m);
         toast({
           title: 'Норма уточнена',
-          description: m.source === 'ai' ? 'Подобрано ИИ-агентом' : 'Подобрано по базе норм',
+          description:
+            m.source === 'manual'
+              ? `Ссылку ранее задал инженер${m.author ? `: ${m.author}` : ''}`
+              : m.source === 'ai'
+                ? 'Подобрано ИИ-агентом'
+                : 'Подобрано по базе норм',
         });
       }
     } catch {
@@ -267,9 +289,7 @@ const ActEditor = ({
                       <Input
                         defaultValue={d.normRef}
                         key={d.normRef}
-                        onBlur={(e) =>
-                          e.target.value !== d.normRef && update(d.id, { normRef: e.target.value })
-                        }
+                        onBlur={(e) => saveOwnRef(d.id, d.title, d.normRef, e.target.value)}
                         placeholder="Пункт норм подбирается автоматически…"
                         className="h-7 w-full rounded-sm border-transparent bg-transparent px-1 text-[0.8em] text-muted-foreground hover:border-border focus:border-border"
                       />
@@ -319,7 +339,7 @@ const ActEditor = ({
                             key={a.ref}
                             type="button"
                             onClick={() =>
-                              update(d.id, { normRef: `${a.ref} — ${a.name}` })
+                              saveOwnRef(d.id, d.title, d.normRef, `${a.ref} — ${a.name}`)
                             }
                             className="rounded-sm border border-border px-1.5 py-0.5 text-[0.7em] text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
                           >
