@@ -159,6 +159,54 @@ def ask_ai(items, budget):
     return None, errors
 
 
+def probe():
+    """Диагностика: сколько времени занимает каждый шаг обращения к ИИ."""
+    auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
+    if not auth:
+        return {'error': 'нет ключа'}
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    log = {}
+    try:
+        t = time.time()
+        token = giga_token(auth, ctx)
+        log['token_sec'] = round(time.time() - t, 2)
+
+        t = time.time()
+        req = urllib.request.Request(
+            'https://gigachat.devices.sberbank.ru/api/v1/models',
+            headers={'Authorization': f'Bearer {token}'},
+        )
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as r:
+            data = json.loads(r.read())
+        log['models_sec'] = round(time.time() - t, 2)
+        log['models'] = [m.get('id') for m in data.get('data', [])]
+
+        t = time.time()
+        chat = urllib.request.Request(
+            'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
+            data=json.dumps(
+                {
+                    'model': log['models'][0] if log['models'] else 'GigaChat',
+                    'max_tokens': 20,
+                    'messages': [{'role': 'user', 'content': 'Ответь одним словом: привет'}],
+                },
+                ensure_ascii=False,
+            ).encode(),
+            headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+        )
+        with urllib.request.urlopen(chat, timeout=25, context=ctx) as r:
+            out = json.loads(r.read())
+        log['chat_sec'] = round(time.time() - t, 2)
+        log['answer'] = out['choices'][0]['message']['content'][:80]
+    except urllib.error.HTTPError as e:
+        log['error'] = f'HTTP {e.code}: {e.read()[:200].decode(errors="replace")}'
+    except Exception as e:
+        log['error'] = f'{type(e).__name__}: {e}'
+    return log
+
+
 def check_key():
     auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
     if not auth:
@@ -205,6 +253,9 @@ def handler(event: dict, context) -> dict:
 
     if body.get('action') == 'check':
         return resp(200, check_key())
+
+    if body.get('action') == 'probe':
+        return resp(200, probe())
 
     items = body.get('items') or ([body['text']] if body.get('text') else [])
     if not items:
