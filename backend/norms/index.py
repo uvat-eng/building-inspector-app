@@ -50,11 +50,23 @@ def match_local(text: str):
 
 
 PROMPT_HEAD = (
-    'Ты инженер строительного контроля в России. Для каждого замечания укажи нарушенный '
-    'пункт действующих норм РФ (СП, ГОСТ, ПУЭ, приказы Минтруда) и краткое название документа. '
-    'Ответ строго JSON-массивом вида '
-    '[{"ref":"СП 70.13330.2012, п. 5.3.7","name":"Уплотнение бетонной смеси"}] '
-    'без пояснений, по одному объекту на каждое замечание в том же порядке.\n\nЗамечания:\n'
+    'Ты инженер строительного контроля в России с 20-летним стажем. Для каждого замечания '
+    'определи нарушенное требование действующих норм РФ и укажи конкретный пункт.\n\n'
+    'Правила:\n'
+    '1. Используй только действующие документы: СП (актуализированные редакции СНиП), '
+    'ГОСТ, ПУЭ-7, ФНП Ростехнадзора, приказы Минтруда по охране труда, '
+    'Постановление Правительства № 1479 о противопожарном режиме, РД-11-02-2006 и РД-11-05-2007.\n'
+    '2. Обязательно указывай номер пункта. Формат ссылки: '
+    '"СП 70.13330.2012, п. 5.3.7" или "ГОСТ 5264-80, п. 3".\n'
+    '3. Не выдумывай несуществующие номера пунктов. Если точный пункт неизвестен — '
+    'дай раздел документа, который заведомо существует.\n'
+    '4. Поле name — краткая суть требования, 3-6 слов, без слова "нарушение".\n'
+    '5. Отвечай строго JSON-массивом, без markdown, без пояснений, '
+    'по одному объекту на каждое замечание в исходном порядке.\n\n'
+    'Пример ответа:\n'
+    '[{"ref":"СП 70.13330.2012, п. 5.3.7","name":"Уплотнение бетонной смеси"},'
+    '{"ref":"Приказ Минтруда № 782н, п. 16","name":"Применение страховочных систем"}]\n\n'
+    'Замечания:\n'
 )
 
 
@@ -124,32 +136,49 @@ def ask_gigachat(prompt, count, budget):
     return parse_ai(r.json()['choices'][0]['message']['content'], count)
 
 
-def ask_openrouter(prompt, count, budget):
-    key = os.environ.get('OPENROUTER_API_KEY', '')
+def ask_gemini(prompt, count, budget):
+    key = os.environ.get('GEMINI_API_KEY', '')
     if not key:
         return None
-    req = urllib.request.Request(
-        'https://openrouter.ai/api/v1/chat/completions',
-        data=json.dumps(
-            {
-                'model': 'meta-llama/llama-3.3-70b-instruct:free',
-                'temperature': 0.1,
-                'messages': [{'role': 'user', 'content': prompt}],
-            },
-            ensure_ascii=False,
-        ).encode(),
-        headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+    r = requests.post(
+        'https://generativelanguage.googleapis.com/v1beta/models/'
+        'gemini-2.0-flash:generateContent',
+        params={'key': key},
+        json={
+            'contents': [{'parts': [{'text': prompt}]}],
+            'generationConfig': {'temperature': 0.1, 'maxOutputTokens': 1200},
+        },
+        timeout=budget,
     )
-    with urllib.request.urlopen(req, timeout=budget) as r:
-        data = json.loads(r.read())
-    return parse_ai(data['choices'][0]['message']['content'], count)
+    r.raise_for_status()
+    text = r.json()['candidates'][0]['content']['parts'][0]['text']
+    return parse_ai(text, count)
+
+
+def ask_mistral(prompt, count, budget):
+    key = os.environ.get('MISTRAL_API_KEY', '')
+    if not key:
+        return None
+    r = requests.post(
+        'https://api.mistral.ai/v1/chat/completions',
+        json={
+            'model': 'mistral-small-latest',
+            'temperature': 0.1,
+            'max_tokens': 1200,
+            'messages': [{'role': 'user', 'content': prompt}],
+        },
+        headers={'Authorization': f'Bearer {key}'},
+        timeout=budget,
+    )
+    r.raise_for_status()
+    return parse_ai(r.json()['choices'][0]['message']['content'], count)
 
 
 def ask_ai(items, budget):
     prompt = PROMPT_HEAD + '\n'.join(f'{i + 1}. {t}' for i, t in enumerate(items))
     errors = []
     deadline = time.time() + budget
-    for fn in (ask_gigachat, ask_openrouter):
+    for fn in (ask_gemini, ask_mistral, ask_gigachat):
         left = deadline - time.time()
         if left < 1.5:
             errors.append('время ожидания ИИ исчерпано')
@@ -164,105 +193,37 @@ def ask_ai(items, budget):
     return None, errors
 
 
-def probe():
-    """Диагностика: сколько времени занимает каждый шаг обращения к ИИ."""
-    auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
-    if not auth:
-        return {'error': 'нет ключа'}
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    log = {}
-    try:
-        t = time.time()
-        token = giga_token(auth, ctx)
-        log['token_sec'] = round(time.time() - t, 2)
-
-        t = time.time()
-        req = urllib.request.Request(
-            'https://gigachat.devices.sberbank.ru/api/v1/models',
-            headers={'Authorization': f'Bearer {token}'},
-        )
-        with urllib.request.urlopen(req, timeout=20, context=ctx) as r:
-            data = json.loads(r.read())
-        log['models_sec'] = round(time.time() - t, 2)
-        log['models'] = [m.get('id') for m in data.get('data', [])]
-
-        log['chat'] = {}
+def probe_providers():
+    """Проверка, какие ИИ-сервисы отвечают и с какими ключами."""
+    out = {}
+    for name, fn in (('gemini', ask_gemini), ('mistral', ask_mistral), ('gigachat', ask_gigachat)):
+        env = {'gemini': 'GEMINI_API_KEY', 'mistral': 'MISTRAL_API_KEY',
+               'gigachat': 'GIGACHAT_AUTH_KEY'}[name]
+        if not os.environ.get(env):
+            out[name] = 'ключ не задан'
+            continue
         t = time.time()
         try:
-            r = requests.post(
-                'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
-                json={
-                    'model': 'GigaChat-2',
-                    'max_tokens': 16,
-                    'stream': True,
-                    'messages': [{'role': 'user', 'content': 'Скажи: привет'}],
-                },
-                headers={
-                    'Authorization': f'Bearer {token}',
-                    'Connection': 'close',
-                    'Accept': 'application/json',
-                    'User-Agent': 'GigaChat-Client/1.0',
-                },
-                timeout=(5, 15),
-                verify=False,
-                stream=True,
-            )
-            log['chat']['connect_ok'] = True
-            log['chat']['headers_sec'] = round(time.time() - t, 2)
-            log['chat']['code'] = r.status_code
-            chunks = []
-            for line in r.iter_lines(decode_unicode=True):
-                if line:
-                    chunks.append(line[:120])
-                if len(chunks) >= 3:
-                    break
-            log['chat']['first_sec'] = round(time.time() - t, 2)
-            log['chat']['chunks'] = chunks
-            r.close()
+            res = fn(PROMPT_HEAD + '1. Мусор на строительной площадке', 1, 12)
+            out[name] = {'sec': round(time.time() - t, 2), 'result': res}
         except Exception as e:
-            log['chat']['error'] = f'{type(e).__name__} за {round(time.time() - t, 1)}с: {e}'[:200]
-    except urllib.error.HTTPError as e:
-        log['error'] = f'HTTP {e.code}: {e.read()[:200].decode(errors="replace")}'
-    except Exception as e:
-        log['error'] = f'{type(e).__name__}: {e}'
-    return log
+            out[name] = f'{type(e).__name__} за {round(time.time() - t, 1)}с: {str(e)[:120]}'
+    return out
 
 
 def check_key():
-    auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
-    if not auth:
-        return {'ok': False, 'stage': 'key', 'message': 'Ключ GigaChat не добавлен'}
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    try:
-        req = urllib.request.Request(
-            'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
-            data=b'scope=GIGACHAT_API_PERS',
-            headers={
-                'Authorization': f'Basic {auth}',
-                'RqUID': str(uuid.uuid4()),
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json',
-            },
+    have = [
+        n
+        for n, e in (
+            ('Google Gemini', 'GEMINI_API_KEY'),
+            ('Mistral', 'MISTRAL_API_KEY'),
+            ('GigaChat', 'GIGACHAT_AUTH_KEY'),
         )
-        with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
-            data = json.loads(r.read())
-        return {
-            'ok': bool(data.get('access_token')),
-            'stage': 'token',
-            'message': 'Ключ действителен, токен получен',
-        }
-    except urllib.error.HTTPError as e:
-        return {
-            'ok': False,
-            'stage': 'token',
-            'message': f'GigaChat отклонил ключ: HTTP {e.code}',
-        }
-    except Exception as e:
-        return {'ok': False, 'stage': 'token', 'message': f'{type(e).__name__}: {e}'}
+        if os.environ.get(e)
+    ]
+    if not have:
+        return {'ok': False, 'message': 'Ни один ИИ-ключ не добавлен, работает база норм'}
+    return {'ok': True, 'message': 'Подключено: ' + ', '.join(have), 'providers': have}
 
 
 def handler(event: dict, context) -> dict:
@@ -277,8 +238,8 @@ def handler(event: dict, context) -> dict:
     if body.get('action') == 'check':
         return resp(200, check_key())
 
-    if body.get('action') == 'probe':
-        return resp(200, probe())
+    if body.get('action') == 'providers':
+        return resp(200, probe_providers())
 
     items = body.get('items') or ([body['text']] if body.get('text') else [])
     if not items:
