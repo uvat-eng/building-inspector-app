@@ -37,11 +37,15 @@ interface DocsCabinetProps {
   object: ProjectObject;
   onBack: () => void;
   only?: DocSection;
+  sections?: DocSection[];
+  title?: string;
+  hint?: string;
 }
 
-const SECTIONS: DocSection[] = ['project', 'working', 'masterplan'];
+const DEFAULT_SECTIONS: DocSection[] = ['project', 'working', 'masterplan'];
 
-const DocsCabinet = ({ object, onBack, only }: DocsCabinetProps) => {
+const DocsCabinet = ({ object, onBack, only, sections, title: pageTitle, hint }: DocsCabinetProps) => {
+  const SECTIONS = sections ?? DEFAULT_SECTIONS;
   const { profile } = useProfile();
   const { toast } = useToast();
   const { items, loading, uploading, upload, remove } = useDocuments(object.id);
@@ -54,7 +58,8 @@ const DocsCabinet = ({ object, onBack, only }: DocsCabinetProps) => {
   const [busy, setBusy] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const canUpload = ['pm', 'coordinator', 'director'].includes(profile.role);
+  const manualUpload = !!sections?.every((s) => s === 'pos' || s === 'ppr');
+  const canUpload = manualUpload || ['pm', 'coordinator', 'director'].includes(profile.role);
 
   const bySection = useMemo(() => {
     const map: Record<DocSection, ProjectDoc[]> = {
@@ -62,6 +67,8 @@ const DocsCabinet = ({ object, onBack, only }: DocsCabinetProps) => {
       working: [],
       masterplan: [],
       contract: [],
+      pos: [],
+      ppr: [],
     };
     items.forEach((d) => map[d.section]?.push(d));
     return map;
@@ -221,15 +228,16 @@ const DocsCabinet = ({ object, onBack, only }: DocsCabinetProps) => {
       <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4">
           <p className="text-[0.72em] uppercase tracking-[0.14em] text-muted-foreground">
-            {only ? SECTION_LABEL[only] : 'Проектный кабинет'}
+            {pageTitle ?? (only ? SECTION_LABEL[only] : 'Проектный кабинет')}
           </p>
           <h1 className="mt-1 font-head text-[17px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[23px]">
             {object.title}
           </h1>
           <p className="mt-1.5 text-[0.82em] text-muted-foreground">
-            {canUpload
-              ? 'Вы можете загружать и удалять документы объекта.'
-              : 'Просмотр и скачивание. Загрузку выполняет менеджер проекта.'}
+            {hint ??
+              (canUpload
+                ? 'Вы можете загружать и удалять документы объекта.'
+                : 'Просмотр и скачивание. Загрузку выполняет менеджер проекта.')}
           </p>
         </section>
 

@@ -9,10 +9,10 @@ export type ObjectMenuId =
   | 'orders'
   | 'company'
   | 'inspections'
-  | 'defects'
-  | 'photos'
-  | 'acts'
-  | 'materials'
+  | 'tests'
+  | 'ks'
+  | 'incoming'
+  | 'pos'
   | 'journal'
   | 'staff';
 
@@ -61,32 +61,32 @@ const ITEMS: MenuItem[] = [
     ready: true,
   },
   {
-    id: 'defects',
-    icon: 'TriangleAlert',
-    label: 'Замечания',
-    note: 'Выявленные нарушения и их устранение',
-    ready: false,
-  },
-  {
-    id: 'photos',
-    icon: 'Camera',
-    label: 'Фотофиксация',
-    note: 'Фотоотчёты с привязкой к работам',
-    ready: false,
-  },
-  {
-    id: 'acts',
+    id: 'tests',
     icon: 'FileSignature',
-    label: 'Акты скрытых работ',
-    note: 'Освидетельствование конструкций',
-    ready: false,
+    label: 'Подписанные акты испытаний',
+    note: 'И иные важные документы, по месяцам',
+    ready: true,
   },
   {
-    id: 'materials',
+    id: 'ks',
+    icon: 'FileSpreadsheet',
+    label: 'Подписанные акты КС-2',
+    note: 'КС-2, КС-3, КС-6, КС-11 по месяцам',
+    ready: true,
+  },
+  {
+    id: 'incoming',
     icon: 'Package',
-    label: 'Входной контроль',
-    note: 'Материалы, паспорта и сертификаты',
-    ready: false,
+    label: 'Акты входного контроля',
+    note: 'И подписанные формы М-19, М-29',
+    ready: true,
+  },
+  {
+    id: 'pos',
+    icon: 'BookMarked',
+    label: 'ПОС и ППР',
+    note: 'Загрузка вручную инспектором',
+    ready: true,
   },
   {
     id: 'journal',

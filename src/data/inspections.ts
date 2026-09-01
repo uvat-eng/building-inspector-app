@@ -66,6 +66,60 @@ export interface NormMatch {
   alts?: { ref: string; name: string }[];
 }
 
+export interface WorkSummary {
+  defects: number;
+  inspections: number;
+  orders: number;
+}
+
+export const useSummary = () => {
+  const [summary, setSummary] = useState<WorkSummary>({
+    defects: 0,
+    inspections: 0,
+    orders: 0,
+  });
+
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      fetch(`${API}?action=summary`)
+        .then((r) => r.json())
+        .then((d: WorkSummary) => alive && setSummary(d))
+        .catch(() => undefined);
+    load();
+    const t = setInterval(load, 30000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  return summary;
+};
+
+export interface DefectRow extends InspectionDefect {
+  inspNumber: string;
+  objectId: string;
+  workType: string;
+  inspector: string;
+  inspDate: string;
+}
+
+export const useAllDefects = () => {
+  const [items, setItems] = useState<DefectRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API}?action=all_defects`)
+      .then((r) => r.json())
+      .then((d: { items: DefectRow[] }) => setItems(d.items ?? []))
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { items, loading };
+};
+
 export const teachNorm = async (text: string, ref: string, author = '') => {
   const [head, ...tail] = ref.split('—');
   await fetch(NORMS_API, {

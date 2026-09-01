@@ -31,6 +31,7 @@ def to_folder(r):
         'subsection': r['subsection'],
         'title': r['title'],
         'note': r['note'],
+        'month': r.get('month') or '',
         'createdBy': r['created_by'],
         'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
         'photos': r.get('photos') or [],
@@ -100,9 +101,9 @@ def handler(event: dict, context) -> dict:
             fid = uuid.uuid4().hex[:12]
             cur.execute(
                 'INSERT INTO photo_folders (id, object_id, section, subsection, title, note, '
-                f"created_by) VALUES ('{esc(fid)}', '{esc(object_id)}', '{esc(section)}', "
+                f"month, created_by) VALUES ('{esc(fid)}', '{esc(object_id)}', '{esc(section)}', "
                 f"'{esc(body.get('subsection', ''))}', '{esc(title)}', '{esc(body.get('note', ''))}', "
-                f"'{esc(body.get('createdBy', ''))}') RETURNING *"
+                f"'{esc(body.get('month', ''))}', '{esc(body.get('createdBy', ''))}') RETURNING *"
             )
             conn.commit()
             return resp(200, {'item': to_folder(cur.fetchone())})

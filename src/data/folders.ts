@@ -16,6 +16,7 @@ export interface PhotoFolder {
   subsection: string;
   title: string;
   note: string;
+  month: string;
   createdBy: string;
   createdAt: string;
   photos: FolderPhoto[];
@@ -26,6 +27,33 @@ export const SECTION_TITLE: Record<FolderSection, string> = {
   ks: 'Подписанные акты ф. КС-2, КС-3, КС-6, КС-11',
   incoming: 'Входной контроль',
 };
+
+export const MONTHS = [
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
+];
+
+export const monthKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+export const monthLabel = (key: string) => {
+  const [y, m] = key.split('-');
+  const idx = Number(m) - 1;
+  return MONTHS[idx] ? `${MONTHS[idx]} ${y}` : key;
+};
+
+export const monthsForYear = (year: number) =>
+  MONTHS.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 
 export const SUBSECTIONS: Record<FolderSection, { id: string; label: string; icon: string }[]> = {
   tests: [],
@@ -58,11 +86,11 @@ export const useFolders = (objectId: string, section: FolderSection) => {
   }, [reload]);
 
   const create = useCallback(
-    async (title: string, subsection = '', note = '', createdBy = '') => {
+    async (title: string, subsection = '', note = '', createdBy = '', month = '') => {
       const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objectId, section, subsection, title, note, createdBy }),
+        body: JSON.stringify({ objectId, section, subsection, title, note, createdBy, month }),
       });
       if (!res.ok) throw new Error('create_failed');
       const { item } = (await res.json()) as { item: PhotoFolder };

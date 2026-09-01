@@ -26,6 +26,8 @@ const SHORT: Record<DocSection, string> = {
   project: 'Проектная',
   working: 'Рабочая',
   masterplan: 'Генплан',
+  pos: 'ПОС',
+  ppr: 'ППР',
 };
 
 interface ManagerCabinetProps {

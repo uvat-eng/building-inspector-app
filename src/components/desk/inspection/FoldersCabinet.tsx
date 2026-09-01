@@ -17,7 +17,16 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
-import { useFolders, FolderSection, SECTION_TITLE, SUBSECTIONS, PhotoFolder } from '@/data/folders';
+import {
+  useFolders,
+  FolderSection,
+  SECTION_TITLE,
+  SUBSECTIONS,
+  PhotoFolder,
+  monthKey,
+  monthLabel,
+  monthsForYear,
+} from '@/data/folders';
 import { usePhotoQueue, queuePhoto, flushQueue, isWifi } from '@/data/photoQueue';
 
 interface FoldersCabinetProps {
@@ -48,10 +57,27 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
   const [busy, setBusy] = useState(false);
   const camRef = useRef<HTMLInputElement>(null);
 
-  const list = useMemo(
+  const [month, setMonth] = usePersistedState<string | null>(
+    `gsi-fold-month-${object.id}-${section}`,
+    null,
+  );
+  const [year, setYear] = useState(new Date().getFullYear());
+
+  const inSub = useMemo(
     () => (sub === null ? items : items.filter((f) => f.subsection === sub)),
     [items, sub],
   );
+
+  const list = useMemo(
+    () => (month ? inSub.filter((f) => (f.month || '') === month) : []),
+    [inSub, month],
+  );
+
+  const countByMonth = useMemo(() => {
+    const map = new Map<string, number>();
+    inSub.forEach((f) => map.set(f.month || '', (map.get(f.month || '') ?? 0) + 1));
+    return map;
+  }, [inSub]);
 
   const localByFolder = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -68,7 +94,7 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
     }
     setBusy(true);
     try {
-      await create(title.trim(), sub ?? '', '', profile.fio);
+      await create(title.trim(), sub ?? '', '', profile.fio, month ?? monthKey());
       setTitle('');
       setNewOpen(false);
     } catch {
@@ -121,13 +147,20 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
           type="button"
           onClick={() => {
             if (open) setOpen(null);
+            else if (month !== null) setMonth(null);
             else if (sub !== null && subs.length) setSub(null);
             else onBack();
           }}
           className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
         >
           <Icon name="ArrowLeft" size={14} className="text-accent" />
-          {open ? 'К папкам' : sub !== null && subs.length ? 'К разделам' : 'К меню объекта'}
+          {open
+            ? 'К папкам'
+            : month !== null
+              ? 'К месяцам'
+              : sub !== null && subs.length
+                ? 'К разделам'
+                : 'К меню объекта'}
         </button>
         {pending > 0 && (
           <button
@@ -144,7 +177,9 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
       <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4">
           <p className="text-[0.72em] uppercase tracking-[0.14em] text-muted-foreground">
-            {subLabel ?? SECTION_TITLE[section]}
+            {[subLabel ?? SECTION_TITLE[section], month ? monthLabel(month) : null]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
           <h1 className="mt-1 font-head text-[16px] uppercase leading-[1.2] tracking-[0.02em] sm:text-[21px]">
             {open ? open.title : object.title}
@@ -211,6 +246,65 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
               </div>
             )}
           </Panel>
+        ) : sub !== null && month === null ? (
+          <Panel
+            title="Месяцы"
+            note={`${inSub.length} папок`}
+            action={
+              <span className="ml-3 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setYear((y) => y - 1)}
+                  className="flex h-6 w-6 items-center justify-center rounded-sm bg-secondary transition-colors hover:bg-border"
+                >
+                  <Icon name="ChevronLeft" size={13} />
+                </button>
+                <span className="min-w-[42px] text-center font-head text-[0.85em]">{year}</span>
+                <button
+                  type="button"
+                  onClick={() => setYear((y) => y + 1)}
+                  className="flex h-6 w-6 items-center justify-center rounded-sm bg-secondary transition-colors hover:bg-border"
+                >
+                  <Icon name="ChevronRight" size={13} />
+                </button>
+              </span>
+            }
+          >
+            <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">
+              {monthsForYear(year).map((mk) => {
+                const n = countByMonth.get(mk) ?? 0;
+                const isNow = mk === monthKey();
+                return (
+                  <button
+                    key={mk}
+                    type="button"
+                    onClick={() => setMonth(mk)}
+                    className={cn(
+                      'group flex items-center gap-2.5 bg-card px-3 py-3 text-left transition-colors hover:bg-foreground hover:text-background',
+                      isNow && 'border-l-2 border-l-accent',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'flex h-9 w-9 flex-none items-center justify-center rounded-sm',
+                        n ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground',
+                      )}
+                    >
+                      <Icon name={n ? 'FolderCheck' : 'Folder'} size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-head text-[0.9em] uppercase tracking-[0.02em]">
+                        {monthLabel(mk).split(' ')[0]}
+                      </span>
+                      <span className="block truncate text-[0.72em] text-muted-foreground group-hover:text-background/70">
+                        {n ? `${n} докум.` : 'пусто'}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Panel>
         ) : sub === null && subs.length ? (
           <Panel title="Разделы" note={`${items.length} папок`}>
             <div className="grid gap-px bg-border sm:grid-cols-2">
@@ -239,7 +333,7 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
           </Panel>
         ) : (
           <Panel
-            title="Папки документов"
+            title={month ? monthLabel(month) : 'Папки документов'}
             note={`${list.length}`}
             action={
               <button
@@ -255,8 +349,8 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
             {list.length === 0 ? (
               <Empty
                 icon="FolderOpen"
-                title={loading ? 'Загрузка…' : 'Папок пока нет'}
-                hint="Создайте папку с названием документа."
+                title={loading ? 'Загрузка…' : 'В этом месяце документов нет'}
+                hint="Нажмите «Новая папка», введите название документа и сфотографируйте его."
               />
             ) : (
               list.map((f) => {

@@ -15,7 +15,7 @@ CORS = {
     'Content-Type': 'application/json',
 }
 
-SECTIONS = {'project', 'working', 'masterplan', 'contract'}
+SECTIONS = {'project', 'working', 'masterplan', 'contract', 'pos', 'ppr'}
 
 
 def esc(v):

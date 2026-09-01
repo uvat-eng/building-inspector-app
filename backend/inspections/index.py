@@ -86,6 +86,46 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
+        if method == 'GET' and action == 'all_defects':
+            cur.execute(
+                'SELECT d.*, i.number AS insp_number, i.object_id, i.work_type, '
+                'i.inspector, i.created_at AS insp_date '
+                'FROM inspection_defects d JOIN inspections i ON i.id = d.inspection_id '
+                'ORDER BY i.created_at DESC, d.pos LIMIT 300'
+            )
+            return resp(
+                200,
+                {
+                    'items': [
+                        {
+                            **to_defect(r),
+                            'inspNumber': r['insp_number'],
+                            'objectId': r['object_id'],
+                            'workType': r['work_type'] or '',
+                            'inspector': r['inspector'] or '',
+                            'inspDate': r['insp_date'].isoformat() if r['insp_date'] else '',
+                        }
+                        for r in cur.fetchall()
+                    ]
+                },
+            )
+
+        if method == 'GET' and action == 'summary':
+            cur.execute(
+                'SELECT (SELECT COUNT(*) FROM inspection_defects) AS defects, '
+                '(SELECT COUNT(*) FROM inspections) AS inspections, '
+                '(SELECT COUNT(*) FROM orders) AS orders'
+            )
+            r = cur.fetchone()
+            return resp(
+                200,
+                {
+                    'defects': int(r['defects'] or 0),
+                    'inspections': int(r['inspections'] or 0),
+                    'orders': int(r['orders'] or 0),
+                },
+            )
+
         if method == 'GET':
             object_id = params.get('object_id', '')
             insp_id = params.get('id', '')

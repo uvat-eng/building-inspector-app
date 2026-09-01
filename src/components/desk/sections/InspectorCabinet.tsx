@@ -7,7 +7,8 @@ import Tag from '@/components/desk/Tag';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import Timesheet from '@/components/desk/Timesheet';
 import { useObjects } from '@/data/store';
-import { DEFECTS, PHOTOS } from '@/data/mock';
+import { useSummary, useAllDefects, SEVERITY } from '@/data/inspections';
+import { useOrders } from '@/data/orders';
 import { useTimesheet, monthEntries, dayHours, fmtHours } from '@/data/timesheet';
 import { cn } from '@/lib/utils';
 import InspectorProfile from '@/components/desk/InspectorProfile';
@@ -17,21 +18,32 @@ import DocsCabinet from '@/components/desk/DocsCabinet';
 import InspectionsCabinet from '@/components/desk/inspection/InspectionsCabinet';
 import OrdersCabinet from '@/components/desk/inspection/OrdersCabinet';
 import ContractorCard from '@/components/desk/inspection/ContractorCard';
+import FoldersCabinet from '@/components/desk/inspection/FoldersCabinet';
 
-type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'photos' | 'profile';
+type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile';
 
 const VIEW_KEY = 'gsi-cabinet-view-v1';
 const OBJ_KEY = 'gsi-cabinet-object-v1';
 const OBJ_VIEW_KEY = 'gsi-cabinet-object-view-v1';
 
-type ObjView = 'menu' | 'docs' | 'contract' | 'inspections' | 'orders' | 'company';
+type ObjView =
+  | 'menu'
+  | 'docs'
+  | 'contract'
+  | 'inspections'
+  | 'orders'
+  | 'company'
+  | 'tests'
+  | 'ks'
+  | 'incoming'
+  | 'pos';
 
 const VIEW_TITLE: Record<View, string> = {
   home: 'Обзор',
   objects: 'Мои объекты',
   timesheet: 'Табель учёта времени',
-  defects: 'Мои замечания',
-  photos: 'Мои фотоотчёты',
+  defects: 'Замечания по всем объектам',
+  ordersAll: 'Предписания по всем объектам',
   profile: 'Профиль инспектора',
 };
 
@@ -65,6 +77,9 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const { list: objects } = useObjects();
   const { sheet } = useTimesheet();
   const { current } = useUsers();
+  const summary = useSummary();
+  const { items: allDefects, loading: defectsLoading } = useAllDefects();
+  const { items: allOrders } = useOrders();
   const spec = profile.specialties ?? [];
 
   const now = new Date();
@@ -79,8 +94,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       value: `${fmtHours(monthHours)} ч`,
       view: 'timesheet',
     },
-    { icon: 'TriangleAlert', label: 'Замечаний', value: DEFECTS.length, view: 'defects' },
-    { icon: 'Camera', label: 'Фотоотчётов', value: PHOTOS.length, view: 'photos' },
+    { icon: 'TriangleAlert', label: 'Замечаний', value: summary.defects, view: 'defects' },
+    { icon: 'FileWarning', label: 'Предписаний', value: summary.orders, view: 'ordersAll' },
   ];
 
   const objectsPanel = (
@@ -134,12 +149,44 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
     if (objectView === 'company') {
       return <ContractorCard object={active} onBack={() => setObjectView('menu')} />;
     }
+    if (objectView === 'tests' || objectView === 'ks' || objectView === 'incoming') {
+      return (
+        <FoldersCabinet
+          object={active}
+          section={objectView}
+          onBack={() => setObjectView('menu')}
+        />
+      );
+    }
+    if (objectView === 'pos') {
+      return (
+        <DocsCabinet
+          object={active}
+          onBack={() => setObjectView('menu')}
+          sections={['pos', 'ppr']}
+          title="ПОС и ППР"
+          hint="Загрузка вручную инспектором. Прикрепите сканы ПОС и ППР в формате PDF или фото."
+        />
+      );
+    }
     return (
       <ObjectMenu
         object={active}
         onBack={() => setOpenObject(null)}
         onOpen={(id) => {
-          if (['docs', 'contract', 'inspections', 'orders', 'company'].includes(id))
+          if (
+            [
+              'docs',
+              'contract',
+              'inspections',
+              'orders',
+              'company',
+              'tests',
+              'ks',
+              'incoming',
+              'pos',
+            ].includes(id)
+          )
             setObjectView(id as ObjView);
         }}
       />
@@ -331,31 +378,57 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       )}
 
       {view === 'defects' && (
-        <Panel title="Мои замечания" note={`${DEFECTS.length}`}>
-          {DEFECTS.length === 0 ? (
+        <Panel title="Замечания по всем объектам" note={`${allDefects.length}`}>
+          {defectsLoading ? (
+            <Empty icon="Loader2" title="Загрузка…" hint="Собираем замечания со всех объектов." />
+          ) : allDefects.length === 0 ? (
             <Empty
               icon="TriangleAlert"
               title="Замечаний нет"
               hint="Замечания появятся после выездов на объект."
             />
           ) : (
-            DEFECTS.map((d) => (
-              <Row key={d.id} title={d.title} sub={d.sub} right={<Tag tone={d.tone}>{d.tag}</Tag>} />
+            allDefects.map((d) => (
+              <Row
+                key={d.id}
+                title={d.title}
+                sub={[
+                  objects.find((o) => o.id === d.objectId)?.title ?? 'Объект',
+                  `акт № ${d.inspNumber}`,
+                  d.normRef || 'норма не указана',
+                ].join(' · ')}
+                right={
+                  <Tag tone={d.severity === 'critical' ? 'hot' : d.severity === 'minor' ? 'dim' : 'wait'}>
+                    {d.deadline || SEVERITY[d.severity || 'normal'].label}
+                  </Tag>
+                }
+              />
             ))
           )}
         </Panel>
       )}
 
-      {view === 'photos' && (
-        <Panel title="Мои фотоотчёты" note={`${PHOTOS.length}`}>
-          {PHOTOS.length === 0 ? (
+      {view === 'ordersAll' && (
+        <Panel title="Предписания по всем объектам" note={`${allOrders.length}`}>
+          {allOrders.length === 0 ? (
             <Empty
-              icon="Camera"
-              title="Фотоотчётов нет"
-              hint="Снимки с объектов появятся здесь."
+              icon="FileWarning"
+              title="Предписаний нет"
+              hint="Оформите предписание из акта проверки."
             />
           ) : (
-            PHOTOS.map((p) => <Row key={p.id} title={p.title} sub={p.meta} />)
+            allOrders.map((o) => (
+              <Row
+                key={o.id}
+                title={`Предписание № ${o.number}`}
+                sub={[
+                  objects.find((ob) => ob.id === o.objectId)?.title ?? 'Объект',
+                  o.issuedTo || '—',
+                  new Date(o.createdAt).toLocaleDateString('ru'),
+                ].join(' · ')}
+                right={<Tag tone={o.status === 'done' ? 'ok' : 'wait'}>{o.deadline || '—'}</Tag>}
+              />
+            ))
           )}
         </Panel>
       )}
