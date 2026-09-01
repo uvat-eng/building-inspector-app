@@ -174,11 +174,30 @@ def ask_mistral(prompt, count, budget):
     return parse_ai(r.json()['choices'][0]['message']['content'], count)
 
 
+def ask_deepseek(prompt, count, budget):
+    key = os.environ.get('DEEPSEEK_API_KEY', '')
+    if not key:
+        return None
+    r = requests.post(
+        'https://api.deepseek.com/chat/completions',
+        json={
+            'model': 'deepseek-chat',
+            'temperature': 0.1,
+            'max_tokens': 1500,
+            'messages': [{'role': 'user', 'content': prompt}],
+        },
+        headers={'Authorization': f'Bearer {key}'},
+        timeout=budget,
+    )
+    r.raise_for_status()
+    return parse_ai(r.json()['choices'][0]['message']['content'], count)
+
+
 def ask_ai(items, budget):
     prompt = PROMPT_HEAD + '\n'.join(f'{i + 1}. {t}' for i, t in enumerate(items))
     errors = []
     deadline = time.time() + budget
-    for fn in (ask_gemini, ask_mistral, ask_gigachat):
+    for fn in (ask_deepseek, ask_gemini, ask_mistral, ask_gigachat):
         left = deadline - time.time()
         if left < 1.5:
             errors.append('время ожидания ИИ исчерпано')
@@ -196,9 +215,18 @@ def ask_ai(items, budget):
 def probe_providers():
     """Проверка, какие ИИ-сервисы отвечают и с какими ключами."""
     out = {}
-    for name, fn in (('gemini', ask_gemini), ('mistral', ask_mistral), ('gigachat', ask_gigachat)):
-        env = {'gemini': 'GEMINI_API_KEY', 'mistral': 'MISTRAL_API_KEY',
-               'gigachat': 'GIGACHAT_AUTH_KEY'}[name]
+    for name, fn in (
+        ('deepseek', ask_deepseek),
+        ('gemini', ask_gemini),
+        ('mistral', ask_mistral),
+        ('gigachat', ask_gigachat),
+    ):
+        env = {
+            'deepseek': 'DEEPSEEK_API_KEY',
+            'gemini': 'GEMINI_API_KEY',
+            'mistral': 'MISTRAL_API_KEY',
+            'gigachat': 'GIGACHAT_AUTH_KEY',
+        }[name]
         if not os.environ.get(env):
             out[name] = 'ключ не задан'
             continue
@@ -215,6 +243,7 @@ def check_key():
     have = [
         n
         for n, e in (
+            ('DeepSeek', 'DEEPSEEK_API_KEY'),
             ('Google Gemini', 'GEMINI_API_KEY'),
             ('Mistral', 'MISTRAL_API_KEY'),
             ('GigaChat', 'GIGACHAT_AUTH_KEY'),
