@@ -7,12 +7,80 @@ import urllib.error
 import urllib.request
 import uuid
 
+import psycopg2
+import psycopg2.extras
 import requests
 import urllib3
 
 from norms_db import RULES, FALLBACK
 
 urllib3.disable_warnings()
+
+PROMPT_VER = 2
+
+
+def norm_phrase(text):
+    words = re.findall(r'[а-яёa-z0-9]+', str(text).lower())
+    stop = {'в', 'на', 'не', 'и', 'с', 'по', 'для', 'из', 'от', 'до', 'при', 'без', 'осях', 'оси'}
+    keep = [w[:6] for w in words if w not in stop and len(w) > 2 and not w.isdigit()]
+    return ' '.join(sorted(set(keep)))[:250]
+
+
+def cache_get(texts):
+    """Готовые ответы, накопленные ИИ ранее."""
+    found = {}
+    phrases = {t: norm_phrase(t) for t in texts}
+    keys = [p for p in phrases.values() if p]
+    if not keys:
+        return found
+    try:
+        with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            lst = ','.join("'" + k.replace("'", "''") + "'" for k in keys)
+            cur.execute(
+                f'SELECT phrase, ref, name FROM norms_cache '
+                f'WHERE phrase IN ({lst}) AND prompt_ver = {PROMPT_VER}'
+            )
+            by_phrase = {r['phrase']: r for r in cur.fetchall()}
+            for t, p in phrases.items():
+                if p in by_phrase:
+                    r = by_phrase[p]
+                    found[t] = {'ref': r['ref'], 'name': r['name'], 'source': 'ai', 'score': 9}
+            if found:
+                cur.execute(
+                    f'UPDATE norms_cache SET hits = hits + 1 WHERE phrase IN ({lst})'
+                )
+    except Exception:
+        pass
+    return found
+
+
+def cache_put(pairs):
+    """Пополняем базу ответами ИИ, чтобы работало и без интернета."""
+    rows = [(norm_phrase(t), m) for t, m in pairs if m and m.get('ref')]
+    rows = [(p, m) for p, m in rows if p]
+    if not rows:
+        return
+    try:
+        with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
+            cur = conn.cursor()
+            vals = ','.join(
+                "('{}','{}','{}',{})".format(
+                    p.replace("'", "''"),
+                    str(m['ref']).replace("'", "''")[:300],
+                    str(m.get('name', '')).replace("'", "''")[:300],
+                    PROMPT_VER,
+                )
+                for p, m in rows
+            )
+            cur.execute(
+                f'INSERT INTO norms_cache (phrase, ref, name, prompt_ver) VALUES {vals} '
+                'ON CONFLICT (phrase) DO UPDATE SET ref = EXCLUDED.ref, '
+                'name = EXCLUDED.name, prompt_ver = EXCLUDED.prompt_ver, '
+                'hits = norms_cache.hits + 1'
+            )
+    except Exception:
+        pass
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -64,14 +132,20 @@ PROMPT_HEAD = (
     'земляные работы и основания — СП 45.13330.2017; кровля — СП 17.13330.2017; '
     'пожарная автоматика и дымоудаление — СП 7.13130.2013 и СП 484.1311500.2020; '
     'электромонтаж — ПУЭ-7 и СП 76.13330.2016; исполнительная документация — '
-    'РД-11-02-2006 и РД-11-05-2007; охрана труда на высоте — Приказ Минтруда № 782н. '
-    'Если точный пункт неизвестен — дай раздел, который заведомо существует.\n'
-    '4. Поле name — краткая суть требования, 3-6 слов, без слова "нарушение".\n'
-    '5. Отвечай строго JSON-массивом, без markdown, без пояснений, '
+    'РД-11-02-2006 и РД-11-05-2007; охрана труда на высоте — Приказ Минтруда № 782н; '
+    'полы и стяжки — СП 29.13330.2011; отделка — СП 71.13330.2017; '
+    'огнезащита конструкций — СП 2.13130.2020 и ГОСТ Р 53292-2009; '
+    'фасады и утепление — СП 293.1325800.2017; окна и витражи — ГОСТ 30971-2012; '
+    'вентиляция и отопление — СП 60.13330.2020 и СП 73.13330.2016; '
+    'водоснабжение и канализация — СП 30.13330.2020; '
+    'лифты — ТР ТС 011/2011; геодезия — СП 126.13330.2012; '
+    'бетонные работы зимой — СП 70.13330.2012 раздел 5.11.\n'
+    '4. Каждому замечанию — свой пункт. Не повторяй один и тот же номер для разных тем, '
+    'если темы не совпадают. Пункт 5.3.7 относится только к уплотнению бетонной смеси.\n'
+    '5. Поле name — краткая суть требования, 3-6 слов, без слова "нарушение".\n'
+    '6. Отвечай строго JSON-массивом, без markdown, без пояснений, '
     'по одному объекту на каждое замечание в исходном порядке.\n\n'
-    'Пример ответа:\n'
-    '[{"ref":"СП 70.13330.2012, п. 5.3.7","name":"Уплотнение бетонной смеси"},'
-    '{"ref":"Приказ Минтруда № 782н, п. 16","name":"Применение страховочных систем"}]\n\n'
+    'Формат: [{"ref":"<документ>, п. <номер>","name":"<суть требования>"}]\n\n'
     'Замечания:\n'
 )
 
@@ -276,20 +350,45 @@ def handler(event: dict, context) -> dict:
     if body.get('action') == 'providers':
         return resp(200, probe_providers())
 
+    if body.get('action') == 'stats':
+        try:
+            with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT COUNT(*), COALESCE(SUM(hits), 0) FROM norms_cache')
+                total, hits = cur.fetchone()
+            return resp(200, {'learned': int(total), 'reuses': int(hits), 'builtin': len(RULES)})
+        except Exception as e:
+            return resp(200, {'error': f'{type(e).__name__}'})
+
     items = body.get('items') or ([body['text']] if body.get('text') else [])
     if not items:
         return resp(400, {'error': 'items_required'})
 
-    results = [match_local(t) for t in items]
+    budget = float(body.get('budget') or 20)
     debug = []
+    local = [match_local(t) for t in items]
+    results = [None] * len(items)
 
-    if body.get('ai'):
-        budget = float(body.get('budget') or 20)
-        ai, debug = ask_ai(items, budget)
+    cached = cache_get(items)
+    for i, t in enumerate(items):
+        if t in cached:
+            results[i] = {**cached[t], 'alts': local[i].get('alts', [])}
+
+    todo = [i for i, r in enumerate(results) if r is None]
+    if todo:
+        ai, debug = ask_ai([items[i] for i in todo], budget)
         if ai:
-            results = [
-                {**a, 'alts': b.get('alts', [])} if a['ref'] else b for a, b in zip(ai, results)
-            ]
+            fresh = []
+            for k, i in enumerate(todo):
+                m = ai[k] if k < len(ai) else None
+                if m and m.get('ref'):
+                    results[i] = {**m, 'alts': local[i].get('alts', [])}
+                    fresh.append((items[i], m))
+            cache_put(fresh)
+
+    for i, r in enumerate(results):
+        if r is None:
+            results[i] = local[i]
 
     out = {'items': results}
     if body.get('debug'):
