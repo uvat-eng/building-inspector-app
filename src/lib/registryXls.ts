@@ -11,7 +11,7 @@ const ruDate = (iso: string) => (iso ? new Date(iso).toLocaleDateString('ru') : 
 export const downloadRegistry = (items: Inspection[], objectTitle: string) => {
   const rows = items
     .slice()
-    .sort((a, b) => a.number.localeCompare(b.number, 'ru'))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     .map(
       (i, n) => `
       <tr>
@@ -22,7 +22,8 @@ export const downloadRegistry = (items: Inspection[], objectTitle: string) => {
         <td>${esc(i.workType || '—')}</td>
         <td>${esc(i.subcontractor || i.generalContractor || '—')}</td>
         <td>${esc(i.contractorRep || '—')}</td>
-        <td style="text-align:center">${i.status === 'done' ? 'Оформлен' : 'Черновик'}</td>
+        <td style="text-align:center">${i.defectCount ?? 0}</td>
+        <td style="text-align:center">${i.actUrl ? 'В системе' : 'Черновик'}</td>
       </tr>`,
     )
     .join('');
@@ -42,10 +43,10 @@ export const downloadRegistry = (items: Inspection[], objectTitle: string) => {
 </style></head>
 <body>
 <table>
-  <tr><td class="title" colspan="8">Реестр актов проверок</td></tr>
-  <tr><td class="sub" colspan="8">Объект: ${esc(objectTitle)}</td></tr>
-  <tr><td class="sub" colspan="8">Сформирован: ${new Date().toLocaleDateString('ru')} · всего актов: ${items.length}</td></tr>
-  <tr><td class="sub" colspan="8"></td></tr>
+  <tr><td class="title" colspan="9">Реестр актов проверок</td></tr>
+  <tr><td class="sub" colspan="9">Объект: ${esc(objectTitle)}</td></tr>
+  <tr><td class="sub" colspan="9">Сформирован: ${new Date().toLocaleDateString('ru')} · всего актов: ${items.length}</td></tr>
+  <tr><td class="sub" colspan="9"></td></tr>
   <tr>
     <th width="45">№ п/п</th>
     <th width="90">№ акта</th>
@@ -54,9 +55,10 @@ export const downloadRegistry = (items: Inspection[], objectTitle: string) => {
     <th width="200">Вид работ</th>
     <th width="200">Подрядная организация</th>
     <th width="200">Представитель подрядчика</th>
+    <th width="80">Замечаний</th>
     <th width="90">Статус</th>
   </tr>
-  ${rows || '<tr><td colspan="8" style="text-align:center">Актов нет</td></tr>'}
+  ${rows || '<tr><td colspan="9" style="text-align:center">Актов нет</td></tr>'}
 </table>
 </body></html>`;
 

@@ -13,10 +13,11 @@ import {
   Severity,
   SEVERITY,
   deadlineFor,
+  uploadAct,
 } from '@/data/inspections';
 import { cn } from '@/lib/utils';
 import { usePhotoQueue, flushQueue, isWifi } from '@/data/photoQueue';
-import { downloadAct } from '@/lib/actDoc';
+import { downloadAct, buildActHtml } from '@/lib/actDoc';
 
 interface ActEditorProps {
   inspection: Inspection;
@@ -120,10 +121,29 @@ const ActEditor = ({
     }
   };
 
-  const saveAct = () => {
-    downloadAct({ inspection, defects, objectTitle, contractorName });
-    onFinish(inspection);
-    toast({ title: 'Акт сохранён', description: `Файл Word · № ${inspection.number}` });
+  const [saving, setSaving] = useState(false);
+
+  const saveAct = async () => {
+    setSaving(true);
+    const data = { inspection, defects, objectTitle, contractorName };
+    downloadAct(data);
+    try {
+      await uploadAct(inspection.id, buildActHtml(data));
+      onFinish(inspection);
+      toast({
+        title: `Акт № ${inspection.number} сохранён`,
+        description: 'Файл скачан и добавлен в реестр объекта',
+      });
+    } catch {
+      onFinish(inspection);
+      toast({
+        title: 'Акт скачан, но не попал в реестр',
+        description: 'Нет связи — нажмите «Сохранить акт» ещё раз при интернете',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const sendNow = async () => {
@@ -334,10 +354,15 @@ const ActEditor = ({
         <div className="flex flex-none flex-col gap-2 sm:flex-row">
           <Button
             onClick={saveAct}
+            disabled={saving}
             className="flex-1 gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
           >
-            <Icon name="FileDown" size={16} />
-            Сохранить акт (Word)
+            <Icon
+              name={saving ? 'Loader2' : 'FileDown'}
+              size={16}
+              className={saving ? 'animate-spin' : ''}
+            />
+            Сохранить акт
           </Button>
           {defects.length > 0 && (
             <Button

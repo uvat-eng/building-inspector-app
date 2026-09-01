@@ -258,23 +258,40 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
                 hint="Начните с кнопки «Новый осмотр»."
               />
             ) : (
-              items.map((i) => (
+              items.map((i, idx) => (
                 <button
                   key={i.id}
                   type="button"
                   onClick={() => setAsk(i)}
                   className="group flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-foreground hover:text-background"
                 >
+                  <span className="w-6 flex-none text-center font-head text-[0.85em] text-muted-foreground group-hover:text-background/70">
+                    {items.length - idx}
+                  </span>
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-sm bg-secondary text-muted-foreground">
-                    <Icon name={i.status === 'done' ? 'FileCheck' : 'FilePen'} size={17} />
+                    <Icon name={i.actUrl ? 'FileCheck' : 'FilePen'} size={17} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-head text-[0.95em] uppercase tracking-[0.02em]">
-                      Акт № {i.number} · {i.workType}
+                      Акт № {i.number} · {i.workType || 'без вида работ'}
                     </span>
                     <span className="block truncate text-[0.76em] text-muted-foreground group-hover:text-background/70">
-                      {new Date(i.createdAt).toLocaleDateString('ru')} · {i.contractorRep} ·{' '}
-                      {i.status === 'done' ? 'оформлен' : 'черновик'}
+                      {new Date(i.createdAt).toLocaleString('ru', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                      {i.defectCount ? ` · замечаний: ${i.defectCount}` : ' · без замечаний'}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1 text-[0.72em] uppercase tracking-[0.06em] text-muted-foreground group-hover:text-background/70">
+                      <Icon
+                        name={i.actUrl ? 'CloudCheck' : 'CloudOff'}
+                        size={12}
+                        className="flex-none"
+                      />
+                      {i.actUrl ? 'в системе' : 'черновик'}
                     </span>
                   </span>
                   <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
@@ -310,6 +327,16 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
               <Icon name="Eye" size={16} />
               Просмотреть акт
             </Button>
+            {ask?.actUrl && (
+              <Button
+                variant="outline"
+                onClick={() => window.open(ask.actUrl, '_blank')}
+                className="gap-2 rounded-sm font-head uppercase tracking-[0.06em]"
+              >
+                <Icon name="Download" size={16} />
+                Скачать сохранённый акт
+              </Button>
+            )}
             <Button
               variant="outline"
               disabled={busy}

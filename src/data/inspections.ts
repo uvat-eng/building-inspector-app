@@ -16,8 +16,19 @@ export interface Inspection {
   status: 'draft' | 'done';
   note: string;
   actUrl: string;
+  defectCount?: number;
   createdAt: string;
 }
+
+export const uploadAct = async (inspectionId: string, html: string) => {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'act', inspectionId, content: html }),
+  });
+  if (!res.ok) throw new Error('upload_failed');
+  return (await res.json()) as { url: string; item: Inspection };
+};
 
 export interface InspectionDefect {
   id: string;

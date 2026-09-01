@@ -47,6 +47,7 @@ def to_insp(r):
         'status': r['status'],
         'note': r['note'],
         'actUrl': r['act_url'],
+        'defectCount': int(r.get('defect_count') or 0),
         'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
     }
 
@@ -100,8 +101,12 @@ def handler(event: dict, context) -> dict:
                     'item': to_insp(row),
                     'defects': [to_defect(d) for d in cur.fetchall()],
                 })
-            where = f"WHERE object_id = '{esc(object_id)}'" if object_id else ''
-            cur.execute(f'SELECT * FROM inspections {where} ORDER BY created_at DESC')
+            where = f"WHERE i.object_id = '{esc(object_id)}'" if object_id else ''
+            cur.execute(
+                'SELECT i.*, (SELECT COUNT(*) FROM inspection_defects d '
+                'WHERE d.inspection_id = i.id) AS defect_count '
+                f'FROM inspections i {where} ORDER BY i.created_at DESC'
+            )
             return resp(200, {'items': [to_insp(r) for r in cur.fetchall()]})
 
         if method == 'POST' and action == 'photo':
@@ -122,6 +127,27 @@ def handler(event: dict, context) -> dict:
             if not row:
                 return resp(404, {'error': 'defect_not_found'})
             return resp(200, {'url': url, 'defect': to_defect(row)})
+
+        if method == 'POST' and action == 'act':
+            insp_id = body.get('inspectionId', '')
+            content = body.get('content', '')
+            if not insp_id or not content:
+                return resp(400, {'error': 'inspection_and_content_required'})
+            raw = content.encode('utf-8')
+            key = f'inspections/{insp_id}/act-{uuid.uuid4().hex[:8]}.doc'
+            s3_client().put_object(
+                Bucket='files', Key=key, Body=raw, ContentType='application/msword'
+            )
+            url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
+            cur.execute(
+                f"UPDATE inspections SET act_url = '{esc(url)}', status = 'done' "
+                f"WHERE id = '{esc(insp_id)}' RETURNING *"
+            )
+            row = cur.fetchone()
+            conn.commit()
+            if not row:
+                return resp(404, {'error': 'inspection_not_found'})
+            return resp(200, {'url': url, 'item': to_insp(row)})
 
         if method == 'POST' and action == 'defect':
             insp_id = body.get('inspectionId', '')
