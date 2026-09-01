@@ -14,7 +14,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
-import { Inspection, useInspections } from '@/data/inspections';
+import { Inspection, useInspections, suggestNorms } from '@/data/inspections';
 import { useContractor, useOrders } from '@/data/orders';
 import { downloadRegistry } from '@/lib/registryXls';
 import NewInspection from '@/components/desk/inspection/NewInspection';
@@ -27,6 +27,8 @@ interface InspectionsCabinetProps {
 }
 
 type View = 'menu' | 'new' | 'act' | 'list';
+
+const INSPECTIONS_API = 'https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039';
 
 const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinetProps) => {
   const { toast } = useToast();
@@ -82,6 +84,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
       );
       const { defects } = (await res.json()) as {
         defects: {
+          id: string;
           pos: number;
           title: string;
           normRef?: string;
@@ -89,6 +92,30 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
           photos: string[];
         }[];
       };
+
+      const empty = defects.filter((d) => !d.normRef?.trim());
+      if (empty.length) {
+        try {
+          const found = await suggestNorms(
+            empty.map((d) => d.title),
+            true,
+          );
+          await Promise.all(
+            empty.map(async (d, k) => {
+              const m = found[k];
+              if (!m?.ref) return;
+              d.normRef = `${m.ref} — ${m.name}`;
+              await fetch(`${INSPECTIONS_API}?action=defect`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'defect', id: d.id, normRef: d.normRef }),
+              });
+            }),
+          );
+        } catch {
+          /* без ссылок предписание всё равно оформим */
+        }
+      }
       const order = await createOrder({
         objectId: object.id,
         inspectionId: insp.id,
