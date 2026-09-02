@@ -22,6 +22,11 @@ const DeskHeader = ({ onLogin, onMenu }: DeskHeaderProps) => (
       >
         <Icon name="Menu" size={22} />
       </button>
+      <img
+        src="/emblem.png"
+        alt="Эмблема компании"
+        className="h-10 w-10 flex-none object-contain sm:h-12 sm:w-12"
+      />
       <div className="flex items-baseline gap-3">
         <h1 className="font-head text-[26px] leading-[1.05] tracking-[-0.01em] sm:text-[38px]">
           ИНСПЕКТОР <span className="text-accent">СК</span>
