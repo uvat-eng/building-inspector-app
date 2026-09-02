@@ -11,13 +11,14 @@ import { DailyReport, importReportFile, statsOf, useReports } from '@/data/repor
 import { downloadDailyReport, downloadJournal } from '@/lib/reportXls';
 import DailyReportForm from '@/components/desk/inspection/DailyReportForm';
 import ReportView from '@/components/desk/inspection/ReportView';
+import ArchiveView from '@/components/desk/inspection/ArchiveView';
 
 interface ReportsCabinetProps {
   object: ProjectObject;
   onBack: () => void;
 }
 
-type View = 'root' | 'daily' | 'daily-new' | 'daily-log' | 'daily-view';
+type View = 'root' | 'daily' | 'daily-new' | 'daily-log' | 'daily-view' | 'archive';
 
 const MONTHS = [
   'Январь',
@@ -88,6 +89,10 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
 
   const totalRows = items.reduce((s, r) => s + r.rows.length, 0);
 
+  if (view === 'archive') {
+    return <ArchiveView object={object} reports={items} onBack={() => setView('daily')} />;
+  }
+
   if (view === 'daily-view' && viewing) {
     const fresh = items.find((r) => r.id === viewing.id) ?? viewing;
     return (
@@ -136,7 +141,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
     view === 'root'
       ? 'Отчётные формы инспектора по объекту'
       : view === 'daily'
-        ? 'Ежедневные отчёты по месяцам'
+        ? 'Ежедневные отчёты по месяцам · архив предписаний'
         : 'Накопительный журнал замечаний по объекту';
 
   const openReports = openMonth ? (months.find(([k]) => k === openMonth)?.[1] ?? []) : [];
@@ -186,7 +191,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
 
         {view === 'daily' && !openMonth && (
           <>
-            <div className="grid flex-none gap-2 sm:grid-cols-3">
+            <div className="grid flex-none gap-2 sm:grid-cols-2">
               <Button
                 onClick={() => fileRef.current?.click()}
                 disabled={importing}
@@ -241,6 +246,22 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
                   </span>
                 </span>
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setView('archive')}
+                className="h-auto justify-start gap-3 rounded-sm px-4 py-3.5 text-left"
+              >
+                <Icon name="Archive" size={19} className="text-accent" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-head text-[0.95em] uppercase tracking-[0.03em]">
+                    Общий архив
+                  </span>
+                  <span className="block truncate text-[0.75em] text-muted-foreground">
+                    Все выданные предписания
+                  </span>
+                </span>
+              </Button>
+
               <input
                 ref={fileRef}
                 type="file"

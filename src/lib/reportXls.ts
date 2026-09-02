@@ -244,3 +244,37 @@ export const downloadJournal = (
   );
   download(html, `Журнал замечаний. ${objectTitle} от ${new Date().toLocaleDateString('ru')}.xls`);
 };
+export const downloadArchive = (
+  rows: (ReportRow & { lastDate?: string; seen?: number })[],
+  objectTitle: string,
+  field: string,
+) => {
+  const body = rows
+    .map(
+      (r, i) => `
+    <tr>
+      ${rowCells(r, String(i + 1)).replace(/^\s*<tr>|<\/tr>\s*$/g, '')}
+      <td class="c">${r.lastDate ? ru(r.lastDate) : ''}</td>
+      <td class="c">${r.seen ?? 1}</td>
+    </tr>`,
+    )
+    .join('');
+
+  const html = book(
+    'Архив предписаний',
+    `
+    <table>
+      <tr><td class="t" colspan="21">Общий архив выданных предписаний</td></tr>
+      <tr><td class="s" colspan="21">Объект: ${esc(objectTitle)}${field ? ` · ${esc(field)}` : ''}</td></tr>
+      <tr><td class="s" colspan="21">Сформирован: ${new Date().toLocaleDateString('ru')} · записей: ${rows.length}</td></tr>
+      <tr><td class="s" colspan="21"></td></tr>
+    </table>
+    ${summary(rows)}
+    <br>
+    <table>
+      ${HEAD.replace('</tr>', '<th>Последний отчёт</th><th>Упоминаний</th></tr>')}
+      ${body}
+    </table>`,
+  );
+  download(html, `Архив предписаний. ${objectTitle} от ${new Date().toLocaleDateString('ru')}.xls`);
+};

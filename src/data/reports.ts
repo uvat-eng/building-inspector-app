@@ -170,6 +170,36 @@ export const statsOf = (rows: ReportRow[], today = new Date()): RowStats => {
   return s;
 };
 
+export interface ArchiveRow extends ReportRow {
+  lastDate: string;
+  seen: number;
+}
+
+const archiveKey = (r: ReportRow) =>
+  [r.orderNo.trim().toLowerCase(), r.point, r.content.trim().slice(0, 80).toLowerCase()].join('|');
+
+export const buildArchive = (reports: DailyReport[]): ArchiveRow[] => {
+  const map = new Map<string, ArchiveRow>();
+  reports
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .forEach((rep) => {
+      rep.rows.forEach((row) => {
+        const key = archiveKey(row);
+        const prev = map.get(key);
+        map.set(key, {
+          ...row,
+          photos: [...(prev?.photos ?? []), ...(row.photos ?? [])].filter(
+            (u, i, a) => a.indexOf(u) === i,
+          ),
+          lastDate: rep.date,
+          seen: (prev?.seen ?? 0) + 1,
+        });
+      });
+    });
+  return [...map.values()].sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+};
+
 export const byContractor = (rows: ReportRow[]) => {
   const m = new Map<string, ReportRow[]>();
   rows.forEach((r) => {

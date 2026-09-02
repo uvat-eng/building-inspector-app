@@ -14,6 +14,7 @@ import {
   DailyReport,
   EMPTY_ROW,
   NATURE,
+  buildArchive,
   ReportRow,
   rid,
   statsOf,
@@ -126,7 +127,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
   const { toast } = useToast();
   const { profile } = useProfile();
   const { list: contractors } = useContractor(object.id);
-  const { save } = useReports(object.id);
+  const { items, save } = useReports(object.id);
 
   const [date, setDate] = useState(existing?.date || today());
   const [note, setNote] = useState(existing?.note || '');
@@ -152,6 +153,30 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
         issuedAt: date,
       },
     ]);
+
+  const carryOver = useMemo(() => {
+    const present = new Set(
+      rows.map((r) => `${r.orderNo.trim().toLowerCase()}|${r.point}`),
+    );
+    return buildArchive(items.filter((r) => r.id !== existing?.id))
+      .filter((r) => r.status !== 'Устранено')
+      .filter((r) => !present.has(`${r.orderNo.trim().toLowerCase()}|${r.point}`));
+  }, [items, rows, existing?.id]);
+
+  const pullCarryOver = () => {
+    setRows((p) => [
+      ...p,
+      ...carryOver.map((r) => ({
+        ...(r as ReportRow),
+        id: rid(),
+        inspector: r.inspector || profile.fio,
+      })),
+    ]);
+    toast({
+      title: `Перенесено предписаний: ${carryOver.length}`,
+      description: 'Ранее выданные и не устранённые',
+    });
+  };
 
   const patch = (id: string, part: Partial<ReportRow>) =>
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...part } : r)));
@@ -230,6 +255,27 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
             </Field>
           </div>
         </Panel>
+
+        {carryOver.length > 0 && (
+          <Panel title="Архив предписаний" className="flex-none [&>div]:overflow-visible">
+            <div className="flex flex-col gap-2.5 p-3.5">
+              <p className="text-[0.83em] leading-snug text-muted-foreground">
+                В архиве объекта {carryOver.length} ранее выданных и не устранённых предписаний.
+                Их можно перенести в отчёт одной кнопкой — все поля подставятся, останется
+                обновить статус и даты.
+              </p>
+              <Button
+                type="button"
+                onClick={pullCarryOver}
+                variant="outline"
+                className="w-full rounded-sm font-head uppercase tracking-[0.06em]"
+              >
+                <Icon name="History" fallback="Clock" size={15} className="mr-1.5 text-accent" />
+                Подгрузить из архива ({carryOver.length})
+              </Button>
+            </div>
+          </Panel>
+        )}
 
         <Panel title="Сводка" note={`${rows.length} строк`} className="flex-none [&>div]:overflow-visible">
           <div className="grid grid-cols-3 gap-px bg-border sm:grid-cols-6">
