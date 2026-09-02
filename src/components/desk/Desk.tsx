@@ -25,7 +25,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { SectionId, MENU } from '@/data/mock';
-import { useProfile, ROLE_SECTIONS, ROLE_LABEL } from '@/data/profile';
+import { useProfile, ROLE_SECTIONS, ROLE_LABEL, Role } from '@/data/profile';
 import { useModule } from '@/data/modules';
 import { useScope } from '@/data/scope';
 import { useLocations } from '@/data/locations';
@@ -275,6 +275,7 @@ const DeskRoot = () => {
   const { module, pick } = useModule();
   const { save: saveScope, clear: clearScope } = useScope();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [wantRole, setWantRole] = useState<Role | null>(null);
   const [adminLogin, setAdminLogin] = useState(false);
   const [inScope, setInScope] = useState(() => !!localStorage.getItem(SCOPE_ENTERED));
 
@@ -319,9 +320,17 @@ const DeskRoot = () => {
         <ScopePicker
           onReady={enterScope}
           onBackToModules={leaveModule}
-          onLogin={() => setLoginOpen(true)}
+          onLogin={(r) => {
+            setWantRole(r);
+            setLoginOpen(true);
+          }}
         />
-        <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} onEntered={() => {}} />
+        <LoginDialog
+          open={loginOpen}
+          onOpenChange={setLoginOpen}
+          expectRole={wantRole}
+          onEntered={() => {}}
+        />
       </>
     );
   }

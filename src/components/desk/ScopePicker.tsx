@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Topbar from '@/components/desk/Topbar';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
@@ -14,14 +14,22 @@ import {
 import { cn } from '@/lib/utils';
 import { useObjects, NO_FIELD } from '@/data/store';
 import { useLocations } from '@/data/locations';
-import { useProfile, ROLE_LABEL, ROLE_ICON, ROLE_NOTE, canSeeLocation } from '@/data/profile';
+import {
+  useProfile,
+  ROLE_LABEL,
+  ROLE_ICON,
+  ROLE_NOTE,
+  ROLE_ORDER,
+  Role,
+  canSeeLocation,
+} from '@/data/profile';
 import { useToast } from '@/hooks/use-toast';
 import useBackGuard from '@/hooks/use-back-guard';
 
 interface Props {
   onReady: (locationId: string, project: string) => void;
   onBackToModules: () => void;
-  onLogin: () => void;
+  onLogin: (role: Role) => void;
 }
 
 const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
@@ -34,6 +42,12 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
   const [form, setForm] = useState(false);
   const [name, setName] = useState('');
   const [roleSeen, setRoleSeen] = useState(false);
+  const fioRef = useRef(profile.fio);
+
+  useEffect(() => {
+    if (profile.fio && profile.fio !== fioRef.current) setRoleSeen(true);
+    fioRef.current = profile.fio;
+  }, [profile.fio]);
 
   const canAdd = canAddLocation;
   const locations = allLocations.filter((l) => canSeeLocation(profile, l.id));
@@ -89,7 +103,7 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
         <Button
           size="sm"
           variant="outline"
-          onClick={onLogin}
+          onClick={() => onLogin(profile.role)}
           className="h-8 gap-1.5 rounded-sm px-3 text-[0.8em] uppercase tracking-[0.06em]"
         >
           <Icon name={profile.fio ? 'UserCog' : 'LogIn'} size={14} />
@@ -103,7 +117,7 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
     return (
       <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
         <Topbar />
-        <div className="flex flex-none items-center border-b border-border bg-card px-4 py-3 sm:px-6">
+        <div className="flex flex-none items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-6">
           <button
             type="button"
             onClick={onBackToModules}
@@ -112,66 +126,69 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
             <Icon name="ArrowLeft" size={15} />
             Модули
           </button>
+          {profile.fio && (
+            <span className="hidden truncate font-head text-[0.8em] uppercase tracking-[0.08em] text-muted-foreground sm:inline">
+              {ROLE_LABEL[profile.role]} · {profile.fio}
+            </span>
+          )}
         </div>
 
         <main className="scrollbar-thin flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 py-6 sm:px-6">
-          <div className="w-full max-w-md animate-rise">
+          <div className="w-full max-w-2xl animate-rise">
             <div className="flex items-center gap-2 text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
               <span className="text-accent">Строительный контроль</span>
               <Icon name="ChevronRight" size={12} />
-              <span className="text-foreground">Вход</span>
+              <span className="text-foreground">Должность</span>
             </div>
 
-            <div className="mt-4 rounded-sm border border-border border-t-2 border-t-accent bg-card p-5 text-center">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-sm bg-accent text-accent-foreground">
-                <Icon name={profile.fio ? ROLE_ICON[profile.role] : 'LogIn'} size={23} />
-              </span>
+            <h1 className="mt-3 font-head text-[20px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[26px]">
+              Выберите должность
+            </h1>
+            <p className="mt-1 text-[0.84em] text-muted-foreground">
+              Роль определяет доступные разделы. Дальше — вход по логину и паролю.
+            </p>
 
-              {profile.fio ? (
-                <>
-                  <h1 className="mt-3 font-head text-[19px] uppercase leading-[1.15] tracking-[0.02em]">
-                    {ROLE_LABEL[profile.role]}
-                  </h1>
-                  <p className="mt-1 text-[0.86em] text-muted-foreground">{profile.fio}</p>
-                  <p className="mx-auto mt-1.5 max-w-xs text-[0.78em] leading-snug text-muted-foreground">
-                    {ROLE_NOTE[profile.role]}
-                  </p>
-
-                  <Button
-                    onClick={() => setRoleSeen(true)}
-                    className="mt-4 w-full gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
-                  >
-                    <Icon name="ArrowRight" size={16} />
-                    Продолжить
-                  </Button>
+            <div className="mt-4 overflow-hidden rounded-sm border border-border bg-card">
+              {ROLE_ORDER.filter((r) => r !== 'admin').map((r) => {
+                const mine = profile.fio && profile.role === r;
+                return (
                   <button
+                    key={r}
                     type="button"
-                    onClick={onLogin}
-                    className="mt-2 w-full rounded-sm border border-dashed border-input py-2 text-[0.82em] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+                    onClick={() => (mine ? setRoleSeen(true) : onLogin(r))}
+                    className="group flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-secondary/70"
                   >
-                    Войти под другой учётной записью
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-secondary text-accent transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+                      <Icon name={ROLE_ICON[r]} fallback="User" size={19} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="truncate font-head text-[1em] uppercase tracking-[0.03em]">
+                          {ROLE_LABEL[r]}
+                        </span>
+                        {mine && (
+                          <span className="flex-none rounded-sm bg-accent px-1.5 py-0.5 text-[0.62em] uppercase tracking-[0.08em] text-accent-foreground">
+                            вы вошли
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block text-[0.78em] leading-snug text-muted-foreground">
+                        {ROLE_NOTE[r]}
+                      </span>
+                    </span>
+                    <Icon
+                      name={mine ? 'ArrowRight' : 'LogIn'}
+                      size={16}
+                      className="flex-none text-muted-foreground transition-colors group-hover:text-accent"
+                    />
                   </button>
-                </>
-              ) : (
-                <>
-                  <h1 className="mt-3 font-head text-[19px] uppercase leading-[1.15] tracking-[0.02em]">
-                    Вход в модуль
-                  </h1>
-                  <p className="mx-auto mt-1.5 max-w-xs text-[0.82em] leading-snug text-muted-foreground">
-                    Должность определяется вашей учётной записью. Логин и пароль выдаёт менеджер
-                    или координатор проекта.
-                  </p>
-
-                  <Button
-                    onClick={onLogin}
-                    className="mt-4 w-full gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
-                  >
-                    <Icon name="LogIn" size={16} />
-                    Войти
-                  </Button>
-                </>
-              )}
+                );
+              })}
             </div>
+
+            <p className="mt-3 text-center text-[0.76em] text-muted-foreground">
+              Логин и пароль выдаёт менеджер или координатор проекта.
+            </p>
           </div>
         </main>
       </div>

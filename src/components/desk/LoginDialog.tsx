@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
-import { useProfile, Role, ROLE_LABEL } from '@/data/profile';
+import { useProfile, Role, ROLE_LABEL, ROLE_NOTE } from '@/data/profile';
 import { loginUser, registerUser, setSession, fetchUsers, User } from '@/data/users';
 
 interface LoginDialogProps {
@@ -19,9 +19,16 @@ interface LoginDialogProps {
   onOpenChange: (v: boolean) => void;
   onEntered?: (role: Role) => void;
   adminMode?: boolean;
+  expectRole?: Role | null;
 }
 
-const LoginDialog = ({ open, onOpenChange, onEntered, adminMode }: LoginDialogProps) => {
+const LoginDialog = ({
+  open,
+  onOpenChange,
+  onEntered,
+  adminMode,
+  expectRole,
+}: LoginDialogProps) => {
   const { save } = useProfile();
   const { toast } = useToast();
 
@@ -67,6 +74,14 @@ const LoginDialog = ({ open, onOpenChange, onEntered, adminMode }: LoginDialogPr
     setBusy(true);
     try {
       const user = await loginUser(fio, pass);
+      if (expectRole && user.role !== expectRole && user.role !== 'admin') {
+        toast({
+          title: `Вы не ${ROLE_LABEL[expectRole].toLowerCase()}`,
+          description: `Ваша учётная запись — ${ROLE_LABEL[user.role]}. Выберите свою должность.`,
+          variant: 'destructive',
+        });
+        return;
+      }
       if (adminMode && user.role !== 'admin') {
         toast({
           title: 'Это не учётная запись администратора',
@@ -110,7 +125,7 @@ const LoginDialog = ({ open, onOpenChange, onEntered, adminMode }: LoginDialogPr
       const user = await registerUser({
         fio: fio.trim().replace(/\s+/g, ' '),
         password: pass,
-        role: adminMode ? 'admin' : 'pm',
+        role: adminMode ? 'admin' : (expectRole ?? 'pm'),
         group: '',
         org: 'ООО «Глобал-Стройинжиниринг»',
         phone: '',
@@ -132,14 +147,22 @@ const LoginDialog = ({ open, onOpenChange, onEntered, adminMode }: LoginDialogPr
       <DialogContent className="max-w-md rounded-sm">
         <DialogHeader>
           <DialogTitle className="font-head text-[1.4em] uppercase tracking-[0.03em]">
-            {empty ? 'Первый вход' : adminMode ? 'Вход администратора' : 'Вход в систему'}
+            {empty
+              ? 'Первый вход'
+              : adminMode
+                ? 'Вход администратора'
+                : expectRole
+                  ? ROLE_LABEL[expectRole]
+                  : 'Вход в систему'}
           </DialogTitle>
           <DialogDescription className="text-[0.85em] text-muted-foreground">
             {empty
               ? `В системе ещё нет сотрудников. Создайте учётную запись ${adminMode ? 'администратора' : 'менеджера проекта'} — дальше доступы выдаёт он.`
               : adminMode
                 ? 'Доступ только для администратора системы.'
-                : 'Логин — ваши фамилия, имя и отчество на русском языке.'}
+                : expectRole
+                  ? `${ROLE_NOTE[expectRole]}. Логин — ваши фамилия, имя и отчество.`
+                  : 'Логин — ваши фамилия, имя и отчество на русском языке.'}
           </DialogDescription>
         </DialogHeader>
 
