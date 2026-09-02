@@ -12,7 +12,7 @@ interface PanelProps {
 const Panel = ({ title, note, className, children, action }: PanelProps) => (
   <section
     className={cn(
-      'flex min-h-0 flex-col overflow-hidden rounded-sm border border-border border-t-2 border-t-accent bg-card',
+      'flex min-h-0 flex-none flex-col overflow-hidden rounded-sm border border-border border-t-2 border-t-accent bg-card',
       className,
     )}
   >
@@ -25,7 +25,7 @@ const Panel = ({ title, note, className, children, action }: PanelProps) => (
         </span>
       )}
     </h2>
-    <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">{children}</div>
+    <div className="scrollbar-thin min-h-0 flex-1">{children}</div>
   </section>
 );
 

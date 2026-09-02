@@ -231,7 +231,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
           </p>
         </section>
 
-        <Panel title="Шапка отчёта" className="flex-none [&>div]:overflow-visible">
+        <Panel title="Шапка отчёта">
           <div className="grid gap-3 p-3.5 sm:grid-cols-2">
             <Field label="Дата отчёта">
               <Input
@@ -257,7 +257,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
         </Panel>
 
         {carryOver.length > 0 && (
-          <Panel title="Архив предписаний" className="flex-none [&>div]:overflow-visible">
+          <Panel title="Архив предписаний">
             <div className="flex flex-col gap-2.5 p-3.5">
               <p className="text-[0.83em] leading-snug text-muted-foreground">
                 В архиве объекта {carryOver.length} ранее выданных и не устранённых предписаний.
@@ -277,7 +277,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
           </Panel>
         )}
 
-        <Panel title="Сводка" note={`${rows.length} строк`} className="flex-none [&>div]:overflow-visible">
+        <Panel title="Сводка" note={`${rows.length} строк`}>
           <div className="grid grid-cols-3 gap-px bg-border sm:grid-cols-6">
             {[
               ['Выдано', stats.issued],
@@ -300,7 +300,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
         <Panel
           title="Предписания"
           note={`${rows.length}`}
-          className="flex-none [&>div]:overflow-visible"
+         
           action={
             <button
               type="button"

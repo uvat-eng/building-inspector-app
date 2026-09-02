@@ -138,7 +138,11 @@ const ObjectMenu = ({ object, onOpen, badges }: ObjectMenuProps) => (
         </div>
       </section>
 
-      <Panel title="Разделы объекта" note={`${ITEMS.filter((i) => i.ready).length} доступно`}>
+      <Panel
+        title="Разделы объекта"
+        note={`${ITEMS.filter((i) => i.ready).length} доступно`}
+       
+      >
         <div className="grid gap-px bg-border sm:grid-cols-2">
           {ITEMS.map((it) => (
             <button

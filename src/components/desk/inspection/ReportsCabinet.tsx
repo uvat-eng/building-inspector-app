@@ -167,7 +167,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
         </section>
 
         {view === 'root' && (
-          <Panel title="Отчётные формы" note="1" className="flex-none [&>div]:overflow-visible">
+          <Panel title="Отчётные формы" note="1">
             <button
               type="button"
               onClick={() => setView('daily')}
@@ -273,7 +273,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
               />
             </div>
 
-            <Panel title="Хронология по месяцам" note={`${months.length}`} className="flex-none [&>div]:overflow-visible">
+            <Panel title="Хронология по месяцам" note={`${months.length}`}>
               {loading ? (
                 <div className="px-4 py-8 text-center text-[0.85em] text-muted-foreground">
                   Загрузка…
@@ -315,7 +315,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
         )}
 
         {view === 'daily' && openMonth && (
-          <Panel title={monthLabel(openMonth)} note={`${openReports.length}`} className="flex-none [&>div]:overflow-visible">
+          <Panel title={monthLabel(openMonth)} note={`${openReports.length}`}>
             <div className="flex flex-col gap-px bg-border">
               {openReports.map((r) => {
                 const s = statsOf(r.rows);
@@ -401,7 +401,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
               </Button>
             </div>
 
-            <Panel title="Накопительный журнал" note={`${totalRows}`} className="flex-none [&>div]:overflow-visible">
+            <Panel title="Накопительный журнал" note={`${totalRows}`}>
               {totalRows === 0 ? (
                 <Empty
                   icon="BookOpen"

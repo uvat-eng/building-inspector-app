@@ -413,7 +413,11 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
           </Panel>
         ))}
 
-      {view === 'objects' && <div className="flex min-h-0 flex-1 flex-col">{objectsPanel}</div>}
+      {view === 'objects' && (
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {objectsPanel}
+        </div>
+      )}
 
       {view === 'timesheet' && (
         <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto">

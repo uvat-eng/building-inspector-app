@@ -162,7 +162,7 @@ const ReportView = ({ object, report, onBack }: Props) => {
           </div>
         </section>
 
-        <Panel title="Сводка" note={`${report.rows.length} строк`} className="flex-none [&>div]:overflow-visible">
+        <Panel title="Сводка" note={`${report.rows.length} строк`}>
           <div className="grid grid-cols-3 gap-px bg-border sm:grid-cols-6">
             {[
               ['Выдано', stats.issued],
@@ -182,7 +182,7 @@ const ReportView = ({ object, report, onBack }: Props) => {
           </div>
         </Panel>
 
-        <Panel title="Поиск" className="flex-none [&>div]:overflow-visible">
+        <Panel title="Поиск">
           <div className="flex flex-col gap-2 p-3.5">
             <Input
               value={q}
@@ -222,7 +222,7 @@ const ReportView = ({ object, report, onBack }: Props) => {
               key={name}
               title={name}
               note={`${list.length}`}
-              className="flex-none [&>div]:overflow-visible"
+             
             >
               <div className="flex flex-wrap gap-1.5 border-b border-border px-4 py-2">
                 <Tag tone="dim">Выдано {s.issued}</Tag>

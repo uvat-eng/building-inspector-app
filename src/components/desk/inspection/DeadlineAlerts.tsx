@@ -67,7 +67,7 @@ const DeadlineAlerts = ({ reports, compact, onOpenArchive }: Props) => {
     <Panel
       title="Контроль сроков"
       note={`${alerts.total}`}
-      className="flex-none border-t-destructive [&>div]:overflow-visible"
+      className="border-t-destructive"
     >
       <button
         type="button"

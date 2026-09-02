@@ -163,7 +163,7 @@ const ArchiveView = ({ object, reports, onBack }: Props) => {
 
         <DeadlineAlerts reports={reports} compact />
 
-        <Panel title="Сводка" className="flex-none [&>div]:overflow-visible">
+        <Panel title="Сводка">
           <div className="grid grid-cols-3 gap-px bg-border sm:grid-cols-6">
             {[
               ['Всего', stats.issued],
@@ -194,7 +194,7 @@ const ArchiveView = ({ object, reports, onBack }: Props) => {
           </Button>
         </div>
 
-        <Panel title="Поиск" className="flex-none [&>div]:overflow-visible">
+        <Panel title="Поиск">
           <div className="flex flex-col gap-2 p-3.5">
             <Input
               value={q}
@@ -232,7 +232,7 @@ const ArchiveView = ({ object, reports, onBack }: Props) => {
         <Panel
           title="Предписания"
           note={`${rows.length}`}
-          className="flex-none [&>div]:overflow-visible"
+         
         >
           {rows.length === 0 ? (
             <Empty
