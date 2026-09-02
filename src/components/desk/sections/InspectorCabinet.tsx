@@ -137,55 +137,141 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
 
   const active = objects.find((o) => o.id === openObject);
 
+  const OBJ_VIEW_TITLE: Record<ObjView, string> = {
+    menu: 'Разделы объекта',
+    docs: 'Документация',
+    contract: 'Договор',
+    inspections: 'Проверки и выезды',
+    orders: 'Предписания',
+    company: 'Подрядчик',
+    tests: 'Протоколы испытаний',
+    ks: 'Акты КС',
+    incoming: 'Входящие документы',
+    pos: 'ПОС и ППР',
+  };
+
+  const objectCrumbs = active && (
+    <div className="flex flex-none flex-wrap items-center gap-2">
+      <span className="flex min-w-0 items-center gap-1.5 text-[0.82em] uppercase tracking-[0.08em]">
+        <button
+          type="button"
+          onClick={() => {
+            setOpenObject(null);
+            setObjectView('menu');
+            setView('objects');
+          }}
+          className="flex flex-none items-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <Icon name="IdCard" size={14} className="text-accent" />
+          Кабинет
+        </button>
+        <Icon name="ChevronRight" size={13} className="flex-none text-muted-foreground/50" />
+        <button
+          type="button"
+          onClick={() => setObjectView('menu')}
+          className={cn(
+            'min-w-0 truncate rounded-sm px-2 py-1 font-head tracking-[0.06em] transition-colors',
+            objectView === 'menu'
+              ? 'text-muted-foreground'
+              : 'hover:bg-secondary hover:text-foreground',
+          )}
+        >
+          {active.title}
+        </button>
+        {objectView !== 'menu' && (
+          <>
+            <Icon name="ChevronRight" size={13} className="flex-none text-muted-foreground/50" />
+            <span className="truncate font-head tracking-[0.1em] text-muted-foreground">
+              {OBJ_VIEW_TITLE[objectView]}
+            </span>
+          </>
+        )}
+      </span>
+
+      {objectView === 'menu' && (
+        <button
+          type="button"
+          onClick={() => {
+            setOpenObject(null);
+            setView('objects');
+          }}
+          className="flex flex-none items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
+        >
+          <Icon name="ArrowLeft" size={14} className="text-accent" />
+          К списку объектов
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={onExit}
+        className="ml-auto flex flex-none items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-destructive hover:text-destructive"
+      >
+        <Icon name="LogOut" size={14} />
+        Выйти
+      </button>
+    </div>
+  );
+
+  const wrap = (node: React.ReactNode) => (
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+      {objectCrumbs}
+      <div className="flex min-h-0 flex-1 flex-col">{node}</div>
+    </div>
+  );
+
   if (active) {
     if (objectView === 'docs' || objectView === 'contract') {
-      return (
+      return wrap(
         <DocsCabinet
           object={active}
           onBack={() => setObjectView('menu')}
           only={objectView === 'contract' ? 'contract' : undefined}
-        />
+        />,
       );
     }
     if (objectView === 'inspections') {
-      return (
+      return wrap(
         <InspectionsCabinet
           object={active}
           onBack={() => setObjectView('menu')}
           onOrdersOpen={() => setObjectView('orders')}
-        />
+        />,
       );
     }
     if (objectView === 'orders') {
-      return <OrdersCabinet object={active} onBack={() => setObjectView('menu')} />;
+      return wrap(<OrdersCabinet object={active} onBack={() => setObjectView('menu')} />);
     }
     if (objectView === 'company') {
-      return <ContractorCard object={active} onBack={() => setObjectView('menu')} />;
+      return wrap(<ContractorCard object={active} onBack={() => setObjectView('menu')} />);
     }
     if (objectView === 'tests' || objectView === 'ks' || objectView === 'incoming') {
-      return (
+      return wrap(
         <FoldersCabinet
           object={active}
           section={objectView}
           onBack={() => setObjectView('menu')}
-        />
+        />,
       );
     }
     if (objectView === 'pos') {
-      return (
+      return wrap(
         <DocsCabinet
           object={active}
           onBack={() => setObjectView('menu')}
           sections={['pos', 'ppr']}
           title="ПОС и ППР"
           hint="Загрузка вручную инспектором. Прикрепите сканы ПОС и ППР в формате PDF или фото."
-        />
+        />,
       );
     }
-    return (
+    return wrap(
       <ObjectMenu
         object={active}
-        onBack={() => setOpenObject(null)}
+        onBack={() => {
+          setOpenObject(null);
+          setView('objects');
+        }}
         onOpen={(id) => {
           if (
             [
@@ -202,7 +288,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
           )
             setObjectView(id as ObjView);
         }}
-      />
+      />,
     );
   }
 

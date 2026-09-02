@@ -106,21 +106,12 @@ const ITEMS: MenuItem[] = [
 
 interface ObjectMenuProps {
   object: ProjectObject;
-  onBack: () => void;
+  onBack?: () => void;
   onOpen: (id: ObjectMenuId) => void;
 }
 
-const ObjectMenu = ({ object, onBack, onOpen }: ObjectMenuProps) => (
+const ObjectMenu = ({ object, onOpen }: ObjectMenuProps) => (
   <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-    <button
-      type="button"
-      onClick={onBack}
-      className="flex w-fit flex-none items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
-    >
-      <Icon name="ArrowLeft" size={14} className="text-accent" />
-      К списку объектов
-    </button>
-
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
       <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 sm:px-6 sm:py-5">
         <h1 className="font-head text-[18px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[26px]">
