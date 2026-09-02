@@ -104,7 +104,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const shift = currentShift(sheet);
 
   const stats: { icon: string; label: string; value: string | number; view: View }[] = [
-    { icon: 'Building2', label: 'Объектов', value: objects.length, view: 'objects' },
+    { icon: 'Building2', label: 'Объекты', value: objects.length, view: 'objects' },
     {
       icon: 'Clock',
       label: `${MONTHS[now.getMonth()]} · ${month.length} смен`,
