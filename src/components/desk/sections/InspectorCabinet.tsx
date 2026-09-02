@@ -13,7 +13,7 @@ import { runDailyArchive } from '@/data/rollup';
 import {
   useTimesheet,
   monthEntries,
-  isMO,
+  isMark,
   currentShift,
   MONTHS,
 } from '@/data/timesheet';
@@ -95,7 +95,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
 
   const now = new Date();
   const month = monthEntries(sheet, now.getFullYear(), now.getMonth()).filter(
-    ([, l]) => !isMO(l),
+    ([, l]) => !isMark(l),
   );
   const shift = currentShift(sheet);
 

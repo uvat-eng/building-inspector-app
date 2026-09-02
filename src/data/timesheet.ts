@@ -1,6 +1,25 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
-export type DayKind = 'work' | 'mo';
+export type DayKind = 'work' | 'mo' | 'sick' | 'vacation' | 'extra' | 'absent' | 'study';
+
+export const MARKS: {
+  id: Exclude<DayKind, 'work'>;
+  code: string;
+  label: string;
+  icon: string;
+}[] = [
+  { id: 'mo', code: 'В', label: 'Межвахтовый отдых', icon: 'Home' },
+  { id: 'sick', code: 'Б', label: 'Больничный', icon: 'HeartPulse' },
+  { id: 'vacation', code: 'ОТ', label: 'Отпуск', icon: 'Palmtree' },
+  { id: 'extra', code: 'ДО', label: 'Дополнительный отпуск', icon: 'CalendarPlus' },
+  { id: 'absent', code: 'НН', label: 'Неявка', icon: 'CircleSlash' },
+  { id: 'study', code: 'У', label: 'Учёба', icon: 'GraduationCap' },
+];
+
+export const MARK_BY_ID = Object.fromEntries(MARKS.map((m) => [m.id, m])) as Record<
+  string,
+  (typeof MARKS)[number]
+>;
 
 export interface TimeEntry {
   objectId: string;
@@ -10,17 +29,33 @@ export interface TimeEntry {
   kind?: DayKind;
 }
 
-export const MO_ENTRY: TimeEntry = {
+export const markEntry = (id: Exclude<DayKind, 'work'>): TimeEntry => ({
   objectId: '',
-  objectTitle: 'Межвахтовый отдых',
+  objectTitle: MARK_BY_ID[id]?.label ?? '',
   from: '00:00',
   to: '00:00',
-  kind: 'mo',
+  kind: id,
+});
+
+export const MO_ENTRY = markEntry('mo');
+
+export const kindOf = (list: TimeEntry[] = []): DayKind | null =>
+  list.length ? (list[0].kind ?? 'work') : null;
+
+export const isWork = (list: TimeEntry[] = []) => kindOf(list) === 'work';
+
+export const isMark = (list: TimeEntry[] = []) => {
+  const k = kindOf(list);
+  return !!k && k !== 'work';
 };
 
-export const isMO = (list: TimeEntry[] = []) => list.length > 0 && list[0].kind === 'mo';
+export const isMO = (list: TimeEntry[] = []) => kindOf(list) === 'mo';
 
-export const isWork = (list: TimeEntry[] = []) => list.length > 0 && list[0].kind !== 'mo';
+export const codeOf = (list: TimeEntry[] = []) => {
+  const k = kindOf(list);
+  if (!k) return '';
+  return k === 'work' ? 'Я' : (MARK_BY_ID[k]?.code ?? '');
+};
 
 export type Timesheet = Record<string, TimeEntry[]>;
 
@@ -45,13 +80,13 @@ export const SHIFTS = [
 ] as const;
 
 export const shiftOf = (list: TimeEntry[] = []) => {
-  if (!list.length || isMO(list)) return null;
+  if (!list.length || isMark(list)) return null;
   const start = minutes(list[0].from);
   return start >= 20 * 60 || start < 8 * 60 ? 'night' : 'day';
 };
 
 export const dayHours = (list: TimeEntry[] = []) =>
-  isMO(list) ? 0 : list.reduce((s, e) => s + entryHours(e), 0);
+  isMark(list) ? 0 : list.reduce((s, e) => s + entryHours(e), 0);
 
 export const fmtHours = (h: number) =>
   Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/0$/, '').replace('.', ',');
@@ -219,8 +254,8 @@ export const buildShifts = (sheet: Timesheet): Shift[] => {
   let cur: Shift | null = null;
 
   days.forEach(([key, list]) => {
-    if (isMO(list)) {
-      if (cur) {
+    if (isMark(list)) {
+      if (cur && isMO(list)) {
         if (!cur.moStart) cur.moStart = key;
         cur.moDays += 1;
         cur.moEnd = key;

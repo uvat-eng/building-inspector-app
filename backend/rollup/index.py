@@ -43,9 +43,9 @@ def build_shifts(days):
     shifts = []
     cur = None
     for day, entries in days:
-        is_mo = bool(entries) and entries[0].get('kind') == 'mo'
-        if is_mo:
-            if cur:
+        kind = entries[0].get('kind') or 'work' if entries else None
+        if kind and kind != 'work':
+            if cur and kind == 'mo':
                 if not cur['moStart']:
                     cur['moStart'] = day
                 cur['moDays'] += 1
@@ -143,7 +143,7 @@ def handler(event: dict, context) -> dict:
                 month_days = [
                     (d, e)
                     for d, e in days
-                    if d.startswith(month) and e and e[0].get('kind') != 'mo'
+                    if d.startswith(month) and e and (e[0].get('kind') or 'work') == 'work'
                 ]
                 month_mo = [
                     d for d, e in days if d.startswith(month) and e and e[0].get('kind') == 'mo'

@@ -28,8 +28,13 @@ import {
   fmtHours,
   SHIFTS,
   shiftOf,
-  MO_ENTRY,
+  MARKS,
+  MARK_BY_ID,
+  markEntry,
+  isMark,
   isMO,
+  kindOf,
+  codeOf,
   buildShifts,
   shiftLabel,
   fmtDay,
@@ -59,43 +64,82 @@ const Timesheet = () => {
 
   const entries = useMemo(() => monthEntries(sheet, year, month), [sheet, year, month]);
   const shifts = useMemo(() => buildShifts(sheet), [sheet]);
-  const workEntries = useMemo(() => entries.filter(([, l]) => !isMO(l)), [entries]);
-  const moDays = entries.length - workEntries.length;
+  const workEntries = useMemo(() => entries.filter(([, l]) => !isMark(l)), [entries]);
+  const moDays = entries.filter(([, l]) => isMO(l)).length;
   const totalHours = workEntries.reduce((s, [, list]) => s + dayHours(list), 0);
   const nightDays = entries.filter(([, list]) => shiftOf(list) === 'night').length;
   const rowsHours = dayHours(rows);
 
   const shareDoc = useMemo(() => {
     const period = `${MONTHS[month]} ${year}`;
+    const mainObj = objects.find((o) => o.id === workEntries[0]?.[1]?.[0]?.objectId);
+    const objNames = [
+      ...new Set(workEntries.flatMap(([, l]) => l.map((e) => e.objectTitle)).filter(Boolean)),
+    ];
+
     const head = [
       `ТАБЕЛЬ УЧЁТА РАБОЧЕГО ВРЕМЕНИ · ${period}`,
+      `Объект: ${objNames.join(', ') || '—'}`,
+      `Заказчик: ${mainObj?.customer || '—'}`,
       `Инспектор: ${profile.fio || '—'}`,
-      `Проект: ${profile.group || '—'}`,
-      `Организация: ${profile.org || '—'}`,
       '',
     ];
-    const lines = entries.flatMap(([k, list]) =>
-      isMO(list)
-        ? [`${k.split('-').reverse().join('.')} · МО · межвахтовый отдых`]
-        : list.map(
-            (e) =>
-              `${k.split('-').reverse().join('.')} · ${
-                shiftOf(list) === 'night' ? 'ночная' : 'дневная'
-              } · ${e.objectTitle} · ${e.from}–${e.to} · ${fmtHours(entryHours(e))} ч`,
-          ),
-    );
-    const total = `\nИтого: ${workEntries.length} смен (${nightDays} ноч. / ${
-      workEntries.length - nightDays
-    } дн.), ${fmtHours(totalHours)} ч${moDays ? `\nМежвахтовый отдых: ${moDays} дн.` : ''}`;
+
+    const counts: Record<string, number> = {};
+    entries.forEach(([, l]) => {
+      const c = codeOf(l);
+      if (c) counts[c] = (counts[c] ?? 0) + 1;
+    });
+
+    const days = Array.from({ length: daysInMonth }).map((_, i) => {
+      const list = sheet[dayKey(year, month, i + 1)];
+      return codeOf(list) || '';
+    });
+
+    const lines = entries.map(([k, list]) => {
+      const date = k.split('-').reverse().join('.');
+      if (isMark(list)) return `${date} · ${codeOf(list)} · ${list[0].objectTitle}`;
+      return `${date} · Я · ${shiftOf(list) === 'night' ? 'ночная' : 'дневная'} · ${list
+        .map((e) => `${e.objectTitle} ${e.from}–${e.to}`)
+        .join('; ')} · ${fmtHours(dayHours(list))} ч`;
+    });
+
+    const legend = MARKS.map((m) => `${m.code} — ${m.label}: ${counts[m.code] ?? 0}`);
+    const total = [
+      '',
+      `Явок (Я): ${workEntries.length}, из них ночных ${nightDays}`,
+      `Отработано часов: ${fmtHours(totalHours)}`,
+      ...legend,
+    ].join('\n');
 
     const csvRows = [
-      ['Дата', 'Смена', 'Объект', 'Начало', 'Окончание', 'Часы'],
+      ['Ф.И.О.', 'Должность', ...Array.from({ length: daysInMonth }, (_, i) => String(i + 1)),
+        'Я', 'Б', 'ДО', 'ОТ', 'НН', 'В', 'У', 'Часы'],
+      [
+        profile.fio || '—',
+        'Инспектор строительного контроля',
+        ...days,
+        String(workEntries.length),
+        String(counts['Б'] ?? 0),
+        String(counts['ДО'] ?? 0),
+        String(counts['ОТ'] ?? 0),
+        String(counts['НН'] ?? 0),
+        String(counts['В'] ?? 0),
+        String(counts['У'] ?? 0),
+        fmtHours(totalHours),
+      ],
+      [],
+      ['Объект', objNames.join(', ') || '—'],
+      ['Заказчик', mainObj?.customer || '—'],
+      ['Период', period],
+      [],
+      ['Дата', 'Код', 'Объект', 'Начало', 'Окончание', 'Часы'],
       ...entries.flatMap(([k, list]) =>
-        isMO(list)
-          ? [[k.split('-').reverse().join('.'), 'МО', 'Межвахтовый отдых', '', '', '0']]
+        isMark(list)
+          ? [[k.split('-').reverse().join('.'), codeOf(list), list[0].objectTitle, '', '', '0']]
           : list.map((e) => [
               k.split('-').reverse().join('.'),
-              shiftOf(list) === 'night' ? 'Ночная' : 'Дневная',
+              'Я',
               e.objectTitle,
               e.from,
               e.to,
@@ -111,7 +155,18 @@ const Timesheet = () => {
       text: [...head, ...lines, total].join('\n'),
       csv: csvRows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n'),
     };
-  }, [entries, workEntries, moDays, month, year, profile, totalHours, nightDays]);
+  }, [
+    entries,
+    workEntries,
+    month,
+    year,
+    profile,
+    totalHours,
+    nightDays,
+    objects,
+    sheet,
+    daysInMonth,
+  ]);
 
   const shift = (delta: number) => {
     const d = new Date(year, month + delta, 1);
@@ -156,13 +211,13 @@ const Timesheet = () => {
     setPick(null);
   };
 
-  const markMO = () => {
+  const setMark = (id: (typeof MARKS)[number]['id']) => {
     if (pick === null) return;
-    setDay(dayKey(year, month, pick), [{ ...MO_ENTRY }]);
+    setDay(dayKey(year, month, pick), [markEntry(id)]);
     setPick(null);
     toast({
-      title: 'Отмечен межвахтовый отдых',
-      description: 'Отмечайте МО каждый день до возвращения на вахту.',
+      title: `Отметка «${MARK_BY_ID[id].code}» проставлена`,
+      description: MARK_BY_ID[id].label,
     });
   };
 
@@ -229,7 +284,7 @@ const Timesheet = () => {
                   onClick={() => openDay(d)}
                   className={cn(
                     'flex min-h-[62px] flex-col rounded-sm border p-1.5 text-left transition-colors',
-                    isMO(list)
+                    isMark(list)
                       ? 'border-warning bg-warning/10 hover:bg-warning/20'
                       : list?.length
                         ? 'border-accent bg-accent/10 hover:bg-accent/20'
@@ -239,8 +294,12 @@ const Timesheet = () => {
                 >
                   <span className="flex items-center gap-1">
                     <span className="font-head text-[0.95em] leading-none">{d}</span>
-                    {isMO(list) ? (
-                      <Icon name="Home" size={11} className="text-warning" />
+                    {isMark(list) ? (
+                      <Icon
+                        name={MARK_BY_ID[kindOf(list) as string]?.icon ?? 'Home'}
+                        size={11}
+                        className="text-warning"
+                      />
                     ) : (
                       !!list?.length && (
                         <Icon
@@ -256,9 +315,9 @@ const Timesheet = () => {
                       </span>
                     )}
                   </span>
-                  {isMO(list) ? (
-                    <span className="mt-auto font-head text-[0.72em] uppercase text-warning">
-                      МО
+                  {isMark(list) ? (
+                    <span className="mt-auto font-head text-[0.78em] uppercase text-warning">
+                      {codeOf(list)}
                     </span>
                   ) : list?.length ? (
                     <>
@@ -279,6 +338,32 @@ const Timesheet = () => {
                 </button>
               );
             })}
+          </div>
+
+          <div className="mt-3 grid grid-cols-4 gap-px overflow-hidden rounded-sm bg-border sm:grid-cols-7">
+            {[
+              { code: 'Я', label: 'Явок', value: workEntries.length, hot: true },
+              ...MARKS.map((m) => ({
+                code: m.code,
+                label: m.label,
+                value: entries.filter(([, l]) => codeOf(l) === m.code).length,
+                hot: false,
+              })),
+            ].map((c) => (
+              <span key={c.code} className="bg-card px-2 py-2 text-center" title={c.label}>
+                <span
+                  className={cn(
+                    'block font-head text-[1.1em] leading-none',
+                    c.value ? (c.hot ? 'text-accent' : 'text-warning') : 'text-muted-foreground/40',
+                  )}
+                >
+                  {c.value}
+                </span>
+                <span className="mt-1 block text-[0.66em] uppercase tracking-[0.08em] text-muted-foreground">
+                  {c.code}
+                </span>
+              </span>
+            ))}
           </div>
 
           <Button
@@ -372,14 +457,21 @@ const Timesheet = () => {
                 })}
               </div>
 
-              <button
-                type="button"
-                onClick={markMO}
-                className="flex items-center justify-center gap-2 rounded-sm border border-warning px-2 py-2 text-[0.8em] uppercase tracking-[0.06em] text-warning transition-colors hover:bg-warning hover:text-background"
-              >
-                <Icon name="Home" size={14} />
-                МО — межвахтовый отдых
-              </button>
+              <div className="grid grid-cols-3 gap-1.5">
+                {MARKS.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMark(m.id)}
+                    className="flex items-center gap-1.5 rounded-sm border border-input px-2 py-1.5 text-left text-[0.74em] transition-colors hover:border-warning hover:bg-warning/10"
+                  >
+                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-sm bg-secondary font-head text-[0.9em]">
+                      {m.code}
+                    </span>
+                    <span className="min-w-0 truncate">{m.label}</span>
+                  </button>
+                ))}
+              </div>
 
               <div className="scrollbar-thin max-h-[52vh] space-y-2.5 overflow-y-auto pr-1">
                 {rows.map((r, i) => (
