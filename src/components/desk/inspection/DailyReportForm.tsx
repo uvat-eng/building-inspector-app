@@ -128,7 +128,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
           </p>
         </section>
 
-        <Panel title="Шапка отчёта">
+        <Panel title="Шапка отчёта" className="flex-none [&>div]:overflow-visible">
           <div className="grid gap-3 p-3.5 sm:grid-cols-2">
             <Field label="Дата отчёта">
               <Input
@@ -153,7 +153,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
           </div>
         </Panel>
 
-        <Panel title="Сводка" note={`${rows.length} строк`}>
+        <Panel title="Сводка" note={`${rows.length} строк`} className="flex-none [&>div]:overflow-visible">
           <div className="grid grid-cols-3 gap-px bg-border sm:grid-cols-6">
             {[
               ['Выдано', stats.issued],
@@ -176,6 +176,7 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
         <Panel
           title="Предписания"
           note={`${rows.length}`}
+          className="flex-none [&>div]:overflow-visible"
           action={
             <button
               type="button"
