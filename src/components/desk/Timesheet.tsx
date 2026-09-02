@@ -28,6 +28,11 @@ import {
   fmtHours,
   SHIFTS,
   shiftOf,
+  MO_ENTRY,
+  isMO,
+  buildShifts,
+  shiftLabel,
+  fmtDay,
 } from '@/data/timesheet';
 
 const today = new Date();
@@ -53,7 +58,10 @@ const Timesheet = () => {
   const firstShift = (new Date(year, month, 1).getDay() + 6) % 7;
 
   const entries = useMemo(() => monthEntries(sheet, year, month), [sheet, year, month]);
-  const totalHours = entries.reduce((s, [, list]) => s + dayHours(list), 0);
+  const shifts = useMemo(() => buildShifts(sheet), [sheet]);
+  const workEntries = useMemo(() => entries.filter(([, l]) => !isMO(l)), [entries]);
+  const moDays = entries.length - workEntries.length;
+  const totalHours = workEntries.reduce((s, [, list]) => s + dayHours(list), 0);
   const nightDays = entries.filter(([, list]) => shiftOf(list) === 'night').length;
   const rowsHours = dayHours(rows);
 
@@ -67,28 +75,32 @@ const Timesheet = () => {
       '',
     ];
     const lines = entries.flatMap(([k, list]) =>
-      list.map(
-        (e) =>
-          `${k.split('-').reverse().join('.')} · ${
-            shiftOf(list) === 'night' ? 'ночная' : 'дневная'
-          } · ${e.objectTitle} · ${e.from}–${e.to} · ${fmtHours(entryHours(e))} ч`,
-      ),
+      isMO(list)
+        ? [`${k.split('-').reverse().join('.')} · МО · межвахтовый отдых`]
+        : list.map(
+            (e) =>
+              `${k.split('-').reverse().join('.')} · ${
+                shiftOf(list) === 'night' ? 'ночная' : 'дневная'
+              } · ${e.objectTitle} · ${e.from}–${e.to} · ${fmtHours(entryHours(e))} ч`,
+          ),
     );
-    const total = `\nИтого: ${entries.length} смен (${nightDays} ноч. / ${
-      entries.length - nightDays
-    } дн.), ${fmtHours(totalHours)} ч`;
+    const total = `\nИтого: ${workEntries.length} смен (${nightDays} ноч. / ${
+      workEntries.length - nightDays
+    } дн.), ${fmtHours(totalHours)} ч${moDays ? `\nМежвахтовый отдых: ${moDays} дн.` : ''}`;
 
     const csvRows = [
       ['Дата', 'Смена', 'Объект', 'Начало', 'Окончание', 'Часы'],
       ...entries.flatMap(([k, list]) =>
-        list.map((e) => [
-          k.split('-').reverse().join('.'),
-          shiftOf(list) === 'night' ? 'Ночная' : 'Дневная',
-          e.objectTitle,
-          e.from,
-          e.to,
-          fmtHours(entryHours(e)),
-        ]),
+        isMO(list)
+          ? [[k.split('-').reverse().join('.'), 'МО', 'Межвахтовый отдых', '', '', '0']]
+          : list.map((e) => [
+              k.split('-').reverse().join('.'),
+              shiftOf(list) === 'night' ? 'Ночная' : 'Дневная',
+              e.objectTitle,
+              e.from,
+              e.to,
+              fmtHours(entryHours(e)),
+            ]),
       ),
       ['Итого', '', '', '', '', fmtHours(totalHours)],
     ];
@@ -99,7 +111,7 @@ const Timesheet = () => {
       text: [...head, ...lines, total].join('\n'),
       csv: csvRows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n'),
     };
-  }, [entries, month, year, profile, totalHours, nightDays]);
+  }, [entries, workEntries, moDays, month, year, profile, totalHours, nightDays]);
 
   const shift = (delta: number) => {
     const d = new Date(year, month + delta, 1);
@@ -144,6 +156,16 @@ const Timesheet = () => {
     setPick(null);
   };
 
+  const markMO = () => {
+    if (pick === null) return;
+    setDay(dayKey(year, month, pick), [{ ...MO_ENTRY }]);
+    setPick(null);
+    toast({
+      title: 'Отмечен межвахтовый отдых',
+      description: 'Отмечайте МО каждый день до возвращения на вахту.',
+    });
+  };
+
   const clearDay = () => {
     if (pick === null) return;
     setDay(dayKey(year, month, pick), null);
@@ -154,9 +176,9 @@ const Timesheet = () => {
     <>
       <Panel
         title="Табель учёта рабочего времени"
-        note={`${entries.length} дн. · ${fmtHours(totalHours)} ч${
-          loading ? ' · загрузка' : synced ? ' · в облаке' : ''
-        }`}
+        note={`${workEntries.length} см. · ${fmtHours(totalHours)} ч${
+          moDays ? ` · МО ${moDays}` : ''
+        }${loading ? ' · загрузка' : synced ? ' · в облаке' : ''}`}
         action={
           <span className="ml-3 flex items-center gap-1">
             <button
@@ -207,20 +229,26 @@ const Timesheet = () => {
                   onClick={() => openDay(d)}
                   className={cn(
                     'flex min-h-[62px] flex-col rounded-sm border p-1.5 text-left transition-colors',
-                    list?.length
-                      ? 'border-accent bg-accent/10 hover:bg-accent/20'
-                      : 'border-border hover:bg-secondary/60',
+                    isMO(list)
+                      ? 'border-warning bg-warning/10 hover:bg-warning/20'
+                      : list?.length
+                        ? 'border-accent bg-accent/10 hover:bg-accent/20'
+                        : 'border-border hover:bg-secondary/60',
                     isToday && 'ring-1 ring-foreground',
                   )}
                 >
                   <span className="flex items-center gap-1">
                     <span className="font-head text-[0.95em] leading-none">{d}</span>
-                    {!!list?.length && (
-                      <Icon
-                        name={shiftOf(list) === 'night' ? 'Moon' : 'Sun'}
-                        size={11}
-                        className="text-accent"
-                      />
+                    {isMO(list) ? (
+                      <Icon name="Home" size={11} className="text-warning" />
+                    ) : (
+                      !!list?.length && (
+                        <Icon
+                          name={shiftOf(list) === 'night' ? 'Moon' : 'Sun'}
+                          size={11}
+                          className="text-accent"
+                        />
+                      )
                     )}
                     {(list?.length ?? 0) > 1 && (
                       <span className="ml-auto rounded-[2px] bg-accent px-1 text-[0.6em] leading-[1.4] text-accent-foreground">
@@ -228,7 +256,11 @@ const Timesheet = () => {
                       </span>
                     )}
                   </span>
-                  {list?.length ? (
+                  {isMO(list) ? (
+                    <span className="mt-auto font-head text-[0.72em] uppercase text-warning">
+                      МО
+                    </span>
+                  ) : list?.length ? (
                     <>
                       <span className="mt-1 line-clamp-2 text-[0.66em] leading-tight text-muted-foreground">
                         {list.map((e) => e.objectTitle).join(' · ')}
@@ -257,6 +289,43 @@ const Timesheet = () => {
             Сформировать табель
           </Button>
         </div>
+      </Panel>
+
+      <Panel title="Учёт по вахтам" note={`${shifts.length}`}>
+        {shifts.length === 0 ? (
+          <p className="p-4 text-[0.85em] text-muted-foreground">
+            Отметьте рабочие дни — вахта соберётся сама, даже если переходит через месяц.
+          </p>
+        ) : (
+          shifts.slice(0, 6).map((s) => (
+            <div
+              key={s.start}
+              className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+            >
+              <span
+                className={cn(
+                  'flex h-9 w-9 flex-none items-center justify-center rounded-sm',
+                  s.open ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground',
+                )}
+              >
+                <Icon name={s.open ? 'PlayCircle' : 'CheckCircle2'} size={17} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[0.95em] uppercase tracking-[0.02em]">
+                  Вахта {shiftLabel(s)}
+                  {s.open && <span className="ml-2 text-[0.8em] text-accent">идёт</span>}
+                </span>
+                <span className="block truncate text-[0.76em] text-muted-foreground">
+                  {s.workDays} смен · {fmtHours(s.hours)} ч
+                  {s.moDays
+                    ? ` · МО ${s.moDays} дн. с ${fmtDay(s.moStart)}`
+                    : ''}
+                  {s.objects.length ? ` · ${s.objects.join(', ')}` : ''}
+                </span>
+              </span>
+            </div>
+          ))
+        )}
       </Panel>
 
       <Dialog open={pick !== null} onOpenChange={(v) => !v && setPick(null)}>
@@ -302,6 +371,15 @@ const Timesheet = () => {
                   );
                 })}
               </div>
+
+              <button
+                type="button"
+                onClick={markMO}
+                className="flex items-center justify-center gap-2 rounded-sm border border-warning px-2 py-2 text-[0.8em] uppercase tracking-[0.06em] text-warning transition-colors hover:bg-warning hover:text-background"
+              >
+                <Icon name="Home" size={14} />
+                МО — межвахтовый отдых
+              </button>
 
               <div className="scrollbar-thin max-h-[52vh] space-y-2.5 overflow-y-auto pr-1">
                 {rows.map((r, i) => (

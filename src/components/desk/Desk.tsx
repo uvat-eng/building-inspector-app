@@ -115,7 +115,7 @@ const Desk = () => {
 
 
   const content = {
-    cabinet: ['pm', 'coordinator', 'director'].includes(profile.role) ? (
+    cabinet: ['pm', 'coordinator', 'director', 'manager', 'engineer'].includes(profile.role) ? (
       <ManagerCabinet
         onExit={() => {
           leaveOk.current = true;

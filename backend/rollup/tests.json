@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Сводка по инспекторам",
+      "method": "GET",
+      "path": "/?action=inspectors",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Сводка по объектам",
+      "method": "GET",
+      "path": "/?action=objects",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Неизвестное действие",
+      "method": "GET",
+      "path": "/?action=nope",
+      "expectedStatus": 400
+    }
+  ]
+}

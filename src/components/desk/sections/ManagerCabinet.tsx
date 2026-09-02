@@ -15,9 +15,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useObjects } from '@/data/store';
-import { useProfile } from '@/data/profile';
+import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { useAllDocuments } from '@/data/allDocuments';
 import { DocSection, SECTION_LABEL, SECTION_ICON, fmtSize, ProjectDoc } from '@/data/documents';
+import InspectorsRollup from '@/components/desk/sections/InspectorsRollup';
 
 const SECTIONS: DocSection[] = ['contract', 'project', 'working', 'masterplan'];
 
@@ -41,6 +42,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   const { items, loading, progress, uploadMany, remove } = useAllDocuments();
 
   const [openObject, setOpenObject] = useState<string | null>(null);
+  const [team, setTeam] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [section, setSection] = useState<DocSection>('project');
   const [target, setTarget] = useState<string[]>([]);
@@ -141,7 +143,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
             className="flex items-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-secondary"
           >
             <Icon name="FileSignature" size={14} className="text-accent" />
-            Кабинет менеджера
+            {ROLE_LABEL[profile.role] ?? 'Кабинет руководителя'}
           </button>
           {active && (
             <>
@@ -154,6 +156,19 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
         </span>
 
         <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setTeam((v) => !v)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors',
+              team
+                ? 'border-accent bg-accent text-accent-foreground'
+                : 'border-border bg-card hover:border-accent hover:bg-secondary',
+            )}
+          >
+            <Icon name="Users" size={14} />
+            Инспекторы
+          </button>
           <button
             type="button"
             onClick={() => openUpload(active?.id)}
@@ -175,12 +190,21 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
         </div>
       </div>
 
+      {team ? (
+        <InspectorsRollup />
+      ) : (
       <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         {!active ? (
           <>
             <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 sm:px-6 sm:py-5">
               <h1 className="font-head text-[19px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[28px]">
-                Менеджер <span className="text-accent">проекта</span>
+                {(ROLE_LABEL[profile.role] ?? 'Руководитель проекта').split(' ')[0]}{' '}
+                <span className="text-accent">
+                  {(ROLE_LABEL[profile.role] ?? 'Руководитель проекта')
+                    .split(' ')
+                    .slice(1)
+                    .join(' ') || 'проекта'}
+                </span>
               </h1>
               <p className="mt-2 text-[0.88em] text-muted-foreground">
                 {profile.fio || 'ФИО не указано'} · {profile.org}
@@ -286,6 +310,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
           })
         )}
       </div>
+      )}
 
       <Dialog open={uploadOpen} onOpenChange={(v) => !progress && setUploadOpen(v)}>
         <DialogContent className="max-w-lg rounded-sm">

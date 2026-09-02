@@ -75,8 +75,8 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'reports',
   ],
   pm: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
-  manager: ['objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
-  engineer: ['objects', 'sites', 'defects', 'photos', 'documents', 'reports'],
+  manager: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
+  engineer: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents', 'reports'],
   inspector: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents'],
   driver: ['objects', 'inspections'],
 };

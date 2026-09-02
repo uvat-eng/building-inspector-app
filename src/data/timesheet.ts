@@ -1,11 +1,26 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
+export type DayKind = 'work' | 'mo';
+
 export interface TimeEntry {
   objectId: string;
   objectTitle: string;
   from: string;
   to: string;
+  kind?: DayKind;
 }
+
+export const MO_ENTRY: TimeEntry = {
+  objectId: '',
+  objectTitle: 'Межвахтовый отдых',
+  from: '00:00',
+  to: '00:00',
+  kind: 'mo',
+};
+
+export const isMO = (list: TimeEntry[] = []) => list.length > 0 && list[0].kind === 'mo';
+
+export const isWork = (list: TimeEntry[] = []) => list.length > 0 && list[0].kind !== 'mo';
 
 export type Timesheet = Record<string, TimeEntry[]>;
 
@@ -30,13 +45,13 @@ export const SHIFTS = [
 ] as const;
 
 export const shiftOf = (list: TimeEntry[] = []) => {
-  if (!list.length) return null;
+  if (!list.length || isMO(list)) return null;
   const start = minutes(list[0].from);
   return start >= 20 * 60 || start < 8 * 60 ? 'night' : 'day';
 };
 
 export const dayHours = (list: TimeEntry[] = []) =>
-  list.reduce((s, e) => s + entryHours(e), 0);
+  isMO(list) ? 0 : list.reduce((s, e) => s + entryHours(e), 0);
 
 export const fmtHours = (h: number) =>
   Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/0$/, '').replace('.', ',');
@@ -178,3 +193,77 @@ export const monthEntries = (sheet: Timesheet, y: number, m: number) =>
   Object.entries(sheet)
     .filter(([k]) => k.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`))
     .sort(([a], [b]) => a.localeCompare(b));
+
+export interface Shift {
+  start: string;
+  end: string;
+  days: [string, TimeEntry[]][];
+  workDays: number;
+  hours: number;
+  moStart: string;
+  moEnd: string;
+  moDays: number;
+  objects: string[];
+  open: boolean;
+}
+
+const shiftDays = (a: string, b: string) =>
+  Math.round((Date.parse(b) - Date.parse(a)) / 86400000) + 1;
+
+export const buildShifts = (sheet: Timesheet): Shift[] => {
+  const days = Object.entries(sheet)
+    .filter(([, v]) => v.length)
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const out: Shift[] = [];
+  let cur: Shift | null = null;
+
+  days.forEach(([key, list]) => {
+    if (isMO(list)) {
+      if (cur) {
+        if (!cur.moStart) cur.moStart = key;
+        cur.moDays += 1;
+        cur.moEnd = key;
+      }
+      return;
+    }
+    const gap = cur ? shiftDays(cur.end, key) - 1 : 0;
+    if (!cur || cur.moDays > 0 || gap > 14) {
+      cur = {
+        start: key,
+        end: key,
+        days: [],
+        workDays: 0,
+        hours: 0,
+        moStart: '',
+        moEnd: '',
+        moDays: 0,
+        objects: [],
+        open: true,
+      };
+      out.push(cur);
+    }
+    cur.days.push([key, list]);
+    cur.workDays += 1;
+    cur.hours += dayHours(list);
+    cur.end = key;
+    list.forEach((e) => {
+      if (e.objectTitle && !cur!.objects.includes(e.objectTitle)) cur!.objects.push(e.objectTitle);
+    });
+  });
+
+  out.forEach((s) => {
+    s.open = !s.moDays;
+  });
+  return out.reverse();
+};
+
+export const currentShift = (sheet: Timesheet): Shift | null => buildShifts(sheet)[0] ?? null;
+
+export const fmtDay = (key: string) => {
+  const [, m, d] = key.split('-');
+  return `${d}.${m}`;
+};
+
+export const shiftLabel = (s: Shift) =>
+  s.start === s.end ? fmtDay(s.start) : `${fmtDay(s.start)} — ${fmtDay(s.end)}`;

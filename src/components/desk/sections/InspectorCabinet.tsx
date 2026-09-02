@@ -9,7 +9,17 @@ import Timesheet from '@/components/desk/Timesheet';
 import { useObjects } from '@/data/store';
 import { useSummary, useAllDefects, SEVERITY } from '@/data/inspections';
 import { useOrders } from '@/data/orders';
-import { useTimesheet, monthEntries, dayHours, fmtHours } from '@/data/timesheet';
+import { runDailyArchive } from '@/data/rollup';
+import {
+  useTimesheet,
+  monthEntries,
+  dayHours,
+  fmtHours,
+  isMO,
+  currentShift,
+  shiftLabel,
+  MONTHS,
+} from '@/data/timesheet';
 import { cn } from '@/lib/utils';
 import InspectorProfile from '@/components/desk/InspectorProfile';
 import { useUsers } from '@/data/users';
@@ -60,6 +70,10 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
     localStorage.setItem(VIEW_KEY, view);
   }, [view]);
 
+  useEffect(() => {
+    runDailyArchive();
+  }, []);
+
   const [openObject, setOpenObject] = useState<string | null>(
     () => localStorage.getItem(OBJ_KEY),
   );
@@ -83,15 +97,28 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const spec = profile.specialties ?? [];
 
   const now = new Date();
-  const month = monthEntries(sheet, now.getFullYear(), now.getMonth());
+  const month = monthEntries(sheet, now.getFullYear(), now.getMonth()).filter(
+    ([, l]) => !isMO(l),
+  );
   const monthHours = month.reduce((s, [, list]) => s + dayHours(list), 0);
+  const shift = currentShift(sheet);
 
   const stats: { icon: string; label: string; value: string | number; view: View }[] = [
     { icon: 'Building2', label: 'Объектов', value: objects.length, view: 'objects' },
     {
       icon: 'Clock',
-      label: `Табель · ${month.length} смен`,
+      label: `${MONTHS[now.getMonth()]} · ${month.length} смен`,
       value: `${fmtHours(monthHours)} ч`,
+      view: 'timesheet',
+    },
+    {
+      icon: shift?.open ? 'PlayCircle' : 'Home',
+      label: shift
+        ? shift.open
+          ? `Вахта с ${shiftLabel(shift).split(' — ')[0]} · идёт`
+          : `МО ${shift.moDays} дн. · вахта ${shiftLabel(shift)}`
+        : 'Вахта не начата',
+      value: shift ? `${shift.workDays} см. · ${fmtHours(shift.hours)} ч` : '—',
       view: 'timesheet',
     },
     { icon: 'TriangleAlert', label: 'Замечаний', value: summary.defects, view: 'defects' },
