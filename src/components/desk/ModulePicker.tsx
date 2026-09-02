@@ -33,7 +33,7 @@ const ModulePicker = ({ onPick }: Props) => {
               <Icon name="Building2" size={24} />
             </span>
             <h1 className="mt-4 font-head text-[22px] uppercase leading-[1.1] tracking-[0.02em] sm:text-[30px]">
-              Единая среда строительства
+              Приложение <span className="text-accent">Инспектор</span>
             </h1>
             <p className="mx-auto mt-2 max-w-md text-[0.88em] text-muted-foreground">
               Выберите, с какой стороны вы участвуете в проекте — откроется свой рабочий модуль
@@ -92,6 +92,17 @@ const ModulePicker = ({ onPick }: Props) => {
           <p className="mt-6 text-center text-[0.76em] text-muted-foreground">
             ООО «Глобал-Стройинжиниринг» · Тюмень
           </p>
+
+          <div className="mt-4 flex justify-center pb-2">
+            <img
+              src="/logo.png"
+              alt="ООО «Глобал-Стройинжиниринг»"
+              className="h-14 w-auto object-contain opacity-90"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
         </div>
       </main>
     </div>
