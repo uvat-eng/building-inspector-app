@@ -1,5 +1,8 @@
 import {
   CATEGORIES,
+  VIOLATIONS,
+  buildArchive,
+  violationOf,
   DailyReport,
   ReportRow,
   byContractor,
@@ -24,6 +27,7 @@ const STYLE = `
   .c { text-align: center; }
   .sum { background: #fde9d9; font-weight: bold; text-align: center; }
   .grp { background: #eaeaea; font-weight: bold; }
+  .v { background: #d8e4bc; font-size: 8pt; }
 `;
 
 const book = (sheet: string, html: string) => `<!DOCTYPE html>
@@ -188,62 +192,107 @@ export const downloadJournal = (
   objectTitle: string,
   field: string,
 ) => {
-  const all = reports
-    .slice()
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .flatMap((rep) => rep.rows.map((r) => ({ ...r, repDate: rep.date })));
+  const all = buildArchive(reports);
+  const org = all.find((r) => r.contractor)?.contractor ?? '';
+
+  const issued = all.length;
+  const fixed = all.filter((r) => r.status === 'Устранено').length;
+  const open = issued - fixed;
+
+  const vHead = VIOLATIONS.map((v) => `<th class="v">${esc(v)}</th>`).join('');
+  const vTotals = VIOLATIONS.map(
+    (v) => `<td class="sum">${all.filter((r) => violationOf(r.category) === v).length}</td>`,
+  ).join('');
 
   const rows = all
-    .map(
-      (r, i) => `
+    .map((r, i) => {
+      const mine = violationOf(r.category);
+      const marks = VIOLATIONS.map(
+        (v) => `<td class="c">${v === mine ? 1 : ''}</td>`,
+      ).join('');
+      return `
     <tr>
       <td class="c">${i + 1}</td>
-      <td class="c">${ru(r.repDate)}</td>
+      <td class="c">${ru(r.issuedAt || r.lastDate)}</td>
       <td>${esc(r.contractor)}</td>
       <td>${esc(r.place)}</td>
-      <td>${esc(r.content)}</td>
-      <td>${esc(r.normRef)}</td>
+      <td>${esc([r.content, r.normRef, r.docRef].filter(Boolean).join(' '))}</td>
       <td>${esc(r.inspector)}</td>
       <td>${esc(r.responsible)}</td>
-      <td class="c">${esc(r.status)}</td>
+      <td>${esc(r.status === 'Устранено' ? r.content : '')}</td>
+      <td class="c">${r.status === 'Устранено' ? 'устранено' : 'не устранено'}</td>
       <td class="c">${ru(r.factAt)}</td>
-      <td>${esc(r.orderNo)}</td>
-      <td>${esc(r.extension)}</td>
-      <td class="c">${esc(r.category)}</td>
-      <td class="c">1</td>
-      <td>${(r.photos ?? []).map((u, i) => `<a href="${esc(u)}">фото ${i + 1}</a>`).join('<br>')}</td>
-    </tr>`,
-    )
+      <td class="c">вопрос подрядчика</td>
+      <td class="c"></td>
+      <td>${esc([r.orderNo ? `Предписание ${r.orderNo}` : '', r.extension].filter(Boolean).join('. '))}</td>
+      <td class="c">${esc(r.nature)}</td>
+      ${marks}
+    </tr>`;
+    })
     .join('');
 
-  const plain = all as unknown as ReportRow[];
+  const cols = 14 + VIOLATIONS.length;
   const html = book(
     'Журнал замечаний',
     `
     <table>
-      <tr><td class="t" colspan="15">Реестр замечаний, отражённых в журналах замечаний и предложений</td></tr>
-      <tr><td class="s" colspan="15">Объект строительства: ${esc(objectTitle)}${field ? ` · ${esc(field)}` : ''}</td></tr>
-      <tr><td class="s" colspan="15">Сформирован: ${new Date().toLocaleDateString('ru')} · записей: ${all.length} · отчётов: ${reports.length}</td></tr>
-      <tr><td class="s" colspan="15"></td></tr>
+      <tr><td class="t" colspan="${cols}">Реестр замечаний, отражённых в журналах замечаний и предложений по ведению СМР ТН ООО «ГЛОБАЛ-Строймнжиниринг»</td></tr>
+      <tr><td class="s" colspan="${cols}">на ${new Date().toLocaleDateString('ru')}</td></tr>
     </table>
-    ${summary(plain)}
+    <table>
+      <tr>
+        <th>Подрядная организация</th>
+        <th>Объект строительства</th>
+        <th>Выдано замечаний</th>
+        <th>Устранено замечаний</th>
+        <th>Не устранено замечаний</th>
+      </tr>
+      <tr>
+        <td>${esc(org)}</td>
+        <td>${esc(objectTitle)}${field ? ` · ${esc(field)}` : ''}</td>
+        <td class="sum">${issued}</td>
+        <td class="sum">${fixed}</td>
+        <td class="sum">${open}</td>
+      </tr>
+    </table>
     <br>
     <table>
       <tr>
-        <th>№ п/п</th><th>Дата</th><th>Организация</th><th>Объект</th>
-        <th>Содержание замечания и предложения</th>
-        <th>Нормативный документ</th>
-        <th>Запись произвёл</th><th>С записью ознакомился</th>
-        <th>Отчёт об устранении</th><th>Дата устранения</th>
-        <th>Выдано предписание / комментарии</th>
-        <th>Продление сроков</th>
-        <th>Характер замечания</th><th>Количество</th><th>Фотоматериалы</th>
+        <th rowspan="3">№ п/п</th>
+        <th rowspan="3">Дата</th>
+        <th rowspan="3">Организация</th>
+        <th rowspan="3">Объект</th>
+        <th rowspan="3">Содержание замечания и предложения (выявленные отступления от проектно-сметной документации, нарушения СНиП и т.д.)</th>
+        <th rowspan="3">Запись произвёл (должность, организация, Ф.И.О. контролирующего лица)</th>
+        <th rowspan="3">С записью ознакомился</th>
+        <th rowspan="3">Выполненные мероприятия</th>
+        <th colspan="2">Отчёт об устранении</th>
+        <th colspan="2">Ответственность</th>
+        <th rowspan="3">Выдано предписание / комментарии</th>
+        <th rowspan="3">Характер замечания</th>
+        <th colspan="${VIOLATIONS.length}">Количество</th>
+      </tr>
+      <tr>
+        <th rowspan="2">статус</th>
+        <th rowspan="2">дата устранения</th>
+        <th rowspan="2">подрядчик</th>
+        <th rowspan="2">заказчик</th>
+        <th colspan="${VIOLATIONS.length}">Характер нарушений</th>
+      </tr>
+      <tr>${vHead}</tr>
+      <tr>
+        <td class="sum" colspan="8">Итого</td>
+        <td class="sum">${fixed} устранено</td>
+        <td class="sum">${open} не устранено</td>
+        <td class="sum" colspan="4"></td>
+        ${vTotals}
       </tr>
       ${rows}
     </table>`,
   );
   download(html, `Журнал замечаний. ${objectTitle} от ${new Date().toLocaleDateString('ru')}.xls`);
 };
+
 export const downloadArchive = (
   rows: (ReportRow & { lastDate?: string; seen?: number })[],
   objectTitle: string,
