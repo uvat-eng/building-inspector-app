@@ -30,9 +30,11 @@ const ModulePicker = ({ onPick, onAdmin }: Props) => {
       <main className="scrollbar-thin flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 py-8 sm:px-6">
         <div className="w-full max-w-3xl animate-rise">
           <div className="text-center">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-sm bg-accent text-accent-foreground">
-              <Icon name="Building2" size={24} />
-            </span>
+            <img
+              src="/emblem.png"
+              alt="Эмблема компании"
+              className="mx-auto h-20 w-20 object-contain sm:h-24 sm:w-24"
+            />
             <p className="mt-4 font-head text-[17px] uppercase leading-[1.15] tracking-[0.03em] text-muted-foreground sm:text-[23px]">
               Система управления строительным контролем
             </p>
