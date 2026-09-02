@@ -35,7 +35,7 @@ interface Props {
 const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
   const { list: objects } = useObjects();
   const { list: allLocations, add } = useLocations();
-  const { profile, canAddLocation } = useProfile();
+  const { profile, save, canAddLocation, isAdmin } = useProfile();
   const { toast } = useToast();
 
   const [loc, setLoc] = useState<string | null>(null);
@@ -97,7 +97,8 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
         {loc ? 'Локации' : 'Должность'}
       </button>
       <span className="flex items-center gap-2">
-        <span className="hidden font-head text-[0.82em] uppercase tracking-[0.08em] text-muted-foreground sm:inline">
+        <span className="hidden items-center gap-1.5 font-head text-[0.82em] uppercase tracking-[0.08em] text-muted-foreground sm:inline-flex">
+          {isAdmin && <Icon name="ShieldUser" fallback="Shield" size={13} className="text-accent" />}
           {profile.fio ? `${ROLE_LABEL[profile.role]} · ${profile.fio}` : 'Вход не выполнен'}
         </span>
         <Button
@@ -150,12 +151,16 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
 
             <div className="mt-4 overflow-hidden rounded-sm border border-border bg-card">
               {ROLE_ORDER.map((r) => {
-                const mine = profile.fio && profile.role === r;
+                const mine = !!profile.fio && (profile.role === r || isAdmin);
                 return (
                   <button
                     key={r}
                     type="button"
-                    onClick={() => (mine ? setRoleSeen(true) : onLogin(r))}
+                    onClick={() => {
+                      if (isAdmin && profile.role !== r) save({ role: r });
+                      if (mine) setRoleSeen(true);
+                      else onLogin(r);
+                    }}
                     className="group flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-secondary/70"
                   >
                     <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-secondary text-accent transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
@@ -168,7 +173,7 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
                         </span>
                         {mine && (
                           <span className="flex-none rounded-sm bg-accent px-1.5 py-0.5 text-[0.62em] uppercase tracking-[0.08em] text-accent-foreground">
-                            вы вошли
+                            {isAdmin && profile.role !== r ? 'открыть' : 'вы вошли'}
                           </span>
                         )}
                       </span>

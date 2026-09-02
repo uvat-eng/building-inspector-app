@@ -51,7 +51,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const [objectId, setObjectId] = useState<string | null>(null);
   const [objectEdit, setObjectEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  const { profile } = useProfile();
+  const { profile, save, isAdmin, viewingAs } = useProfile();
   const { current } = useUsers();
   const { toast } = useToast();
   const { scope } = useScope();
@@ -74,7 +74,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   };
 
   const select = (id: SectionId) => {
-    if (current && !ROLE_SECTIONS[profile.role].includes(id)) {
+    if (current && !isAdmin && !ROLE_SECTIONS[profile.role].includes(id)) {
       toast({
         title: 'Раздел недоступен',
         description: `Для роли «${ROLE_LABEL[profile.role]}» этот раздел закрыт.`,
@@ -205,6 +205,23 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
           <span className="hidden sm:inline">Сменить</span>
         </button>
       </div>
+
+      {viewingAs && (
+        <div className="flex flex-none items-center gap-2 border-b border-accent bg-accent/10 px-4 py-2 text-[0.78em] uppercase tracking-[0.06em] sm:px-[22px]">
+          <Icon name="ShieldUser" fallback="Shield" size={14} className="flex-none text-accent" />
+          <span className="min-w-0 truncate">
+            Администратор · вы смотрите как «{ROLE_LABEL[viewingAs]}»
+          </span>
+          <button
+            type="button"
+            onClick={() => save({ role: 'admin' })}
+            className="ml-auto flex flex-none items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-accent-foreground transition-colors hover:bg-accent/90"
+          >
+            <Icon name="RotateCcw" size={13} />
+            Вернуть права
+          </button>
+        </div>
+      )}
 
       <main className="grid min-h-0 flex-1 animate-rise gap-3.5 px-4 pb-4 pt-3.5 [animation-delay:0.1s] sm:px-[22px] lg:grid-cols-[236px_1fr]">
         <SideMenu active={section} onSelect={select} className="hidden lg:flex" />

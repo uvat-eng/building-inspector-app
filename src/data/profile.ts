@@ -117,6 +117,7 @@ export const SPECIALTIES = [
 export interface Profile {
   fio: string;
   role: Role;
+  baseRole?: Role;
   group: string;
   org: string;
   locations: string[];
@@ -125,14 +126,20 @@ export interface Profile {
 
 export const CAN_MANAGE_USERS: Role[] = ['admin', 'pm', 'coordinator', 'director'];
 
+export const isAdminProfile = (p: Profile) => (p.baseRole ?? p.role) === 'admin';
+
 export const canSeeLocation = (p: Profile, id: string) =>
-  CAN_MANAGE_USERS.includes(p.role) || !p.locations?.length || p.locations.includes(id);
+  isAdminProfile(p) ||
+  CAN_MANAGE_USERS.includes(p.role) ||
+  !p.locations?.length ||
+  p.locations.includes(id);
 
 export const canAddLocation = (r: Role) => CAN_ADD_LOCATION.includes(r);
 
 const DEFAULT: Profile = {
   fio: '',
   role: 'inspector',
+  baseRole: undefined,
   group: '',
   org: 'ООО «Глобал-Стройинжиниринг»',
   locations: [],
@@ -169,13 +176,16 @@ export const useProfile = () => {
     window.dispatchEvent(new Event(EVENT));
   }, []);
 
+  const admin = isAdminProfile(profile);
+
   return {
     profile,
     save,
-    canAddObject: CAN_EDIT.includes(profile.role),
-    canManageUsers: CAN_MANAGE_USERS.includes(profile.role),
-    canAddLocation: CAN_ADD_LOCATION.includes(profile.role),
-    isAdmin: profile.role === 'admin',
+    isAdmin: admin,
+    viewingAs: admin && profile.role !== 'admin' ? profile.role : null,
+    canAddObject: admin || CAN_EDIT.includes(profile.role),
+    canManageUsers: admin || CAN_MANAGE_USERS.includes(profile.role),
+    canAddLocation: admin || CAN_ADD_LOCATION.includes(profile.role),
   };
 };
 

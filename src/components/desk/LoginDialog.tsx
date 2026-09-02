@@ -57,6 +57,7 @@ const LoginDialog = ({
     save({
       fio: user.fio,
       role: user.role,
+      baseRole: user.role,
       group: user.group,
       locations: user.locations ?? [],
       specialties: user.specialties,

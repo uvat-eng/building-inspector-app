@@ -12,9 +12,9 @@ interface SideMenuProps {
 }
 
 const SideMenu = ({ active, onSelect, className }: SideMenuProps) => {
-  const { profile } = useProfile();
+  const { profile, isAdmin } = useProfile();
   const { current } = useUsers();
-  const allowed = current ? ROLE_SECTIONS[profile.role] : null;
+  const allowed = current && !isAdmin ? ROLE_SECTIONS[profile.role] : null;
   const isManager = ['pm', 'coordinator', 'director'].includes(profile.role);
   const items = (allowed ? MENU.filter((m) => allowed.includes(m.id)) : MENU).map((m) =>
     m.id === 'cabinet' && isManager ? { ...m, label: 'Кабинет менеджера', icon: 'FileSignature' } : m,
