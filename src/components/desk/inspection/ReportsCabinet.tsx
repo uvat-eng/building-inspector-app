@@ -6,7 +6,13 @@ import Tag from '@/components/desk/Tag';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
-import { DailyReport, importReportFile, statsOf, useReports } from '@/data/reports';
+import {
+  DailyReport,
+  buildArchive,
+  importReportFile,
+  statsOf,
+  useReports,
+} from '@/data/reports';
 import { downloadDailyReport, downloadJournal } from '@/lib/reportXls';
 import DailyReportForm from '@/components/desk/inspection/DailyReportForm';
 import ReportView from '@/components/desk/inspection/ReportView';
@@ -121,7 +127,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
   }
 
   const back = () => {
-    if (view === 'daily-log') setView('daily');
+    if (view === 'daily-log') setView('root');
     else if (view === 'daily') {
       if (openMonth) setOpenMonth(null);
       else setView('root');
@@ -135,14 +141,22 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
         ? openMonth
           ? 'Ко всем месяцам'
           : 'К отчётам'
-        : 'К ежедневным отчётам';
+        : 'К отчётам';
 
   const subtitle =
     view === 'root'
       ? 'Отчётные формы инспектора по объекту'
       : view === 'daily'
         ? 'Ежедневные отчёты по месяцам · архив предписаний'
-        : 'Накопительный журнал замечаний по объекту';
+        : view === 'daily-log'
+          ? 'Реестр замечаний по форме журнала СМР'
+          : 'Накопительный журнал замечаний по объекту';
+
+  const journalStats = (() => {
+    const all = buildArchive(items);
+    const fixed = all.filter((r) => r.status === 'Устранено').length;
+    return { issued: all.length, fixed, open: all.length - fixed };
+  })();
 
   const openReports = openMonth ? (months.find(([k]) => k === openMonth)?.[1] ?? []) : [];
 
@@ -167,26 +181,47 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
         </section>
 
         {view === 'root' && (
-          <Panel title="Отчётные формы" note="1">
-            <button
-              type="button"
-              onClick={() => setView('daily')}
-              className="group flex w-full items-center gap-3 bg-card px-4 py-3.5 text-left transition-colors hover:bg-foreground hover:text-background"
-            >
-              <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
-                <Icon name="CalendarDays" fallback="Folder" size={19} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-head text-[0.98em] uppercase tracking-[0.03em]">
-                  Ежедневные отчёты
-                </span>
-                <span className="block truncate text-[0.78em] text-muted-foreground group-hover:text-background/70">
-                  {items.length} отчётов · {totalRows} предписаний
-                </span>
-              </span>
-              <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
-            </button>
-          </Panel>
+          <>
+            <DeadlineAlerts reports={items} onOpenArchive={() => setView('archive')} />
+            <Panel title="Отчётные формы" note="2">
+              <div className="flex flex-col gap-px bg-border">
+                {[
+                  {
+                    id: 'daily' as const,
+                    icon: 'CalendarDays',
+                    label: 'Отчёт по предписаниям',
+                    note: `${items.length} отчётов · ${totalRows} предписаний`,
+                  },
+                  {
+                    id: 'daily-log' as const,
+                    icon: 'BookOpen',
+                    label: 'Отчёт по замечаниям',
+                    note: `Журнал замечаний · ${totalRows} записей`,
+                  },
+                ].map((it) => (
+                  <button
+                    key={it.id}
+                    type="button"
+                    onClick={() => setView(it.id)}
+                    className="group flex w-full items-center gap-3 bg-card px-4 py-3.5 text-left transition-colors hover:bg-foreground hover:text-background"
+                  >
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                      <Icon name={it.icon} fallback="Folder" size={19} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-head text-[0.98em] uppercase tracking-[0.03em]">
+                        {it.label}
+                      </span>
+                      <span className="block truncate text-[0.78em] text-muted-foreground group-hover:text-background/70">
+                        {it.note}
+                      </span>
+                    </span>
+                    <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
+                  </button>
+                ))}
+              </div>
+            </Panel>
+          </>
         )}
 
         {view === 'daily' && !openMonth && (
@@ -232,21 +267,6 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
                 </span>
               </Button>
 
-              <Button
-                variant="outline"
-                onClick={() => setView('daily-log')}
-                className="h-auto justify-start gap-3 rounded-sm px-4 py-3.5 text-left"
-              >
-                <Icon name="BookOpen" fallback="Book" size={19} className="text-accent" />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-head text-[0.95em] uppercase tracking-[0.03em]">
-                    Сквозной журнал
-                  </span>
-                  <span className="block truncate text-[0.75em] text-muted-foreground">
-                    Накопительно по всем отчётам
-                  </span>
-                </span>
-              </Button>
               <Button
                 variant="outline"
                 onClick={() => setView('archive')}
@@ -390,6 +410,23 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
 
         {view === 'daily-log' && (
           <>
+            <Panel title="Сводка по замечаниям">
+              <div className="grid grid-cols-3 gap-px bg-border">
+                {[
+                  ['Выдано', journalStats.issued],
+                  ['Устранено', journalStats.fixed],
+                  ['Не устранено', journalStats.open],
+                ].map(([label, value]) => (
+                  <div key={String(label)} className="bg-card px-3 py-2.5 text-center">
+                    <p className="font-head text-[1.5em] text-accent">{value}</p>
+                    <p className="text-[0.68em] uppercase tracking-[0.08em] text-muted-foreground">
+                      {label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+
             <div className="flex-none">
               <Button
                 onClick={() => downloadJournal(items, object.title, object.field)}
