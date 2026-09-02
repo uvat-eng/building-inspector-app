@@ -200,6 +200,47 @@ export const buildArchive = (reports: DailyReport[]): ArchiveRow[] => {
   return [...map.values()].sort((a, b) => b.lastDate.localeCompare(a.lastDate));
 };
 
+export const SOON_DAYS = 7;
+
+export const daysLeft = (dueAt: string) => {
+  if (!dueAt) return null;
+  const due = new Date(`${dueAt}T00:00:00`);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - now.getTime()) / 86400000);
+};
+
+export const deadlineLabel = (dueAt: string) => {
+  const d = daysLeft(dueAt);
+  if (d === null) return '';
+  if (d < 0) return `просрочено на ${Math.abs(d)} дн.`;
+  if (d === 0) return 'срок сегодня';
+  if (d === 1) return 'срок завтра';
+  return `осталось ${d} дн.`;
+};
+
+export interface Alerts {
+  overdue: ArchiveRow[];
+  soon: ArchiveRow[];
+  total: number;
+}
+
+export const collectAlerts = (reports: DailyReport[], soonDays = SOON_DAYS): Alerts => {
+  const open = buildArchive(reports).filter((r) => r.status !== 'Устранено' && r.dueAt);
+  const overdue: ArchiveRow[] = [];
+  const soon: ArchiveRow[] = [];
+  open.forEach((r) => {
+    const d = daysLeft(r.dueAt);
+    if (d === null) return;
+    if (d < 0) overdue.push(r);
+    else if (d <= soonDays) soon.push(r);
+  });
+  const byDue = (a: ArchiveRow, b: ArchiveRow) => a.dueAt.localeCompare(b.dueAt);
+  overdue.sort(byDue);
+  soon.sort(byDue);
+  return { overdue, soon, total: overdue.length + soon.length };
+};
+
 export const byContractor = (rows: ReportRow[]) => {
   const m = new Map<string, ReportRow[]>();
   rows.forEach((r) => {

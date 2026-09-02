@@ -9,6 +9,7 @@ import Timesheet from '@/components/desk/Timesheet';
 import { useObjects } from '@/data/store';
 import { useSummary, useAllDefects, SEVERITY } from '@/data/inspections';
 import ReportsCabinet from '@/components/desk/inspection/ReportsCabinet';
+import ObjectMenuAlerts from '@/components/desk/inspection/ObjectMenuAlerts';
 import { useOrders } from '@/data/orders';
 import { runDailyArchive } from '@/data/rollup';
 import {
@@ -21,7 +22,6 @@ import {
 import { cn } from '@/lib/utils';
 import InspectorProfile from '@/components/desk/InspectorProfile';
 import { useUsers } from '@/data/users';
-import ObjectMenu from '@/components/desk/ObjectMenu';
 import DocsCabinet from '@/components/desk/DocsCabinet';
 import InspectionsCabinet from '@/components/desk/inspection/InspectionsCabinet';
 import OrdersCabinet from '@/components/desk/inspection/OrdersCabinet';
@@ -246,7 +246,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       );
     }
     return wrap(
-      <ObjectMenu
+      <ObjectMenuAlerts
         object={active}
         onBack={() => {
           setOpenObject(null);

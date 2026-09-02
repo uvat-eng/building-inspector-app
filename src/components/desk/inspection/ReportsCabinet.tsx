@@ -12,6 +12,7 @@ import { downloadDailyReport, downloadJournal } from '@/lib/reportXls';
 import DailyReportForm from '@/components/desk/inspection/DailyReportForm';
 import ReportView from '@/components/desk/inspection/ReportView';
 import ArchiveView from '@/components/desk/inspection/ArchiveView';
+import DeadlineAlerts from '@/components/desk/inspection/DeadlineAlerts';
 
 interface ReportsCabinetProps {
   object: ProjectObject;
@@ -191,6 +192,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
 
         {view === 'daily' && !openMonth && (
           <>
+            <DeadlineAlerts reports={items} onOpenArchive={() => setView('archive')} />
             <div className="grid flex-none gap-2 sm:grid-cols-2">
               <Button
                 onClick={() => fileRef.current?.click()}

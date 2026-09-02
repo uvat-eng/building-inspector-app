@@ -116,9 +116,10 @@ interface ObjectMenuProps {
   object: ProjectObject;
   onBack?: () => void;
   onOpen: (id: ObjectMenuId) => void;
+  badges?: Partial<Record<ObjectMenuId, number>>;
 }
 
-const ObjectMenu = ({ object, onOpen }: ObjectMenuProps) => (
+const ObjectMenu = ({ object, onOpen, badges }: ObjectMenuProps) => (
   <div className="flex min-h-0 flex-1 flex-col gap-2.5">
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
       <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 sm:px-6 sm:py-5">
@@ -158,6 +159,11 @@ const ObjectMenu = ({ object, onOpen }: ObjectMenuProps) => (
                   {it.ready ? it.note : 'В разработке'}
                 </span>
               </span>
+              {badges?.[it.id] ? (
+                <span className="flex h-6 min-w-[24px] flex-none items-center justify-center rounded-full bg-destructive px-1.5 font-head text-[0.72em] text-destructive-foreground">
+                  {badges[it.id]}
+                </span>
+              ) : null}
               <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
             </button>
           ))}

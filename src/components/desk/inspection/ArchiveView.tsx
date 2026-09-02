@@ -6,8 +6,17 @@ import Tag from '@/components/desk/Tag';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProjectObject } from '@/data/store';
-import { ArchiveRow, DailyReport, buildArchive, statsOf } from '@/data/reports';
+import {
+  ArchiveRow,
+  DailyReport,
+  SOON_DAYS,
+  buildArchive,
+  daysLeft,
+  deadlineLabel,
+  statsOf,
+} from '@/data/reports';
 import { downloadArchive } from '@/lib/reportXls';
+import DeadlineAlerts from '@/components/desk/inspection/DeadlineAlerts';
 
 interface Props {
   object: ProjectObject;
@@ -43,6 +52,11 @@ const Card = ({ row }: { row: ArchiveRow }) => {
             <Tag tone={row.status === 'Устранено' ? 'ok' : 'hot'}>{row.status}</Tag>
             {overdue && <Tag tone="hot">Срок истёк</Tag>}
             {row.stopWork && <Tag tone="hot">Остановка работ</Tag>}
+            {row.status !== 'Устранено' &&
+              (daysLeft(row.dueAt) ?? 99) >= 0 &&
+              (daysLeft(row.dueAt) ?? 99) <= SOON_DAYS && (
+                <Tag tone="dim">{deadlineLabel(row.dueAt)}</Tag>
+              )}
             {row.seen > 1 && <Tag tone="dim">В {row.seen} отчётах</Tag>}
           </span>
           <span className="mt-1.5 block line-clamp-2 text-[0.86em] leading-snug">
@@ -96,7 +110,7 @@ const Card = ({ row }: { row: ArchiveRow }) => {
 
 const ArchiveView = ({ object, reports, onBack }: Props) => {
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<'all' | 'open' | 'overdue' | 'done'>('all');
+  const [filter, setFilter] = useState<'all' | 'open' | 'soon' | 'overdue' | 'done'>('all');
 
   const archive = useMemo(() => buildArchive(reports), [reports]);
   const stats = statsOf(archive);
@@ -110,6 +124,11 @@ const ArchiveView = ({ object, reports, onBack }: Props) => {
       if (filter === 'overdue') {
         if (r.status === 'Устранено') return false;
         if (!r.dueAt || new Date(r.dueAt) >= now) return false;
+      }
+      if (filter === 'soon') {
+        if (r.status === 'Устранено') return false;
+        const d = daysLeft(r.dueAt);
+        if (d === null || d < 0 || d > SOON_DAYS) return false;
       }
       if (!needle) return true;
       return [r.content, r.contractor, r.place, r.orderNo, r.normRef, r.category]
@@ -141,6 +160,8 @@ const ArchiveView = ({ object, reports, onBack }: Props) => {
             {object.title} · {archive.length} уникальных из {reports.length} отчётов
           </p>
         </section>
+
+        <DeadlineAlerts reports={reports} compact />
 
         <Panel title="Сводка" className="flex-none [&>div]:overflow-visible">
           <div className="grid grid-cols-3 gap-px bg-border sm:grid-cols-6">
@@ -181,11 +202,12 @@ const ArchiveView = ({ object, reports, onBack }: Props) => {
               placeholder="подрядчик, объект, № предписания, текст"
               className="rounded-sm"
             />
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
               {(
                 [
                   ['all', 'Все'],
                   ['open', 'Не устранено'],
+                  ['soon', 'Срок близко'],
                   ['overdue', 'Срок истёк'],
                   ['done', 'Устранено'],
                 ] as const
