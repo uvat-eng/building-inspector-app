@@ -25,6 +25,7 @@ export interface User {
   group: string;
   org: string;
   phone: string;
+  locations: string[];
   specialties: string[];
   certificates: Certificate[];
   educations: Education[];
@@ -75,13 +76,17 @@ export const loginUser = async (fio: string, password: string) => {
   return item;
 };
 
-export const registerUser = async (u: Omit<User, 'id' | 'createdAt'>) => {
+export const registerUser = async (
+  u: Omit<User, 'id' | 'createdAt'>,
+  byUserId?: string,
+) => {
   const res = await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'register', ...u }),
+    body: JSON.stringify({ action: 'register', byUserId: byUserId ?? '', ...u }),
   });
   if (res.status === 409) throw new Error('exists');
+  if (res.status === 403) throw new Error('not_allowed');
   if (!res.ok) throw new Error('register_failed');
   const { item } = (await res.json()) as { item: User };
   publish([...cache, item]);

@@ -30,6 +30,7 @@ def row_to_user(r):
         'group': r['group'],
         'org': r['org'],
         'phone': r['phone'],
+        'locations': r['locations'] or [],
         'specialties': r['specialties'] or [],
         'certificates': r['certificates'] or [],
         'educations': r['educations'] or [],
@@ -70,26 +71,45 @@ def handler(event: dict, context) -> dict:
                     return resp(403, {'error': 'wrong_password'})
                 return resp(200, {'item': row_to_user(row)})
 
+            cur.execute("SELECT COUNT(*) AS n FROM users")
+            total = int(cur.fetchone()['n'])
+
+            by_id = esc(body.get('byUserId', ''))
+            allowed = False
+            if total == 0:
+                allowed = True
+            elif by_id:
+                cur.execute(f"SELECT role FROM users WHERE id = '{by_id}'")
+                r = cur.fetchone()
+                allowed = bool(r and r['role'] in ('pm', 'coordinator', 'director'))
+            if not allowed:
+                return resp(403, {'error': 'not_allowed'})
+
             fio = ' '.join(str(body.get('fio', '')).split())
             key = norm(fio)
             cur.execute(f"SELECT id FROM users WHERE fio_key = '{esc(key)}'")
             if cur.fetchone():
                 return resp(409, {'error': 'exists'})
 
+            role = body.get('role', 'inspector')
+            if total == 0:
+                role = 'pm'
+
             uid = uuid.uuid4().hex[:12]
             cur.execute(
                 "INSERT INTO users (id, fio, fio_key, password, role, \"group\", org, phone, "
-                "specialties, certificates, educations) VALUES ("
+                "locations, specialties, certificates, educations) VALUES ("
                 f"'{esc(uid)}', '{esc(fio)}', '{esc(key)}', '{esc(body.get('password', ''))}', "
-                f"'{esc(body.get('role', 'inspector'))}', '{esc(body.get('group', ''))}', "
+                f"'{esc(role)}', '{esc(body.get('group', ''))}', "
                 f"'{esc(body.get('org', ''))}', '{esc(body.get('phone', ''))}', "
+                f"'{esc(json.dumps(body.get('locations', []), ensure_ascii=False))}'::jsonb, "
                 f"'{esc(json.dumps(body.get('specialties', []), ensure_ascii=False))}'::jsonb, "
                 f"'{esc(json.dumps(body.get('certificates', []), ensure_ascii=False))}'::jsonb, "
                 f"'{esc(json.dumps(body.get('educations', []), ensure_ascii=False))}'::jsonb) "
                 'RETURNING *'
             )
             conn.commit()
-            return resp(200, {'item': row_to_user(cur.fetchone())})
+            return resp(200, {'item': row_to_user(cur.fetchone()), 'firstUser': total == 0})
 
         if method == 'PUT':
             uid = body.get('id', '')
@@ -103,7 +123,7 @@ def handler(event: dict, context) -> dict:
                            ('org', 'org'), ('phone', 'phone')):
                 if k in patch:
                     sets.append(f"{col} = '{esc(patch[k])}'")
-            for k in ('specialties', 'certificates', 'educations'):
+            for k in ('locations', 'specialties', 'certificates', 'educations'):
                 if k in patch:
                     val = json.dumps(patch[k], ensure_ascii=False)
                     sets.append(f"{k} = '{esc(val)}'::jsonb")

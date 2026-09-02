@@ -74,7 +74,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'documents',
     'reports',
   ],
-  pm: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
+  pm: ['cabinet', 'objects', 'staff', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
   manager: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
   engineer: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents', 'reports'],
   inspector: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents'],
@@ -101,14 +101,21 @@ export interface Profile {
   role: Role;
   group: string;
   org: string;
+  locations: string[];
   specialties: string[];
 }
+
+export const CAN_MANAGE_USERS: Role[] = ['pm', 'coordinator', 'director'];
+
+export const canSeeLocation = (p: Profile, id: string) =>
+  CAN_MANAGE_USERS.includes(p.role) || !p.locations?.length || p.locations.includes(id);
 
 const DEFAULT: Profile = {
   fio: '',
   role: 'inspector',
   group: '',
   org: 'ООО «Глобал-Стройинжиниринг»',
+  locations: [],
   specialties: [],
 };
 
@@ -142,7 +149,12 @@ export const useProfile = () => {
     window.dispatchEvent(new Event(EVENT));
   }, []);
 
-  return { profile, save, canAddObject: CAN_EDIT.includes(profile.role) };
+  return {
+    profile,
+    save,
+    canAddObject: CAN_EDIT.includes(profile.role),
+    canManageUsers: CAN_MANAGE_USERS.includes(profile.role),
+  };
 };
 
 export const shortFio = (fio: string) => {

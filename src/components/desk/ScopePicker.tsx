@@ -14,7 +14,14 @@ import {
 import { cn } from '@/lib/utils';
 import { useObjects, NO_FIELD } from '@/data/store';
 import { useLocations } from '@/data/locations';
-import { useProfile, ROLE_LABEL, ROLE_ICON, ROLE_NOTE, Role, ROLE_ORDER } from '@/data/profile';
+import {
+  useProfile,
+  ROLE_LABEL,
+  ROLE_ICON,
+  ROLE_NOTE,
+  Role,
+  canSeeLocation,
+} from '@/data/profile';
 import { useToast } from '@/hooks/use-toast';
 
 interface Props {
@@ -27,7 +34,7 @@ const CAN_ADD_LOCATION: Role[] = ['pm', 'director'];
 
 const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
   const { list: objects } = useObjects();
-  const { list: locations, add } = useLocations();
+  const { list: allLocations, add } = useLocations();
   const { profile } = useProfile();
   const { toast } = useToast();
 
@@ -37,6 +44,7 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
   const [roleSeen, setRoleSeen] = useState(!!profile.fio);
 
   const canAdd = CAN_ADD_LOCATION.includes(profile.role);
+  const locations = allLocations.filter((l) => canSeeLocation(profile, l.id));
   const isInspector = profile.role === 'inspector';
 
   const countByLoc = useMemo(() => {
@@ -112,64 +120,63 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
         </div>
 
         <main className="scrollbar-thin flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 py-6 sm:px-6">
-          <div className="w-full max-w-3xl animate-rise">
+          <div className="w-full max-w-md animate-rise">
             <div className="flex items-center gap-2 text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
               <span className="text-accent">Строительный контроль</span>
               <Icon name="ChevronRight" size={12} />
-              <span className="text-foreground">Кто заходит</span>
+              <span className="text-foreground">Вход</span>
             </div>
 
-            <h1 className="mt-3 font-head text-[20px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[26px]">
-              Кто заходит в модуль
-            </h1>
-            <p className="mt-1 text-[0.84em] text-muted-foreground">
-              От должности зависят доступные разделы и права на правку данных
-            </p>
+            <div className="mt-4 rounded-sm border border-border border-t-2 border-t-accent bg-card p-5 text-center">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                <Icon name={profile.fio ? ROLE_ICON[profile.role] : 'LogIn'} size={23} />
+              </span>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {ROLE_ORDER.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => {
-                    if (!profile.fio) {
-                      onLogin();
-                      return;
-                    }
-                    setRoleSeen(true);
-                  }}
-                  className={cn(
-                    'group flex items-start gap-3 rounded-sm border bg-card p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-lg',
-                    profile.role === r ? 'border-accent' : 'border-border',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex h-10 w-10 flex-none items-center justify-center rounded-sm transition-colors',
-                      profile.role === r
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-secondary text-muted-foreground group-hover:text-accent',
-                    )}
+              {profile.fio ? (
+                <>
+                  <h1 className="mt-3 font-head text-[19px] uppercase leading-[1.15] tracking-[0.02em]">
+                    {ROLE_LABEL[profile.role]}
+                  </h1>
+                  <p className="mt-1 text-[0.86em] text-muted-foreground">{profile.fio}</p>
+                  <p className="mx-auto mt-1.5 max-w-xs text-[0.78em] leading-snug text-muted-foreground">
+                    {ROLE_NOTE[profile.role]}
+                  </p>
+
+                  <Button
+                    onClick={() => setRoleSeen(true)}
+                    className="mt-4 w-full gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
                   >
-                    <Icon name={ROLE_ICON[r]} size={19} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-head text-[0.98em] uppercase tracking-[0.03em]">
-                      {ROLE_LABEL[r]}
-                    </span>
-                    <span className="mt-0.5 block text-[0.76em] leading-snug text-muted-foreground">
-                      {ROLE_NOTE[r]}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
+                    <Icon name="ArrowRight" size={16} />
+                    Продолжить
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={onLogin}
+                    className="mt-2 w-full rounded-sm border border-dashed border-input py-2 text-[0.82em] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+                  >
+                    Войти под другой учётной записью
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h1 className="mt-3 font-head text-[19px] uppercase leading-[1.15] tracking-[0.02em]">
+                    Вход в модуль
+                  </h1>
+                  <p className="mx-auto mt-1.5 max-w-xs text-[0.82em] leading-snug text-muted-foreground">
+                    Должность определяется вашей учётной записью. Логин и пароль выдаёт менеджер
+                    или координатор проекта.
+                  </p>
 
-            {!profile.fio && (
-              <p className="mt-4 rounded-sm border border-border bg-card px-3.5 py-3 text-[0.8em] text-muted-foreground">
-                Выберите должность — откроется вход или регистрация под ней.
-              </p>
-            )}
+                  <Button
+                    onClick={onLogin}
+                    className="mt-4 w-full gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+                  >
+                    <Icon name="LogIn" size={16} />
+                    Войти
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </main>
       </div>
@@ -219,6 +226,19 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
                   </Button>
                 )}
               </div>
+
+              {locations.length === 0 && (
+                <div className="mt-4 rounded-sm border border-dashed border-border p-6 text-center">
+                  <Icon name="MapPinOff" size={26} className="mx-auto text-muted-foreground/50" />
+                  <p className="mt-2 font-head text-[0.95em] uppercase tracking-[0.03em]">
+                    Локации не назначены
+                  </p>
+                  <p className="mt-1 text-[0.8em] text-muted-foreground">
+                    Обратитесь к менеджеру или координатору проекта — он откроет доступ к нужной
+                    локации.
+                  </p>
+                </div>
+              )}
 
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {locations.map((l) => (

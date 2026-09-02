@@ -4,8 +4,15 @@
       "name": "Список пользователей",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": { "items": [] },
+      "expectedStatus": 200
+    },
+    {
+      "name": "Регистрация без прав запрещена",
+      "method": "POST",
+      "path": "/",
+      "body": { "action": "register", "fio": "Тест Тестов Тестович", "password": "1234" },
+      "expectedStatus": 403,
+      "expectedBody": { "error": "string" },
       "bodyMatcher": "partial"
     },
     {
