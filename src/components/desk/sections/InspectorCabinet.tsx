@@ -121,8 +121,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       value: shift ? `${shift.workDays} см. · ${fmtHours(shift.hours)} ч` : '—',
       view: 'timesheet',
     },
-    { icon: 'TriangleAlert', label: 'Замечаний', value: summary.defects, view: 'defects' },
-    { icon: 'FileWarning', label: 'Предписаний', value: summary.orders, view: 'ordersAll' },
+    { icon: 'TriangleAlert', label: 'Замечания', value: summary.defects, view: 'defects' },
+    { icon: 'FileWarning', label: 'Предписания', value: summary.orders, view: 'ordersAll' },
   ];
 
   const objectsPanel = (
