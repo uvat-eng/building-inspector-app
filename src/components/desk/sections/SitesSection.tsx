@@ -6,7 +6,15 @@ import ObjectForm from '@/components/desk/ObjectForm';
 import ObjectPage from '@/components/desk/ObjectPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useObjects, ProjectObject, groupByField, NO_FIELD } from '@/data/store';
+import {
+  useObjects,
+  ProjectObject,
+  groupByField,
+  NO_FIELD,
+  groupByLocation,
+  locationTitle,
+  locationIcon,
+} from '@/data/store';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -68,12 +76,15 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
 
   const shown = list.filter((o) =>
     query.trim()
-      ? `${o.title} ${o.field} ${o.customer} ${o.regionName}`
+      ? `${o.title} ${o.field} ${o.customer} ${o.regionName} ${locationTitle(o.location)}`
           .toLowerCase()
           .includes(query.trim().toLowerCase())
       : true,
   );
-  const groups = groupByField(shown);
+  const locGroups = groupByLocation(shown).map(
+    ([loc, items]) => [loc, groupByField(items)] as const,
+  );
+  const fieldCount = locGroups.reduce((s, [, g]) => s + g.length, 0);
 
   const tryAdd = () => {
     if (!canAddObject) {
@@ -90,8 +101,8 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-0.5">
       <Panel
-        title="Объекты по месторождениям"
-        note={`${shown.length} объектов · ${groups.length} месторождений`}
+        title="Объекты по локациям"
+        note={`${locGroups.length} локаций · ${fieldCount} проектов · ${shown.length} объектов`}
         className="min-h-0 flex-1"
         action={
           <Button
@@ -113,7 +124,7 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск по месторождению, объекту, заказчику"
+            placeholder="Поиск по локации, проекту, объекту, заказчику"
             className="h-9 w-full rounded-sm sm:w-96"
           />
         </div>
@@ -144,17 +155,22 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
                 ))}
               </div>
 
-              {groups.map(([fieldName, items]) => {
-                const sum = (fn: (o: ProjectObject) => number) =>
-                  items.reduce((s, o) => s + (fn(o) || 0), 0);
+              {locGroups.map(([loc, fields]) => {
+                const all = fields.flatMap(([, i]) => i);
+                const locSum = (fn: (o: ProjectObject) => number) =>
+                  all.reduce((s, o) => s + (fn(o) || 0), 0);
                 return (
-                  <div key={fieldName}>
+                  <div key={loc || 'none'}>
                     <div className="flex items-end gap-3 border-b border-foreground/85 bg-foreground px-4 py-2.5 text-background">
                       <span className="min-w-0 flex-1 truncate font-head text-[1.25em] uppercase tracking-[0.03em]">
-                        <Icon name="Mountain" size={16} className="mr-2 inline text-accent" />
-                        {fieldName === NO_FIELD ? fieldName : `Месторождение ${fieldName}`}
+                        <Icon
+                          name={locationIcon(loc)}
+                          size={16}
+                          className="mr-2 inline text-accent"
+                        />
+                        {locationTitle(loc)}
                         <span className="ml-2 text-[0.6em] tracking-[0.1em] opacity-70">
-                          {items.length} об.
+                          {fields.length} проект. · {all.length} об.
                         </span>
                       </span>
                       {COLS.map((c) => (
@@ -163,26 +179,63 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
                           className={cn('flex-none text-right text-[0.85em] opacity-80', c.w)}
                         >
                           {c.key === 'inspectors'
-                            ? sum((o) => o.inspectors)
+                            ? locSum((o) => o.inspectors)
                             : c.key === 'vehicles'
-                              ? sum((o) => o.vehicles)
+                              ? locSum((o) => o.vehicles)
                               : c.key === 'cabins'
-                                ? sum((o) => o.cabins)
+                                ? locSum((o) => o.cabins)
                                 : c.key === 'orders'
-                                  ? sum((o) => o.orders)
+                                  ? locSum((o) => o.orders)
                                   : c.key === 'closed'
-                                    ? sum((o) => o.orders - o.ordersOpen)
+                                    ? locSum((o) => o.orders - o.ordersOpen)
                                     : ''}
                         </span>
                       ))}
                     </div>
 
-                    {items.map((o) => (
+                    {fields.map(([fieldName, items]) => (
+                      <div key={fieldName}>
+                        <div className="flex items-end gap-3 border-b border-border bg-secondary/70 px-4 py-2">
+                          <span className="min-w-0 flex-1 truncate font-head text-[0.95em] uppercase tracking-[0.04em]">
+                            <Icon
+                              name="Mountain"
+                              size={13}
+                              className="mr-2 inline text-muted-foreground"
+                            />
+                            {fieldName === NO_FIELD ? fieldName : fieldName}
+                            <span className="ml-2 text-[0.72em] tracking-[0.1em] text-muted-foreground">
+                              {items.length} об.
+                            </span>
+                          </span>
+                          {COLS.map((c) => (
+                            <span
+                              key={c.key}
+                              className={cn(
+                                'flex-none text-right text-[0.8em] text-muted-foreground',
+                                c.w,
+                              )}
+                            >
+                              {c.key === 'inspectors'
+                                ? items.reduce((s, o) => s + o.inspectors, 0)
+                                : c.key === 'vehicles'
+                                  ? items.reduce((s, o) => s + o.vehicles, 0)
+                                  : c.key === 'cabins'
+                                    ? items.reduce((s, o) => s + o.cabins, 0)
+                                    : c.key === 'orders'
+                                      ? items.reduce((s, o) => s + o.orders, 0)
+                                      : c.key === 'closed'
+                                        ? items.reduce((s, o) => s + o.orders - o.ordersOpen, 0)
+                                        : ''}
+                            </span>
+                          ))}
+                        </div>
+
+                        {items.map((o) => (
                       <button
                         key={o.id}
                         type="button"
                         onClick={() => setCurrent(o.id)}
-                        className="flex w-full items-center gap-3 border-b border-border px-4 py-2.5 text-left transition-colors hover:bg-secondary/70"
+                        className="flex w-full items-center gap-3 border-b border-border px-4 py-2.5 pl-7 text-left transition-colors hover:bg-secondary/70"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[0.95em]">{o.title}</span>
@@ -204,6 +257,8 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
                           </span>
                         ))}
                       </button>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 );

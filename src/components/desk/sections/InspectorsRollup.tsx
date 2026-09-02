@@ -3,6 +3,7 @@ import Panel from '@/components/desk/Panel';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import Tag from '@/components/desk/Tag';
+import BrigadeTimesheet from '@/components/desk/BrigadeTimesheet';
 import { cn } from '@/lib/utils';
 import { useObjects } from '@/data/store';
 import { useInspectorsRollup, useObjectsRollup, InspectorRollup } from '@/data/rollup';
@@ -21,7 +22,7 @@ const InspectorsRollup = () => {
   const { items, loading } = useInspectorsRollup();
   const { items: byObject } = useObjectsRollup();
   const [open, setOpen] = useState<string | null>(null);
-  const [tab, setTab] = useState<'people' | 'objects'>('people');
+  const [tab, setTab] = useState<'people' | 'sheet' | 'objects'>('people');
 
   const now = new Date();
   const objTitle = useMemo(() => {
@@ -55,6 +56,7 @@ const InspectorsRollup = () => {
         {(
           [
             ['people', 'По инспекторам', 'Users'],
+            ['sheet', 'Сводный табель', 'CalendarDays'],
             ['objects', 'По объектам', 'Building2'],
           ] as const
         ).map(([id, label, icon]) => (
@@ -206,6 +208,8 @@ const InspectorsRollup = () => {
               ))
             )}
           </Panel>
+        ) : tab === 'sheet' ? (
+          <BrigadeTimesheet items={items} month={now.getMonth()} year={now.getFullYear()} />
         ) : (
           <Panel title="Объекты в работе" note={`${byObject.length}`}>
             {byObject.length === 0 ? (

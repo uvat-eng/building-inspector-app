@@ -38,6 +38,17 @@ def entry_hours(e):
     return d / 60
 
 
+MARK_CODES = {
+    'work': 'Я',
+    'mo': 'В',
+    'sick': 'Б',
+    'vacation': 'ОТ',
+    'extra': 'ДО',
+    'absent': 'НН',
+    'study': 'У',
+}
+
+
 def build_shifts(days):
     """Собираем вахты: подряд идущие рабочие дни, вахту закрывает первый день МО."""
     shifts = []
@@ -148,6 +159,19 @@ def handler(event: dict, context) -> dict:
                 month_mo = [
                     d for d, e in days if d.startswith(month) and e and e[0].get('kind') == 'mo'
                 ]
+                codes = {}
+                obj_ids = []
+                for d, e in days:
+                    if not d.startswith(month) or not e:
+                        continue
+                    kind = e[0].get('kind') or 'work'
+                    codes[d] = MARK_CODES.get(kind, 'Я')
+                    if kind == 'work':
+                        for x in e:
+                            oid = x.get('objectId')
+                            if oid and oid not in obj_ids:
+                                obj_ids.append(oid)
+
                 w = work.get(u['fio']) or {}
                 last = w.get('last_at')
                 items.append(
@@ -162,6 +186,8 @@ def handler(event: dict, context) -> dict:
                             sum(sum(entry_hours(x) for x in e) for _, e in month_days), 2
                         ),
                         'monthMO': len(month_mo),
+                        'codes': codes,
+                        'objectIds': obj_ids,
                         'shift': cur_shift,
                         'shifts': shifts[:6],
                         'inspections': int(w.get('inspections') or 0),

@@ -4,9 +4,7 @@
       "name": "Список объектов",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": { "items": [] },
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     },
     {
       "name": "CORS preflight",

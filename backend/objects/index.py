@@ -17,6 +17,7 @@ CORS = {
 FIELDS = [
     ('title', 'title', 'text'),
     ('field', 'field', 'text'),
+    ('location', 'location', 'text'),
     ('kind', 'kind', 'text'),
     ('capacity', 'capacity', 'text'),
     ('startYear', 'start_year', 'text'),
@@ -91,7 +92,7 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if method == 'GET':
-        cur.execute('SELECT * FROM objects ORDER BY field, title')
+        cur.execute('SELECT * FROM objects ORDER BY location, field, title')
         items = [row_to_obj(r) for r in cur.fetchall()]
         cur.close()
         conn.close()

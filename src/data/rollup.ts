@@ -23,6 +23,8 @@ export interface InspectorRollup {
   monthDays: number;
   monthHours: number;
   monthMO: number;
+  codes: Record<string, string>;
+  objectIds: string[];
   shift: ShiftInfo | null;
   shifts: ShiftInfo[];
   inspections: number;

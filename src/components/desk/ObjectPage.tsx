@@ -16,7 +16,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useObjects, money, ProjectObject, STATUS_LABEL, KIND_LABEL } from '@/data/store';
+import {
+  useObjects,
+  money,
+  ProjectObject,
+  STATUS_LABEL,
+  KIND_LABEL,
+  LOCATIONS,
+  locationTitle,
+  locationIcon,
+} from '@/data/store';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { CITIES } from '@/data/geo';
 import type { TagTone } from '@/data/mock';
@@ -212,7 +221,40 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
         <div className="grid gap-3.5 lg:grid-cols-[1.15fr_1fr]">
           <Panel title="Паспорт объекта" note={edit ? 'режим правки' : 'просмотр'}>
             <div className="grid gap-3 p-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">{text('field', 'Месторождение')}</div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+                  Локация
+                </Label>
+                {edit ? (
+                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                    {LOCATIONS.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => setDraft({ ...draft, location: l.id })}
+                        className={`flex items-center gap-1.5 rounded-sm border px-2 py-2 text-left text-[0.78em] transition-colors ${
+                          draft.location === l.id
+                            ? 'border-accent bg-accent/10 text-accent'
+                            : 'border-input hover:bg-secondary'
+                        }`}
+                      >
+                        <Icon name={l.icon} size={14} className="flex-none" />
+                        <span className="min-w-0 truncate">{l.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="flex items-center gap-1.5 text-[0.95em]">
+                    <Icon
+                      name={locationIcon(object.location)}
+                      size={15}
+                      className="text-accent"
+                    />
+                    {locationTitle(object.location)}
+                  </p>
+                )}
+              </div>
+              <div className="sm:col-span-2">{text('field', 'Месторождение / проект')}</div>
               <div className="sm:col-span-2">{text('title', 'Название объекта')}</div>
 
               <div className="space-y-1.5">

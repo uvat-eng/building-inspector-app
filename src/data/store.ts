@@ -4,6 +4,7 @@ export interface ProjectObject {
   id: string;
   title: string;
   field: string;
+  location: string;
   kind: "area" | "line";
   capacity: string;
   startYear: string;
@@ -39,6 +40,41 @@ export const KIND_LABEL: Record<ProjectObject["kind"], string> = {
 };
 
 export const NO_FIELD = "Без месторождения";
+
+export const LOCATIONS = [
+  { id: "yakutia", title: "Якутия", icon: "Snowflake" },
+  { id: "megion", title: "Мегион", icon: "Mountain" },
+  { id: "messoyakha", title: "Мессояха", icon: "Waves" },
+  { id: "meretoyakha", title: "Меретояха", icon: "Waves" },
+  { id: "azs", title: "Проект АЗС", icon: "Fuel" },
+  { id: "fuel-depot", title: "Проект склады топлива", icon: "Warehouse" },
+  { id: "plants", title: "Проект заводы", icon: "Factory" },
+] as const;
+
+export type LocationId = (typeof LOCATIONS)[number]["id"];
+
+export const NO_LOCATION = "Без локации";
+
+export const locationTitle = (id: string) =>
+  LOCATIONS.find((l) => l.id === id)?.title ?? (id || NO_LOCATION);
+
+export const locationIcon = (id: string) =>
+  LOCATIONS.find((l) => l.id === id)?.icon ?? "MapPin";
+
+export const groupByLocation = (list: ProjectObject[]) => {
+  const map = new Map<string, ProjectObject[]>();
+  list.forEach((o) => {
+    const key = o.location?.trim() || "";
+    map.set(key, [...(map.get(key) ?? []), o]);
+  });
+  const order = LOCATIONS.map((l) => l.id);
+  return [...map.entries()].sort(
+    (a, b) =>
+      (order.indexOf(a[0] as LocationId) + 1 || 99) -
+        (order.indexOf(b[0] as LocationId) + 1 || 99) ||
+      a[0].localeCompare(b[0], "ru"),
+  );
+};
 
 export const groupByField = (list: ProjectObject[]) => {
   const map = new Map<string, ProjectObject[]>();

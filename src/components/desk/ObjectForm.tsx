@@ -20,7 +20,7 @@ import RussiaMap from "@/components/desk/RussiaMap";
 import Icon from "@/components/ui/icon";
 import { useToast } from "@/hooks/use-toast";
 import { CITIES, DISTRICTS } from "@/data/geo";
-import { ProjectObject, STATUS_LABEL, KIND_LABEL } from "@/data/store";
+import { ProjectObject, STATUS_LABEL, KIND_LABEL, LOCATIONS } from "@/data/store";
 
 interface ObjectFormProps {
   open: boolean;
@@ -31,6 +31,7 @@ interface ObjectFormProps {
 const EMPTY = {
   title: "",
   field: "",
+  location: "" as string,
   kind: "area" as ProjectObject["kind"],
   capacity: "",
   startYear: "",
@@ -90,6 +91,10 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
       });
       return;
     }
+    if (!f.location) {
+      toast({ title: "Выберите локацию", variant: "destructive" });
+      return;
+    }
     if (!point) {
       toast({ title: "Отметьте объект на карте", variant: "destructive" });
       return;
@@ -103,6 +108,7 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
       await onSave({
         title: f.title.trim(),
         field: f.field.trim(),
+        location: f.location,
         kind: f.kind,
         capacity: f.capacity.trim(),
         startYear: f.startYear.trim(),
@@ -220,8 +226,31 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+              Локация
+            </Label>
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+              {LOCATIONS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => set("location", l.id)}
+                  className={
+                    "flex items-center gap-1.5 rounded-sm border px-2 py-2 text-left text-[0.78em] transition-colors " +
+                    (f.location === l.id
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-input hover:bg-secondary")
+                  }
+                >
+                  <Icon name={l.icon} size={14} className="flex-none" />
+                  <span className="min-w-0 truncate">{l.title}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="sm:col-span-2">
-            {field("field", "Месторождение", {
+            {field("field", "Месторождение / проект", {
               placeholder: "напр. Чаяндинское НГКМ",
             })}
           </div>
