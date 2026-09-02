@@ -8,6 +8,7 @@ export type ObjectMenuId =
   | 'contract'
   | 'orders'
   | 'company'
+  | 'reports'
   | 'inspections'
   | 'tests'
   | 'ks'
@@ -37,6 +38,13 @@ const ITEMS: MenuItem[] = [
     icon: 'FileBadge',
     label: 'Договор строительства',
     note: 'Договор объекта в формате PDF',
+    ready: true,
+  },
+  {
+    id: 'reports',
+    icon: 'FileText',
+    label: 'Отчёты',
+    note: 'Отчётные формы инспектора',
     ready: true,
   },
   {

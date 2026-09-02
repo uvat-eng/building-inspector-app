@@ -8,6 +8,7 @@ import { useProfile, ROLE_LABEL } from '@/data/profile';
 import Timesheet from '@/components/desk/Timesheet';
 import { useObjects } from '@/data/store';
 import { useSummary, useAllDefects, SEVERITY } from '@/data/inspections';
+import ReportsCabinet from '@/components/desk/inspection/ReportsCabinet';
 import { useOrders } from '@/data/orders';
 import { runDailyArchive } from '@/data/rollup';
 import {
@@ -39,6 +40,7 @@ type ObjView =
   | 'menu'
   | 'docs'
   | 'contract'
+  | 'reports'
   | 'inspections'
   | 'orders'
   | 'company'
@@ -150,6 +152,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
     menu: 'Разделы объекта',
     docs: 'Документация',
     contract: 'Договор',
+    reports: 'Отчёты',
     inspections: 'Проверки и выезды',
     orders: 'Предписания',
     company: 'Подрядчик',
@@ -204,6 +207,9 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
         />,
       );
     }
+    if (objectView === 'reports') {
+      return wrap(<ReportsCabinet object={active} onBack={() => setObjectView('menu')} />);
+    }
     if (objectView === 'inspections') {
       return wrap(
         <InspectionsCabinet
@@ -251,6 +257,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
             [
               'docs',
               'contract',
+              'reports',
               'inspections',
               'orders',
               'company',
