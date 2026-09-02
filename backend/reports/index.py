@@ -1,7 +1,11 @@
+import base64
 import json
 import os
+import re
 import time
+import uuid
 
+import boto3
 import psycopg2
 import psycopg2.extras
 
@@ -61,6 +65,26 @@ def handler(event: dict, context) -> dict:
                 f'SELECT * FROM daily_reports {where} ORDER BY report_date DESC, created_at DESC'
             )
             return resp(200, {'items': [to_report(r) for r in cur.fetchall()]})
+
+        if method == 'POST' and body.get('kind') == 'photo':
+            content = body.get('content') or ''
+            file_name = body.get('fileName') or 'photo.jpg'
+            if not content:
+                return resp(400, {'error': 'file_required'})
+            raw = base64.b64decode(content.split(',')[-1])
+            safe = re.sub(r'[^A-Za-z0-9._-]+', '_', file_name)[-60:]
+            key = f"reports/{body.get('objectId') or 'common'}/{uuid.uuid4().hex[:12]}_{safe}"
+            s3 = boto3.client(
+                's3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+            )
+            s3.put_object(
+                Bucket='files', Key=key, Body=raw, ContentType=body.get('mime') or 'image/jpeg'
+            )
+            base = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket"
+            return resp(200, {'url': f'{base}/{key}'})
 
         if method == 'POST':
             rid = (body.get('id') or '').strip() or f"rep-{int(time.time() * 1000)}"

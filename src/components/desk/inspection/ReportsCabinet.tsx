@@ -327,6 +327,19 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
                             {row.contractor || 'без подрядчика'} · {row.place || object.title}
                             {row.category ? ` · ${row.category}` : ''}
                           </p>
+                          {(row.photos?.length ?? 0) > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {row.photos!.map((u) => (
+                                <a key={u} href={u} target="_blank" rel="noreferrer">
+                                  <img
+                                    src={u}
+                                    alt="фото нарушения"
+                                    className="h-14 w-14 rounded-sm border border-border object-cover"
+                                  />
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )),
                     )}

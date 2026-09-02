@@ -44,6 +44,7 @@ export interface ReportRow {
   stopWork: boolean;
   nature: Nature | '';
   category: Category | '';
+  photos?: string[];
 }
 
 export interface DailyReport {
@@ -75,9 +76,33 @@ export const EMPTY_ROW: Omit<ReportRow, 'id'> = {
   stopWork: false,
   nature: '',
   category: '',
+  photos: [],
 };
 
 export const rid = () => Math.random().toString(36).slice(2, 10);
+
+export const uploadReportPhoto = async (objectId: string, file: File) => {
+  const content = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      kind: 'photo',
+      objectId,
+      fileName: file.name,
+      mime: file.type,
+      content,
+    }),
+  });
+  if (!res.ok) throw new Error('upload_failed');
+  const { url } = (await res.json()) as { url: string };
+  return url;
+};
 
 export interface RowStats {
   issued: number;

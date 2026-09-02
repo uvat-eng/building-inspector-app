@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   ReportRow,
   rid,
   statsOf,
+  uploadReportPhoto,
   useReports,
 } from '@/data/reports';
 import { downloadDailyReport } from '@/lib/reportXls';
@@ -43,6 +44,83 @@ const Field = ({
     <div className="mt-1">{children}</div>
   </div>
 );
+
+const Photos = ({
+  objectId,
+  urls,
+  onChange,
+}: {
+  objectId: string;
+  urls: string[];
+  onChange: (next: string[]) => void;
+}) => {
+  const { toast } = useToast();
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const pick = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setBusy(true);
+    try {
+      const added: string[] = [];
+      for (const f of Array.from(files)) added.push(await uploadReportPhoto(objectId, f));
+      onChange([...urls, ...added]);
+      toast({ title: `Фото прикреплено: ${added.length}` });
+    } catch {
+      toast({ title: 'Не удалось загрузить фото', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+      if (ref.current) ref.current.value = '';
+    }
+  };
+
+  return (
+    <div className="sm:col-span-2">
+      <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
+        Фотоматериалы
+      </Label>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        {urls.map((u) => (
+          <span key={u} className="group relative">
+            <img
+              src={u}
+              alt="фото нарушения"
+              className="h-16 w-16 rounded-sm border border-border object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => onChange(urls.filter((x) => x !== u))}
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
+            >
+              <Icon name="X" size={12} />
+            </button>
+          </span>
+        ))}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => ref.current?.click()}
+          className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-sm border border-dashed border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent"
+        >
+          <Icon
+            name={busy ? 'Loader2' : 'Camera'}
+            size={18}
+            className={busy ? 'animate-spin' : ''}
+          />
+          <span className="text-[0.62em] uppercase tracking-[0.06em]">Прикрепить</span>
+        </button>
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(e) => pick(e.target.files)}
+      />
+    </div>
+  );
+};
 
 const DailyReportForm = ({ object, onBack, existing }: Props) => {
   const { toast } = useToast();
@@ -374,6 +452,11 @@ const DailyReportForm = ({ object, onBack, existing }: Props) => {
                         ))}
                       </select>
                     </Field>
+                    <Photos
+                      objectId={object.id}
+                      urls={r.photos ?? []}
+                      onChange={(photos) => patch(r.id, { photos })}
+                    />
                     <label className="flex items-center gap-2 text-[0.85em] sm:col-span-2">
                       <input
                         type="checkbox"

@@ -63,6 +63,9 @@ const rowCells = (r: ReportRow, num: string) => `
     <td class="c">${esc(r.nature)}</td>
     <td class="c">${esc(r.category)}</td>
     <td class="c">${r.stopWork ? 'да' : ''}</td>
+    <td>${(r.photos ?? [])
+      .map((u, i) => `<a href="${esc(u)}">фото ${i + 1}</a>`)
+      .join('<br>')}</td>
   </tr>`;
 
 const HEAD = `
@@ -85,6 +88,7 @@ const HEAD = `
     <th>Характер предписания</th>
     <th>Категория нарушения</th>
     <th>С остановкой работ</th>
+    <th>Фотоматериалы</th>
   </tr>`;
 
 const summary = (rows: ReportRow[]) => {
@@ -160,15 +164,15 @@ export const downloadDailyReport = (
     'Ежедневный отчёт',
     `
     <table>
-      <tr><td class="t" colspan="18">Сводный отчёт по предписаниям</td></tr>
-      <tr><td class="s" colspan="18">Объект: ${esc(objectTitle)}${field ? ` · ${esc(field)}` : ''}</td></tr>
-      <tr><td class="s" colspan="18">Дата отчёта: ${ru(report.date)} · инженер СК: ${esc(report.author)}</td></tr>
-      <tr><td class="s" colspan="18"></td></tr>
+      <tr><td class="t" colspan="19">Сводный отчёт по предписаниям</td></tr>
+      <tr><td class="s" colspan="19">Объект: ${esc(objectTitle)}${field ? ` · ${esc(field)}` : ''}</td></tr>
+      <tr><td class="s" colspan="19">Дата отчёта: ${ru(report.date)} · инженер СК: ${esc(report.author)}</td></tr>
+      <tr><td class="s" colspan="19"></td></tr>
     </table>
     ${summary(report.rows)}
     <br>
     <table>
-      <tr><td class="t" colspan="18">Сводный отчёт по пунктам предписаний</td></tr>
+      <tr><td class="t" colspan="19">Сводный отчёт по пунктам предписаний</td></tr>
     </table>
     ${categoryTable(report.rows)}
     <br>
@@ -207,6 +211,7 @@ export const downloadJournal = (
       <td>${esc(r.extension)}</td>
       <td class="c">${esc(r.category)}</td>
       <td class="c">1</td>
+      <td>${(r.photos ?? []).map((u, i) => `<a href="${esc(u)}">фото ${i + 1}</a>`).join('<br>')}</td>
     </tr>`,
     )
     .join('');
@@ -216,10 +221,10 @@ export const downloadJournal = (
     'Журнал замечаний',
     `
     <table>
-      <tr><td class="t" colspan="14">Реестр замечаний, отражённых в журналах замечаний и предложений</td></tr>
-      <tr><td class="s" colspan="14">Объект строительства: ${esc(objectTitle)}${field ? ` · ${esc(field)}` : ''}</td></tr>
-      <tr><td class="s" colspan="14">Сформирован: ${new Date().toLocaleDateString('ru')} · записей: ${all.length} · отчётов: ${reports.length}</td></tr>
-      <tr><td class="s" colspan="14"></td></tr>
+      <tr><td class="t" colspan="15">Реестр замечаний, отражённых в журналах замечаний и предложений</td></tr>
+      <tr><td class="s" colspan="15">Объект строительства: ${esc(objectTitle)}${field ? ` · ${esc(field)}` : ''}</td></tr>
+      <tr><td class="s" colspan="15">Сформирован: ${new Date().toLocaleDateString('ru')} · записей: ${all.length} · отчётов: ${reports.length}</td></tr>
+      <tr><td class="s" colspan="15"></td></tr>
     </table>
     ${summary(plain)}
     <br>
@@ -232,7 +237,7 @@ export const downloadJournal = (
         <th>Отчёт об устранении</th><th>Дата устранения</th>
         <th>Выдано предписание / комментарии</th>
         <th>Продление сроков</th>
-        <th>Характер замечания</th><th>Количество</th>
+        <th>Характер замечания</th><th>Количество</th><th>Фотоматериалы</th>
       </tr>
       ${rows}
     </table>`,
