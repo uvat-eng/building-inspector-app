@@ -26,6 +26,7 @@ export interface User {
   org: string;
   phone: string;
   locations: string[];
+  mustChangePassword?: boolean;
   specialties: string[];
   certificates: Certificate[];
   educations: Education[];
@@ -90,6 +91,27 @@ export const registerUser = async (
   if (!res.ok) throw new Error('register_failed');
   const { item } = (await res.json()) as { item: User };
   publish([...cache, item]);
+  return item;
+};
+
+export const changePassword = async (
+  id: string,
+  oldPassword: string,
+  newPassword: string,
+) => {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'change_password', id, oldPassword, newPassword }),
+  });
+  if (res.status === 403) throw new Error('wrong_password');
+  if (res.status === 400) {
+    const { error } = (await res.json()) as { error: string };
+    throw new Error(error);
+  }
+  if (!res.ok) throw new Error('change_failed');
+  const { item } = (await res.json()) as { item: User };
+  publish(cache.map((u) => (u.id === id ? item : u)));
   return item;
 };
 

@@ -62,7 +62,12 @@ const LoginDialog = ({
       specialties: user.specialties,
       org: user.org,
     });
-    toast({ title: `Вход выполнен · ${ROLE_LABEL[user.role]}`, description: user.fio });
+    toast({
+      title: `Вход выполнен · ${ROLE_LABEL[user.role]}`,
+      description: user.mustChangePassword
+        ? 'Пароль временный — смените его в профиле на постоянный.'
+        : user.fio,
+    });
     setFio('');
     setPass('');
     onOpenChange(false);

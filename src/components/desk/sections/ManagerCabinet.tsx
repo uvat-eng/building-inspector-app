@@ -21,6 +21,8 @@ import { DocSection, SECTION_LABEL, SECTION_ICON, fmtSize, ProjectDoc } from '@/
 import InspectorsRollup from '@/components/desk/sections/InspectorsRollup';
 import CabinetBar from '@/components/desk/CabinetBar';
 import useBackGuard from '@/hooks/use-back-guard';
+import ChangePassword from '@/components/desk/ChangePassword';
+import { useUsers } from '@/data/users';
 
 const SECTIONS: DocSection[] = ['contract', 'project', 'working', 'masterplan'];
 
@@ -39,6 +41,7 @@ interface ManagerCabinetProps {
 
 const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   const { profile } = useProfile();
+  const { current } = useUsers();
   const { toast } = useToast();
   const { list: objects } = useObjects();
   const { items, loading, progress, uploadMany, remove } = useAllDocuments();
@@ -46,6 +49,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   const [openObject, setOpenObject] = useState<string | null>(null);
   const [team, setTeam] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [passOpen, setPassOpen] = useState(false);
   const [section, setSection] = useState<DocSection>('project');
   const [target, setTarget] = useState<string[]>([]);
   const [note, setNote] = useState('');
@@ -177,6 +181,21 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
               <Icon name="Users" size={14} />
               Инспекторы
             </button>
+            {current && (
+              <button
+                type="button"
+                onClick={() => setPassOpen(true)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors',
+                  current.mustChangePassword
+                    ? 'border-accent bg-accent text-accent-foreground'
+                    : 'border-border bg-card hover:border-accent hover:bg-secondary',
+                )}
+              >
+                <Icon name="KeyRound" size={14} />
+                Пароль
+              </button>
+            )}
             <button
               type="button"
               onClick={() => openUpload(active?.id)}
@@ -310,6 +329,18 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
         )}
       </div>
       )}
+
+      <Dialog open={passOpen} onOpenChange={setPassOpen}>
+        <DialogContent className="max-w-lg rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.2em] uppercase tracking-[0.03em]">
+              Смена пароля
+            </DialogTitle>
+            <DialogDescription className="text-[0.85em]">{current?.fio}</DialogDescription>
+          </DialogHeader>
+          {current && <ChangePassword user={current} onDone={() => setPassOpen(false)} />}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={uploadOpen} onOpenChange={(v) => !progress && setUploadOpen(v)}>
         <DialogContent className="max-w-lg rounded-sm">

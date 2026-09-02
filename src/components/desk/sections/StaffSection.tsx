@@ -119,8 +119,11 @@ const StaffSection = () => {
       return;
     }
     try {
-      await updateUser(reset.id, { password: pass });
-      toast({ title: 'Пароль сброшен', description: `${reset.fio} — выдайте новый пароль лично.` });
+      await updateUser(reset.id, { password: pass, mustChangePassword: true });
+      toast({
+        title: 'Пароль сброшен',
+        description: `${reset.fio} — выдайте пароль лично, сотрудник сменит его сам.`,
+      });
       setReset(null);
       setPass('');
     } catch {

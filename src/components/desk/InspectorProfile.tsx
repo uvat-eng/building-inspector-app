@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { SPECIALTIES, useProfile } from '@/data/profile';
 import { User, updateUser, uid, Certificate, Education } from '@/data/users';
+import ChangePassword from '@/components/desk/ChangePassword';
 
 interface InspectorProfileProps {
   user: User;
@@ -44,8 +45,6 @@ const InspectorProfile = ({ user }: InspectorProfileProps) => {
   const [spec, setSpec] = useState<string[]>(user.specialties ?? []);
   const [certs, setCerts] = useState<Certificate[]>(user.certificates ?? []);
   const [edus, setEdus] = useState<Education[]>(user.educations ?? []);
-  const [pass, setPass] = useState('');
-  const [pass2, setPass2] = useState('');
   const [specOpen, setSpecOpen] = useState(false);
 
   const toggleSpec = (s: string) =>
@@ -68,14 +67,6 @@ const InspectorProfile = ({ user }: InspectorProfileProps) => {
       toast({ title: 'Укажите ФИО', variant: 'destructive' });
       return;
     }
-    if (pass && pass.length < 4) {
-      toast({ title: 'Пароль минимум 4 символа', variant: 'destructive' });
-      return;
-    }
-    if (pass && pass !== pass2) {
-      toast({ title: 'Пароли не совпадают', variant: 'destructive' });
-      return;
-    }
     try {
       await updateUser(user.id, {
         fio: fio.trim(),
@@ -84,11 +75,8 @@ const InspectorProfile = ({ user }: InspectorProfileProps) => {
         specialties: spec,
         certificates: certs.filter((c) => c.number.trim()),
         educations: edus.filter((e) => e.institution.trim()),
-        ...(pass ? { password: pass } : {}),
       });
       save({ fio: fio.trim(), group: group.trim(), specialties: spec });
-      setPass('');
-      setPass2('');
       toast({ title: 'Профиль сохранён', description: 'Данные доступны с любого устройства.' });
     } catch {
       toast({ title: 'Не удалось сохранить профиль', variant: 'destructive' });
@@ -249,10 +237,9 @@ const InspectorProfile = ({ user }: InspectorProfileProps) => {
         </div>
       </Panel>
 
-      <Panel title="Смена пароля">
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
-          {field('Новый пароль', pass, setPass, 'Оставьте пустым, если не меняете', 'password')}
-          {field('Повторите пароль', pass2, setPass2, '', 'password')}
+      <Panel title="Смена пароля" note={user.mustChangePassword ? 'требуется' : undefined}>
+        <div className="p-4">
+          <ChangePassword user={user} />
         </div>
       </Panel>
 

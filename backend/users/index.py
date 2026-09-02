@@ -31,6 +31,7 @@ def row_to_user(r):
         'org': r['org'],
         'phone': r['phone'],
         'locations': r['locations'] or [],
+        'mustChangePassword': bool(r.get('must_change_password')),
         'specialties': r['specialties'] or [],
         'certificates': r['certificates'] or [],
         'educations': r['educations'] or [],
@@ -71,6 +72,28 @@ def handler(event: dict, context) -> dict:
                     return resp(403, {'error': 'wrong_password'})
                 return resp(200, {'item': row_to_user(row)})
 
+            if action == 'change_password':
+                uid_ = esc(body.get('id', ''))
+                old = body.get('oldPassword', '')
+                new = str(body.get('newPassword', ''))
+                cur.execute(f"SELECT * FROM users WHERE id = '{uid_}'")
+                row = cur.fetchone()
+                if not row:
+                    return resp(404, {'error': 'not_found'})
+                if row['password'] != old:
+                    return resp(403, {'error': 'wrong_password'})
+                if len(new) < 4:
+                    return resp(400, {'error': 'too_short'})
+                if new == old:
+                    return resp(400, {'error': 'same_password'})
+                cur.execute(
+                    f"UPDATE users SET password = '{esc(new)}', must_change_password = false "
+                    f"WHERE id = '{uid_}' RETURNING *"
+                )
+                row = cur.fetchone()
+                conn.commit()
+                return resp(200, {'item': row_to_user(row)})
+
             cur.execute("SELECT COUNT(*) AS n FROM users")
             total = int(cur.fetchone()['n'])
 
@@ -98,14 +121,15 @@ def handler(event: dict, context) -> dict:
             uid = uuid.uuid4().hex[:12]
             cur.execute(
                 "INSERT INTO users (id, fio, fio_key, password, role, \"group\", org, phone, "
-                "locations, specialties, certificates, educations) VALUES ("
+                "locations, specialties, certificates, educations, must_change_password) VALUES ("
                 f"'{esc(uid)}', '{esc(fio)}', '{esc(key)}', '{esc(body.get('password', ''))}', "
                 f"'{esc(role)}', '{esc(body.get('group', ''))}', "
                 f"'{esc(body.get('org', ''))}', '{esc(body.get('phone', ''))}', "
                 f"'{esc(json.dumps(body.get('locations', []), ensure_ascii=False))}'::jsonb, "
                 f"'{esc(json.dumps(body.get('specialties', []), ensure_ascii=False))}'::jsonb, "
                 f"'{esc(json.dumps(body.get('certificates', []), ensure_ascii=False))}'::jsonb, "
-                f"'{esc(json.dumps(body.get('educations', []), ensure_ascii=False))}'::jsonb) "
+                f"'{esc(json.dumps(body.get('educations', []), ensure_ascii=False))}'::jsonb, "
+                f"{'true' if total > 0 else 'false'}) "
                 'RETURNING *'
             )
             conn.commit()
@@ -123,6 +147,10 @@ def handler(event: dict, context) -> dict:
                            ('org', 'org'), ('phone', 'phone')):
                 if k in patch:
                     sets.append(f"{col} = '{esc(patch[k])}'")
+            if 'mustChangePassword' in patch:
+                sets.append(
+                    f"must_change_password = {'true' if patch['mustChangePassword'] else 'false'}"
+                )
             for k in ('locations', 'specialties', 'certificates', 'educations'):
                 if k in patch:
                     val = json.dumps(patch[k], ensure_ascii=False)
