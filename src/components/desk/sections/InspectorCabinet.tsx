@@ -13,11 +13,8 @@ import { runDailyArchive } from '@/data/rollup';
 import {
   useTimesheet,
   monthEntries,
-  dayHours,
-  fmtHours,
   isMO,
   currentShift,
-  shiftLabel,
   MONTHS,
 } from '@/data/timesheet';
 import { cn } from '@/lib/utils';
@@ -100,25 +97,14 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const month = monthEntries(sheet, now.getFullYear(), now.getMonth()).filter(
     ([, l]) => !isMO(l),
   );
-  const monthHours = month.reduce((s, [, list]) => s + dayHours(list), 0);
   const shift = currentShift(sheet);
 
   const stats: { icon: string; label: string; value: string | number; view: View }[] = [
     { icon: 'Building2', label: 'Объекты', value: objects.length, view: 'objects' },
     {
       icon: 'Clock',
-      label: `${MONTHS[now.getMonth()]} · ${month.length} смен`,
-      value: `${fmtHours(monthHours)} ч`,
-      view: 'timesheet',
-    },
-    {
-      icon: shift?.open ? 'PlayCircle' : 'Home',
-      label: shift
-        ? shift.open
-          ? `Вахта с ${shiftLabel(shift).split(' — ')[0]} · идёт`
-          : `МО ${shift.moDays} дн. · вахта ${shiftLabel(shift)}`
-        : 'Вахта не начата',
-      value: shift ? `${shift.workDays} см. · ${fmtHours(shift.hours)} ч` : '—',
+      label: `Табель · вахта / ${MONTHS[now.getMonth()].toLowerCase()}`,
+      value: `${shift?.workDays ?? 0} / ${month.length}`,
       view: 'timesheet',
     },
     { icon: 'TriangleAlert', label: 'Замечания', value: summary.defects, view: 'defects' },
