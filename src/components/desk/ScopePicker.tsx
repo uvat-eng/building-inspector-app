@@ -149,7 +149,7 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
             </p>
 
             <div className="mt-4 overflow-hidden rounded-sm border border-border bg-card">
-              {ROLE_ORDER.filter((r) => r !== 'admin').map((r) => {
+              {ROLE_ORDER.map((r) => {
                 const mine = profile.fio && profile.role === r;
                 return (
                   <button

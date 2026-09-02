@@ -169,13 +169,13 @@ const LoginDialog = ({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
-              Логин — ФИО
+              {adminMode || expectRole === 'admin' ? 'Логин' : 'Логин — ФИО'}
             </Label>
             <Input
               value={fio}
               onChange={(e) => setFio(e.target.value)}
               className="rounded-sm"
-              placeholder="Иванов Иван Иванович"
+              placeholder={adminMode || expectRole === 'admin' ? 'админ' : 'Иванов Иван Иванович'}
             />
           </div>
           <div className="space-y-1.5">
