@@ -19,6 +19,7 @@ import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { useAllDocuments } from '@/data/allDocuments';
 import { DocSection, SECTION_LABEL, SECTION_ICON, fmtSize, ProjectDoc } from '@/data/documents';
 import InspectorsRollup from '@/components/desk/sections/InspectorsRollup';
+import CabinetBar from '@/components/desk/CabinetBar';
 
 const SECTIONS: DocSection[] = ['contract', 'project', 'working', 'masterplan'];
 
@@ -135,60 +136,54 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-      <div className="flex flex-none flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1.5 text-[0.82em] uppercase tracking-[0.08em]">
-          <button
-            type="button"
-            onClick={() => setOpenObject(null)}
-            className="flex items-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-secondary"
-          >
-            <Icon name="FileSignature" size={14} className="text-accent" />
-            {ROLE_LABEL[profile.role] ?? 'Кабинет руководителя'}
-          </button>
-          {active && (
-            <>
-              <Icon name="ChevronRight" size={13} className="text-muted-foreground/50" />
-              <span className="max-w-[220px] truncate font-head tracking-[0.1em] text-muted-foreground">
-                {active.title}
-              </span>
-            </>
-          )}
-        </span>
-
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setTeam((v) => !v)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors',
-              team
-                ? 'border-accent bg-accent text-accent-foreground'
-                : 'border-border bg-card hover:border-accent hover:bg-secondary',
-            )}
-          >
-            <Icon name="Users" size={14} />
-            Инспекторы
-          </button>
-          <button
-            type="button"
-            onClick={() => openUpload(active?.id)}
-            className="flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] text-accent-foreground transition-colors hover:bg-accent/90"
-          >
-            <Icon name="Upload" size={14} />
-            Загрузить документы
-          </button>
-          {onExit && (
+      <CabinetBar
+        crumbs={[
+          {
+            label: ROLE_LABEL[profile.role] ?? 'Кабинет руководителя',
+            icon: 'FileSignature',
+            onClick: () => {
+              setOpenObject(null);
+              setTeam(false);
+            },
+          },
+          ...(team ? [{ label: 'Инспекторы' }] : []),
+          ...(active ? [{ label: active.title }] : []),
+        ]}
+        backLabel={team ? 'К обзору' : 'К списку объектов'}
+        onBack={
+          team
+            ? () => setTeam(false)
+            : active
+              ? () => setOpenObject(null)
+              : undefined
+        }
+        onExit={onExit}
+        actions={
+          <>
             <button
               type="button"
-              onClick={onExit}
-              className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-destructive hover:text-destructive"
+              onClick={() => setTeam((v) => !v)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors',
+                team
+                  ? 'border-accent bg-accent text-accent-foreground'
+                  : 'border-border bg-card hover:border-accent hover:bg-secondary',
+              )}
             >
-              <Icon name="LogOut" size={14} />
-              Выйти
+              <Icon name="Users" size={14} />
+              Инспекторы
             </button>
-          )}
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={() => openUpload(active?.id)}
+              className="flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] text-accent-foreground transition-colors hover:bg-accent/90"
+            >
+              <Icon name="Upload" size={14} />
+              Загрузить документы
+            </button>
+          </>
+        }
+      />
 
       {team ? (
         <InspectorsRollup />

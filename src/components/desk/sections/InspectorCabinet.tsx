@@ -26,6 +26,7 @@ import InspectionsCabinet from '@/components/desk/inspection/InspectionsCabinet'
 import OrdersCabinet from '@/components/desk/inspection/OrdersCabinet';
 import ContractorCard from '@/components/desk/inspection/ContractorCard';
 import FoldersCabinet from '@/components/desk/inspection/FoldersCabinet';
+import CabinetBar from '@/components/desk/CabinetBar';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile';
 
@@ -151,66 +152,31 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   };
 
   const objectCrumbs = active && (
-    <div className="flex flex-none flex-wrap items-center gap-2">
-      <span className="flex min-w-0 items-center gap-1.5 text-[0.82em] uppercase tracking-[0.08em]">
-        <button
-          type="button"
-          onClick={() => {
+    <CabinetBar
+      crumbs={[
+        {
+          label: 'Кабинет',
+          icon: 'IdCard',
+          onClick: () => {
             setOpenObject(null);
             setObjectView('menu');
             setView('objects');
-          }}
-          className="flex flex-none items-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <Icon name="IdCard" size={14} className="text-accent" />
-          Кабинет
-        </button>
-        <Icon name="ChevronRight" size={13} className="flex-none text-muted-foreground/50" />
-        <button
-          type="button"
-          onClick={() => setObjectView('menu')}
-          className={cn(
-            'min-w-0 truncate rounded-sm px-2 py-1 font-head tracking-[0.06em] transition-colors',
-            objectView === 'menu'
-              ? 'text-muted-foreground'
-              : 'hover:bg-secondary hover:text-foreground',
-          )}
-        >
-          {active.title}
-        </button>
-        {objectView !== 'menu' && (
-          <>
-            <Icon name="ChevronRight" size={13} className="flex-none text-muted-foreground/50" />
-            <span className="truncate font-head tracking-[0.1em] text-muted-foreground">
-              {OBJ_VIEW_TITLE[objectView]}
-            </span>
-          </>
-        )}
-      </span>
-
-      {objectView === 'menu' && (
-        <button
-          type="button"
-          onClick={() => {
-            setOpenObject(null);
-            setView('objects');
-          }}
-          className="flex flex-none items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
-        >
-          <Icon name="ArrowLeft" size={14} className="text-accent" />
-          К списку объектов
-        </button>
-      )}
-
-      <button
-        type="button"
-        onClick={onExit}
-        className="ml-auto flex flex-none items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-destructive hover:text-destructive"
-      >
-        <Icon name="LogOut" size={14} />
-        Выйти
-      </button>
-    </div>
+          },
+        },
+        { label: active.title, onClick: () => setObjectView('menu') },
+        ...(objectView !== 'menu' ? [{ label: OBJ_VIEW_TITLE[objectView] }] : []),
+      ]}
+      backLabel="К списку объектов"
+      onBack={
+        objectView === 'menu'
+          ? () => {
+              setOpenObject(null);
+              setView('objects');
+            }
+          : undefined
+      }
+      onExit={onExit}
+    />
   );
 
   const wrap = (node: React.ReactNode) => (
@@ -294,43 +260,15 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-      <div className="flex flex-none flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1.5 text-[0.82em] uppercase tracking-[0.08em]">
-          <button
-            type="button"
-            onClick={() => setView('home')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-sm px-2 py-1 transition-colors',
-              view === 'home'
-                ? 'text-muted-foreground'
-                : 'hover:bg-secondary hover:text-foreground',
-            )}
-          >
-            <Icon name="IdCard" size={14} className="text-accent" />
-            Кабинет инспектора
-          </button>
-          {view !== 'home' && (
-            <>
-              <Icon name="ChevronRight" size={13} className="text-muted-foreground/50" />
-              <span className="font-head tracking-[0.1em] text-muted-foreground">
-                {VIEW_TITLE[view]}
-              </span>
-            </>
-          )}
-        </span>
-
-        {view !== 'home' && (
-          <button
-            type="button"
-            onClick={() => setView('home')}
-            className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
-          >
-            <Icon name="ArrowLeft" size={14} className="text-accent" />
-            К обзору
-          </button>
-        )}
-
-        <div className="ml-auto flex items-center gap-2">
+      <CabinetBar
+        crumbs={[
+          { label: 'Кабинет инспектора', icon: 'IdCard', onClick: () => setView('home') },
+          ...(view !== 'home' ? [{ label: VIEW_TITLE[view] }] : []),
+        ]}
+        backLabel="К обзору"
+        onBack={view !== 'home' ? () => setView('home') : undefined}
+        onExit={onExit}
+        actions={
           <button
             type="button"
             onClick={() => setView('profile')}
@@ -344,16 +282,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
             <Icon name="UserCog" size={14} />
             Мой профиль
           </button>
-          <button
-            type="button"
-            onClick={onExit}
-            className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-destructive hover:text-destructive"
-          >
-            <Icon name="LogOut" size={14} />
-            Выйти
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {view === 'home' && (
         <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto">
