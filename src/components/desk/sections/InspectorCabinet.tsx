@@ -34,7 +34,6 @@ type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profil
 
 const VIEW_KEY = 'gsi-cabinet-view-v1';
 const OBJ_KEY = 'gsi-cabinet-object-v1';
-const OBJ_VIEW_KEY = 'gsi-cabinet-object-view-v1';
 
 type ObjView =
   | 'menu'
@@ -78,15 +77,16 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const [openObject, setOpenObject] = useState<string | null>(
     () => localStorage.getItem(OBJ_KEY),
   );
-  const [objectView, setObjectView] = useState<ObjView>(
-    () => (localStorage.getItem(OBJ_VIEW_KEY) as ObjView) || 'menu',
-  );
+  const [objectView, setObjectView] = useState<ObjView>('menu');
 
   useEffect(() => {
     if (openObject) localStorage.setItem(OBJ_KEY, openObject);
     else localStorage.removeItem(OBJ_KEY);
-    localStorage.setItem(OBJ_VIEW_KEY, objectView);
-  }, [openObject, objectView]);
+  }, [openObject]);
+
+  useEffect(() => {
+    setObjectView('menu');
+  }, [openObject]);
 
   const { profile } = useProfile();
   const { list: objects } = useObjects();

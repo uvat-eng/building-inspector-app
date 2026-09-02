@@ -6,7 +6,6 @@ import Tag from '@/components/desk/Tag';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
-import { usePersistedState } from '@/hooks/usePersistedState';
 import { DailyReport, importReportFile, statsOf, useReports } from '@/data/reports';
 import { downloadDailyReport, downloadJournal } from '@/lib/reportXls';
 import DailyReportForm from '@/components/desk/inspection/DailyReportForm';
@@ -45,7 +44,7 @@ const monthLabel = (key: string) => {
 const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
   const { toast } = useToast();
   const { items, loading, remove, reload } = useReports(object.id);
-  const [view, setView] = usePersistedState<View>(`gsi-reports-view-${object.id}`, 'root');
+  const [view, setView] = useState<View>('root');
   const [editing, setEditing] = useState<DailyReport | null>(null);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
   const [viewing, setViewing] = useState<DailyReport | null>(null);
