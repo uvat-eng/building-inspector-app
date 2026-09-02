@@ -6,9 +6,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   onPick: (id: ModuleId) => void;
+  onAdmin?: () => void;
 }
 
-const ModulePicker = ({ onPick }: Props) => {
+const ModulePicker = ({ onPick, onAdmin }: Props) => {
   const { toast } = useToast();
 
   const choose = (id: ModuleId, ready: boolean) => {
@@ -88,6 +89,31 @@ const ModulePicker = ({ onPick }: Props) => {
               </button>
             ))}
           </div>
+
+          {onAdmin && (
+            <button
+              type="button"
+              onClick={onAdmin}
+              className="group mt-2.5 flex w-full items-center gap-3 rounded-sm border border-dashed border-border bg-secondary/30 p-4 text-left transition-all hover:border-accent hover:bg-secondary/60"
+            >
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-foreground text-background">
+                <Icon name="ShieldUser" fallback="Shield" size={21} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[1.05em] uppercase tracking-[0.03em]">
+                  Администратор
+                </span>
+                <span className="mt-1 block text-[0.8em] leading-snug text-muted-foreground">
+                  Полный доступ ко всем модулям, локациям и учётным записям
+                </span>
+              </span>
+              <Icon
+                name="ArrowRight"
+                size={17}
+                className="mt-1 flex-none text-muted-foreground transition-colors group-hover:text-accent"
+              />
+            </button>
+          )}
 
           <p className="mt-6 text-center text-[0.76em] text-muted-foreground">
             ООО «Глобал-Стройинжиниринг» · Тюмень

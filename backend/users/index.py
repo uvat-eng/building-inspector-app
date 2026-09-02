@@ -81,7 +81,7 @@ def handler(event: dict, context) -> dict:
             elif by_id:
                 cur.execute(f"SELECT role FROM users WHERE id = '{by_id}'")
                 r = cur.fetchone()
-                allowed = bool(r and r['role'] in ('pm', 'coordinator', 'director'))
+                allowed = bool(r and r['role'] in ('admin', 'pm', 'coordinator', 'director'))
             if not allowed:
                 return resp(403, {'error': 'not_allowed'})
 

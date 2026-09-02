@@ -27,6 +27,7 @@ import OrdersCabinet from '@/components/desk/inspection/OrdersCabinet';
 import ContractorCard from '@/components/desk/inspection/ContractorCard';
 import FoldersCabinet from '@/components/desk/inspection/FoldersCabinet';
 import CabinetBar from '@/components/desk/CabinetBar';
+import useBackGuard from '@/hooks/use-back-guard';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile';
 
@@ -135,6 +136,13 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       )}
     </Panel>
   );
+
+  useBackGuard(view !== 'home' && !openObject, () => setView('home'));
+  useBackGuard(!!openObject && objectView !== 'menu', () => setObjectView('menu'));
+  useBackGuard(!!openObject && objectView === 'menu', () => {
+    setOpenObject(null);
+    setView('objects');
+  });
 
   const active = objects.find((o) => o.id === openObject);
 

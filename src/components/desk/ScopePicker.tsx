@@ -14,15 +14,9 @@ import {
 import { cn } from '@/lib/utils';
 import { useObjects, NO_FIELD } from '@/data/store';
 import { useLocations } from '@/data/locations';
-import {
-  useProfile,
-  ROLE_LABEL,
-  ROLE_ICON,
-  ROLE_NOTE,
-  Role,
-  canSeeLocation,
-} from '@/data/profile';
+import { useProfile, ROLE_LABEL, ROLE_ICON, ROLE_NOTE, canSeeLocation } from '@/data/profile';
 import { useToast } from '@/hooks/use-toast';
+import useBackGuard from '@/hooks/use-back-guard';
 
 interface Props {
   onReady: (locationId: string, project: string) => void;
@@ -30,22 +24,23 @@ interface Props {
   onLogin: () => void;
 }
 
-const CAN_ADD_LOCATION: Role[] = ['pm', 'director'];
-
 const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
   const { list: objects } = useObjects();
   const { list: allLocations, add } = useLocations();
-  const { profile } = useProfile();
+  const { profile, canAddLocation } = useProfile();
   const { toast } = useToast();
 
   const [loc, setLoc] = useState<string | null>(null);
   const [form, setForm] = useState(false);
   const [name, setName] = useState('');
-  const [roleSeen, setRoleSeen] = useState(!!profile.fio);
+  const [roleSeen, setRoleSeen] = useState(false);
 
-  const canAdd = CAN_ADD_LOCATION.includes(profile.role);
+  const canAdd = canAddLocation;
   const locations = allLocations.filter((l) => canSeeLocation(profile, l.id));
   const isInspector = profile.role === 'inspector';
+
+  useBackGuard(roleSeen && !loc, () => setRoleSeen(false));
+  useBackGuard(!!loc, () => setLoc(null));
 
   const countByLoc = useMemo(() => {
     const m = new Map<string, number>();

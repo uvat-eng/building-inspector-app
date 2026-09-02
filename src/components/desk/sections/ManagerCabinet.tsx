@@ -20,6 +20,7 @@ import { useAllDocuments } from '@/data/allDocuments';
 import { DocSection, SECTION_LABEL, SECTION_ICON, fmtSize, ProjectDoc } from '@/data/documents';
 import InspectorsRollup from '@/components/desk/sections/InspectorsRollup';
 import CabinetBar from '@/components/desk/CabinetBar';
+import useBackGuard from '@/hooks/use-back-guard';
 
 const SECTIONS: DocSection[] = ['contract', 'project', 'working', 'masterplan'];
 
@@ -97,6 +98,9 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
     });
     setUploadOpen(false);
   };
+
+  useBackGuard(team, () => setTeam(false));
+  useBackGuard(!!openObject, () => setOpenObject(null));
 
   const active = objects.find((o) => o.id === openObject);
   const activeDocs = active ? (byObject.get(active.id) ?? []) : [];

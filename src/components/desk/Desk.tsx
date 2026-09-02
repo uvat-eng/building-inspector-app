@@ -33,6 +33,7 @@ import ModulePicker from '@/components/desk/ModulePicker';
 import ScopePicker from '@/components/desk/ScopePicker';
 import { useUsers } from '@/data/users';
 import { useToast } from '@/hooks/use-toast';
+import useBackGuard from '@/hooks/use-back-guard';
 
 const SECTION_KEY = 'gsi-section-v1';
 const SCOPE_ENTERED = 'gsi-scope-entered-v1';
@@ -120,6 +121,9 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     });
   };
 
+  useBackGuard(!!objectId, closeObject);
+  useBackGuard(!objectId && section !== 'objects', goBack);
+
   const canGoBack = !objectId && section !== 'objects' && section !== 'cabinet';
   const backLabel = history.length
     ? `Назад · ${MENU.find((m) => m.id === history[history.length - 1])?.label ?? 'Главная'}`
@@ -128,7 +132,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
 
 
   const content = {
-    cabinet: ['pm', 'coordinator', 'director', 'manager', 'engineer'].includes(profile.role) ? (
+    cabinet: ['admin', 'pm', 'coordinator', 'director', 'manager', 'engineer'].includes(profile.role) ? (
       <ManagerCabinet
         onExit={() => {
           leaveOk.current = true;
@@ -260,7 +264,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
         open={loginOpen}
         onOpenChange={setLoginOpen}
         onEntered={(r) =>
-          ['inspector', 'pm', 'coordinator', 'director'].includes(r) && select('cabinet')
+          ['inspector', 'admin', 'pm', 'coordinator', 'director'].includes(r) && select('cabinet')
         }
       />
     </div>
@@ -271,7 +275,13 @@ const DeskRoot = () => {
   const { module, pick } = useModule();
   const { save: saveScope, clear: clearScope } = useScope();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [adminLogin, setAdminLogin] = useState(false);
   const [inScope, setInScope] = useState(() => !!localStorage.getItem(SCOPE_ENTERED));
+
+  useBackGuard(inScope, () => {
+    localStorage.removeItem(SCOPE_ENTERED);
+    setInScope(false);
+  });
 
   const enterScope = (locationId: string, project: string) => {
     saveScope({ locationId, project });
@@ -290,7 +300,18 @@ const DeskRoot = () => {
     pick(null);
   };
 
-  if (!module) return <ModulePicker onPick={pick} />;
+  if (!module)
+    return (
+      <>
+        <ModulePicker onPick={pick} onAdmin={() => setAdminLogin(true)} />
+        <LoginDialog
+          open={adminLogin}
+          onOpenChange={setAdminLogin}
+          adminMode
+          onEntered={() => pick('sk')}
+        />
+      </>
+    );
 
   if (!inScope) {
     return (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type Role =
+  | 'admin'
   | 'director'
   | 'coordinator'
   | 'pm'
@@ -10,6 +11,7 @@ export type Role =
   | 'driver';
 
 export const ROLE_ORDER: Role[] = [
+  'admin',
   'director',
   'coordinator',
   'pm',
@@ -20,6 +22,7 @@ export const ROLE_ORDER: Role[] = [
 ];
 
 export const ROLE_LABEL: Record<Role, string> = {
+  admin: 'Администратор системы',
   director: 'Директор',
   coordinator: 'Координатор проекта',
   pm: 'Менеджер проекта',
@@ -30,6 +33,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 };
 
 export const ROLE_NOTE: Record<Role, string> = {
+  admin: 'Полный доступ ко всем разделам, локациям и учётным записям без ограничений',
   director: 'Полный доступ, сводка по всем объектам и подписание документов',
   coordinator: 'Координация работ и графики выездов',
   pm: 'Договоры с заказчиком, месторождения, проекты и объекты — внесение и правка',
@@ -40,6 +44,7 @@ export const ROLE_NOTE: Record<Role, string> = {
 };
 
 export const ROLE_ICON: Record<Role, string> = {
+  admin: 'ShieldUser',
   director: 'Crown',
   coordinator: 'Network',
   pm: 'FileSignature',
@@ -49,9 +54,22 @@ export const ROLE_ICON: Record<Role, string> = {
   driver: 'Truck',
 };
 
-const CAN_EDIT: Role[] = ['pm'];
+const CAN_EDIT: Role[] = ['admin', 'pm'];
+
+export const CAN_ADD_LOCATION: Role[] = ['admin', 'director', 'pm', 'coordinator'];
 
 export const ROLE_SECTIONS: Record<Role, string[]> = {
+  admin: [
+    'cabinet',
+    'objects',
+    'staff',
+    'sites',
+    'inspections',
+    'defects',
+    'photos',
+    'documents',
+    'reports',
+  ],
   director: [
     'cabinet',
     'objects',
@@ -105,10 +123,12 @@ export interface Profile {
   specialties: string[];
 }
 
-export const CAN_MANAGE_USERS: Role[] = ['pm', 'coordinator', 'director'];
+export const CAN_MANAGE_USERS: Role[] = ['admin', 'pm', 'coordinator', 'director'];
 
 export const canSeeLocation = (p: Profile, id: string) =>
   CAN_MANAGE_USERS.includes(p.role) || !p.locations?.length || p.locations.includes(id);
+
+export const canAddLocation = (r: Role) => CAN_ADD_LOCATION.includes(r);
 
 const DEFAULT: Profile = {
   fio: '',
@@ -154,6 +174,8 @@ export const useProfile = () => {
     save,
     canAddObject: CAN_EDIT.includes(profile.role),
     canManageUsers: CAN_MANAGE_USERS.includes(profile.role),
+    canAddLocation: CAN_ADD_LOCATION.includes(profile.role),
+    isAdmin: profile.role === 'admin',
   };
 };
 

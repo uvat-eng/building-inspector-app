@@ -18,9 +18,10 @@ interface LoginDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onEntered?: (role: Role) => void;
+  adminMode?: boolean;
 }
 
-const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
+const LoginDialog = ({ open, onOpenChange, onEntered, adminMode }: LoginDialogProps) => {
   const { save } = useProfile();
   const { toast } = useToast();
 
@@ -66,6 +67,14 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
     setBusy(true);
     try {
       const user = await loginUser(fio, pass);
+      if (adminMode && user.role !== 'admin') {
+        toast({
+          title: 'Это не учётная запись администратора',
+          description: 'Войдите через свой модуль.',
+          variant: 'destructive',
+        });
+        return;
+      }
       enter(user);
     } catch (e) {
       const code = (e as Error).message;
@@ -101,7 +110,7 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
       const user = await registerUser({
         fio: fio.trim().replace(/\s+/g, ' '),
         password: pass,
-        role: 'pm',
+        role: adminMode ? 'admin' : 'pm',
         group: '',
         org: 'ООО «Глобал-Стройинжиниринг»',
         phone: '',
@@ -123,12 +132,14 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
       <DialogContent className="max-w-md rounded-sm">
         <DialogHeader>
           <DialogTitle className="font-head text-[1.4em] uppercase tracking-[0.03em]">
-            {empty ? 'Первый вход' : 'Вход в систему'}
+            {empty ? 'Первый вход' : adminMode ? 'Вход администратора' : 'Вход в систему'}
           </DialogTitle>
           <DialogDescription className="text-[0.85em] text-muted-foreground">
             {empty
-              ? 'В системе ещё нет сотрудников. Создайте учётную запись менеджера проекта — дальше доступы выдаёт он.'
-              : 'Логин — ваши фамилия, имя и отчество на русском языке.'}
+              ? `В системе ещё нет сотрудников. Создайте учётную запись ${adminMode ? 'администратора' : 'менеджера проекта'} — дальше доступы выдаёт он.`
+              : adminMode
+                ? 'Доступ только для администратора системы.'
+                : 'Логин — ваши фамилия, имя и отчество на русском языке.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -171,10 +182,12 @@ const LoginDialog = ({ open, onOpenChange, onEntered }: LoginDialogProps) => {
             {busy ? 'Проверяем…' : empty ? 'Создать и войти' : 'Войти'}
           </Button>
 
-          <p className="rounded-sm border border-border bg-secondary/50 px-3 py-2.5 text-center text-[0.78em] leading-snug text-muted-foreground">
-            Учётные записи создаёт менеджер или координатор проекта. Он же выдаёт пароль и
-            открывает доступ к локациям.
-          </p>
+          {!adminMode && (
+            <p className="rounded-sm border border-border bg-secondary/50 px-3 py-2.5 text-center text-[0.78em] leading-snug text-muted-foreground">
+              Учётные записи создаёт менеджер или координатор проекта. Он же выдаёт пароль и
+              открывает доступ к локациям.
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>
