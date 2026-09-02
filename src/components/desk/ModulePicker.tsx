@@ -33,7 +33,10 @@ const ModulePicker = ({ onPick, onAdmin }: Props) => {
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-sm bg-accent text-accent-foreground">
               <Icon name="Building2" size={24} />
             </span>
-            <h1 className="mt-4 font-head text-[22px] uppercase leading-[1.1] tracking-[0.02em] sm:text-[30px]">
+            <p className="mt-4 font-head text-[17px] uppercase leading-[1.15] tracking-[0.03em] text-muted-foreground sm:text-[23px]">
+              Система управления строительным контролем
+            </p>
+            <h1 className="mt-1.5 font-head text-[22px] uppercase leading-[1.1] tracking-[0.02em] sm:text-[30px]">
               Приложение <span className="text-accent">Инспектор</span>
             </h1>
             <p className="mx-auto mt-2 max-w-md text-[0.88em] text-muted-foreground">
