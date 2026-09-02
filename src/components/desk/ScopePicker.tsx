@@ -25,6 +25,8 @@ import {
 } from '@/data/profile';
 import { useToast } from '@/hooks/use-toast';
 import useBackGuard from '@/hooks/use-back-guard';
+import { useFields } from '@/data/fields';
+import ObjectForm from '@/components/desk/ObjectForm';
 
 interface Props {
   onReady: (locationId: string, project: string) => void;
@@ -33,14 +35,19 @@ interface Props {
 }
 
 const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
-  const { list: objects } = useObjects();
+  const { list: objects, add: addObject } = useObjects();
   const { list: allLocations, add } = useLocations();
-  const { profile, save, canAddLocation, isAdmin } = useProfile();
+  const { profile, save, canAddLocation, canAddObject, isAdmin } = useProfile();
   const { toast } = useToast();
 
   const [loc, setLoc] = useState<string | null>(null);
   const [form, setForm] = useState(false);
   const [name, setName] = useState('');
+  const [fieldForm, setFieldForm] = useState(false);
+  const [fieldName, setFieldName] = useState('');
+  const [objForm, setObjForm] = useState(false);
+  const [objField, setObjField] = useState('');
+  const { list: fields, add: addField } = useFields(loc ?? undefined);
   const [roleSeen, setRoleSeen] = useState(false);
   const fioRef = useRef(profile.fio);
 
@@ -65,6 +72,7 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
   const projects = useMemo(() => {
     if (!loc) return [];
     const m = new Map<string, number>();
+    fields.forEach((f) => m.set(f.title, 0));
     objects
       .filter((o) => o.location === loc)
       .forEach((o) => {
@@ -72,7 +80,20 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
         m.set(key, (m.get(key) ?? 0) + 1);
       });
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ru'));
-  }, [objects, loc]);
+  }, [objects, loc, fields]);
+
+  const createField = async () => {
+    const title = fieldName.trim();
+    if (title.length < 2) {
+      toast({ title: 'Введите название месторождения', variant: 'destructive' });
+      return;
+    }
+    if (!loc) return;
+    await addField({ locationId: loc, title, createdBy: profile.fio });
+    toast({ title: 'Месторождение создано', description: title });
+    setFieldName('');
+    setFieldForm(false);
+  };
 
   const createLoc = async () => {
     const title = name.trim();
@@ -287,12 +308,26 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
             </>
           ) : (
             <>
-              <h1 className="mt-3 font-head text-[20px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[26px]">
-                {locations.find((l) => l.id === loc)?.title}
-              </h1>
-              <p className="mt-1 text-[0.84em] text-muted-foreground">
-                Проект — название месторождения или города, внутри список объектов
-              </p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="font-head text-[20px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[26px]">
+                    {locations.find((l) => l.id === loc)?.title}
+                  </h1>
+                  <p className="mt-1 text-[0.84em] text-muted-foreground">
+                    Проект — название месторождения или города, внутри список объектов
+                  </p>
+                </div>
+                {canAddObject && (
+                  <Button
+                    size="sm"
+                    onClick={() => setFieldForm(true)}
+                    className="h-8 flex-none gap-1.5 rounded-sm bg-accent px-3 font-head text-[0.8em] uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+                  >
+                    <Icon name="Plus" size={14} />
+                    Месторождение
+                  </Button>
+                )}
+              </div>
 
               <div className="mt-4 grid gap-2">
                 <button
@@ -330,29 +365,46 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
                   </div>
                 ) : (
                   projects.map(([p, n]) => (
-                    <button
+                    <div
                       key={p}
-                      type="button"
-                      onClick={() => onReady(loc, p === NO_FIELD ? '' : p)}
-                      className="group flex items-center gap-3 rounded-sm border border-border bg-card p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-lg"
+                      className="group flex items-center gap-3 rounded-sm border border-border bg-card p-3.5 transition-all hover:border-accent hover:shadow-lg"
                     >
-                      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-secondary text-muted-foreground transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
-                        <Icon name="Mountain" size={18} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-head text-[1em] uppercase tracking-[0.03em]">
-                          {p}
+                      <button
+                        type="button"
+                        onClick={() => onReady(loc, p === NO_FIELD ? '' : p)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      >
+                        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-secondary text-muted-foreground transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+                          <Icon name="Mountain" size={18} />
                         </span>
-                        <span className="block text-[0.78em] text-muted-foreground">
-                          {n} объектов
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-head text-[1em] uppercase tracking-[0.03em]">
+                            {p}
+                          </span>
+                          <span className="block text-[0.78em] text-muted-foreground">
+                            {n} объектов
+                          </span>
                         </span>
-                      </span>
+                      </button>
+                      {canAddObject && p !== NO_FIELD && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setObjField(p);
+                            setObjForm(true);
+                          }}
+                          className="flex flex-none items-center gap-1.5 rounded-sm border border-border px-2.5 py-1.5 text-[0.75em] uppercase tracking-[0.07em] text-muted-foreground transition-colors hover:border-accent hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <Icon name="Plus" size={13} />
+                          Объект
+                        </button>
+                      )}
                       <Icon
                         name="ChevronRight"
                         size={17}
                         className="flex-none text-muted-foreground transition-colors group-hover:text-accent"
                       />
-                    </button>
+                    </div>
                   ))
                 )}
               </div>
@@ -360,6 +412,45 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
           )}
         </div>
       </main>
+
+      <Dialog open={fieldForm} onOpenChange={setFieldForm}>
+        <DialogContent className="max-w-sm rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.15em] uppercase tracking-[0.03em]">
+              Новое месторождение
+            </DialogTitle>
+            <DialogDescription className="text-[0.85em]">
+              Месторождение или город внутри локации «{locations.find((l) => l.id === loc)?.title}»
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+              Название
+            </Label>
+            <Input
+              value={fieldName}
+              onChange={(e) => setFieldName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createField()}
+              placeholder="напр. Восточно-Мессояхское"
+              className="rounded-sm"
+            />
+          </div>
+          <Button
+            onClick={createField}
+            className="w-full rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+          >
+            Создать
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <ObjectForm
+        open={objForm}
+        onOpenChange={setObjForm}
+        onSave={addObject}
+        defaultLocation={loc ?? ''}
+        defaultProject={objField}
+      />
 
       <Dialog open={form} onOpenChange={setForm}>
         <DialogContent className="max-w-sm rounded-sm">

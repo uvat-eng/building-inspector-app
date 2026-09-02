@@ -127,8 +127,8 @@ def handler(event: dict, context) -> dict:
             nxt = cur.fetchone()['s']
             cur.execute(
                 f"INSERT INTO locations (id, title, icon, note, sort, created_by) VALUES "
-                f"('{esc(lid)}', '{esc(loc.get('title'))}', '{esc(loc.get('icon') or 'MapPin')}', "
-                f"'{esc(loc.get('note'))}', {int(loc.get('sort') or nxt)}, '{esc(loc.get('createdBy'))}') "
+                f"({esc(lid)}, {esc(loc.get('title'))}, {esc(loc.get('icon') or 'MapPin')}, "
+                f"{esc(loc.get('note') or '')}, {int(loc.get('sort') or nxt)}, {esc(loc.get('createdBy') or '')}) "
                 f"ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, icon = EXCLUDED.icon, "
                 f"note = EXCLUDED.note"
             )
@@ -141,19 +141,78 @@ def handler(event: dict, context) -> dict:
             sets = []
             for k, c in (('title', 'title'), ('icon', 'icon'), ('note', 'note')):
                 if k in loc:
-                    sets.append(f"{c} = '{esc(loc[k])}'")
+                    sets.append(f"{c} = {esc(loc[k])}")
             if 'sort' in loc:
                 sets.append(f"sort = {int(loc['sort'] or 0)}")
             if sets:
-                cur.execute(f"UPDATE locations SET {', '.join(sets)} WHERE id = '{lid}'")
+                cur.execute(f"UPDATE locations SET {', '.join(sets)} WHERE id = {lid}")
             cur.close()
             conn.close()
             return resp_json({'ok': True})
 
         if method == 'DELETE':
             lid = esc(loc.get('id') or params.get('id'))
-            cur.execute(f"UPDATE objects SET location = '' WHERE location = '{lid}'")
-            cur.execute(f"DELETE FROM locations WHERE id = '{lid}'")
+            cur.execute(f"UPDATE objects SET location = '' WHERE location = {lid}")
+            cur.execute(f"DELETE FROM locations WHERE id = {lid}")
+            cur.close()
+            conn.close()
+            return resp_json({'ok': True})
+
+    if kind_param == 'fields':
+        if method == 'GET':
+            loc_id = params.get('location_id') or ''
+            where = f"WHERE location_id = {esc(loc_id)}" if loc_id else ''
+            cur.execute(f'SELECT * FROM project_fields {where} ORDER BY sort, title')
+            items = [
+                {
+                    'id': r['id'],
+                    'locationId': r['location_id'],
+                    'title': r['title'],
+                    'note': r['note'],
+                    'sort': r['sort'],
+                }
+                for r in cur.fetchall()
+            ]
+            cur.close()
+            conn.close()
+            return resp_json({'items': items})
+
+        fld = json.loads(event.get('body') or '{}')
+
+        if method == 'POST':
+            fid = (fld.get('id') or '').strip() or f"fld-{int(time.time() * 1000)}"
+            cur.execute('SELECT COALESCE(MAX(sort), 0) + 1 AS s FROM project_fields')
+            nxt = cur.fetchone()['s']
+            cur.execute(
+                'INSERT INTO project_fields (id, location_id, title, note, sort, created_by) VALUES ('
+                f"{esc(fid)}, {esc(fld.get('locationId'))}, {esc(fld.get('title'))}, "
+                f"{esc(fld.get('note') or '')}, {int(fld.get('sort') or nxt)}, "
+                f"{esc(fld.get('createdBy') or '')}) "
+                'ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, note = EXCLUDED.note'
+            )
+            cur.close()
+            conn.close()
+            return resp_json({'id': fid})
+
+        if method == 'PUT':
+            fid = esc(fld.get('id'))
+            sets = []
+            for k, c in (('title', 'title'), ('note', 'note')):
+                if k in fld:
+                    sets.append(f"{c} = {esc(fld[k])}")
+            if sets:
+                cur.execute(f"UPDATE project_fields SET {', '.join(sets)} WHERE id = {fid}")
+            cur.close()
+            conn.close()
+            return resp_json({'ok': True})
+
+        if method == 'DELETE':
+            fid = esc(fld.get('id') or params.get('id'))
+            cur.execute(f"SELECT title FROM project_fields WHERE id = {fid}")
+            row = cur.fetchone()
+            if row:
+                cur.execute(f"UPDATE objects SET field = '' WHERE field = {esc(row['title'])}")
+            cur.execute(f"DELETE FROM project_fields WHERE id = {fid}")
             cur.close()
             conn.close()
             return resp_json({'ok': True})
