@@ -157,7 +157,7 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
                     key={r}
                     type="button"
                     onClick={() => {
-                      if (isAdmin && profile.role !== r) save({ role: r });
+                      if (isAdmin && profile.role !== r) save({ role: r, baseRole: 'admin' });
                       if (mine) setRoleSeen(true);
                       else onLogin(r);
                     }}

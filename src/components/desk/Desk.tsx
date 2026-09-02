@@ -290,6 +290,15 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
 
 const DeskRoot = () => {
   const { module, pick } = useModule();
+  const { current } = useUsers();
+  const { profile, save: saveProfile } = useProfile();
+
+  useEffect(() => {
+    if (!current) return;
+    if (current.role === 'admin' && profile.baseRole !== 'admin') saveProfile({ baseRole: 'admin' });
+    if (current.role !== 'admin' && profile.baseRole === 'admin') saveProfile({ baseRole: current.role });
+  }, [current, profile.baseRole, saveProfile]);
+
   const { save: saveScope, clear: clearScope } = useScope();
   const [loginOpen, setLoginOpen] = useState(false);
   const [wantRole, setWantRole] = useState<Role | null>(null);
