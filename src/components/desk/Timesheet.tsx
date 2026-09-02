@@ -229,6 +229,43 @@ const Timesheet = () => {
 
   return (
     <>
+      <Panel title="Учёт по вахтам" note={`${shifts.length}`}>
+        {shifts.length === 0 ? (
+          <p className="p-4 text-[0.85em] text-muted-foreground">
+            Отметьте рабочие дни — вахта соберётся сама, даже если переходит через месяц.
+          </p>
+        ) : (
+          shifts.slice(0, 6).map((s) => (
+            <div
+              key={s.start}
+              className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+            >
+              <span
+                className={cn(
+                  'flex h-9 w-9 flex-none items-center justify-center rounded-sm',
+                  s.open ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground',
+                )}
+              >
+                <Icon name={s.open ? 'PlayCircle' : 'CheckCircle2'} size={17} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[0.95em] uppercase tracking-[0.02em]">
+                  Вахта {shiftLabel(s)}
+                  {s.open && <span className="ml-2 text-[0.8em] text-accent">идёт</span>}
+                </span>
+                <span className="block truncate text-[0.76em] text-muted-foreground">
+                  {s.workDays} смен · {fmtHours(s.hours)} ч
+                  {s.moDays
+                    ? ` · МО ${s.moDays} дн. с ${fmtDay(s.moStart)}`
+                    : ''}
+                  {s.objects.length ? ` · ${s.objects.join(', ')}` : ''}
+                </span>
+              </span>
+            </div>
+          ))
+        )}
+      </Panel>
+
       <Panel
         title="Табель учёта рабочего времени"
         note={`${workEntries.length} см. · ${fmtHours(totalHours)} ч${
@@ -376,42 +413,6 @@ const Timesheet = () => {
         </div>
       </Panel>
 
-      <Panel title="Учёт по вахтам" note={`${shifts.length}`}>
-        {shifts.length === 0 ? (
-          <p className="p-4 text-[0.85em] text-muted-foreground">
-            Отметьте рабочие дни — вахта соберётся сама, даже если переходит через месяц.
-          </p>
-        ) : (
-          shifts.slice(0, 6).map((s) => (
-            <div
-              key={s.start}
-              className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
-            >
-              <span
-                className={cn(
-                  'flex h-9 w-9 flex-none items-center justify-center rounded-sm',
-                  s.open ? 'bg-accent text-accent-foreground' : 'bg-secondary text-muted-foreground',
-                )}
-              >
-                <Icon name={s.open ? 'PlayCircle' : 'CheckCircle2'} size={17} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-head text-[0.95em] uppercase tracking-[0.02em]">
-                  Вахта {shiftLabel(s)}
-                  {s.open && <span className="ml-2 text-[0.8em] text-accent">идёт</span>}
-                </span>
-                <span className="block truncate text-[0.76em] text-muted-foreground">
-                  {s.workDays} смен · {fmtHours(s.hours)} ч
-                  {s.moDays
-                    ? ` · МО ${s.moDays} дн. с ${fmtDay(s.moStart)}`
-                    : ''}
-                  {s.objects.length ? ` · ${s.objects.join(', ')}` : ''}
-                </span>
-              </span>
-            </div>
-          ))
-        )}
-      </Panel>
 
       <Dialog open={pick !== null} onOpenChange={(v) => !v && setPick(null)}>
         <DialogContent
