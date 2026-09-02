@@ -22,10 +22,8 @@ import {
   ProjectObject,
   STATUS_LABEL,
   KIND_LABEL,
-  LOCATIONS,
-  locationTitle,
-  locationIcon,
 } from '@/data/store';
+import { useLocations, locTitle, locIcon } from '@/data/locations';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { CITIES } from '@/data/geo';
 import type { TagTone } from '@/data/mock';
@@ -58,6 +56,7 @@ const km = (aLon: number, aLat: number, bLon: number, bLat: number) => {
 
 const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
   const { list, update, remove } = useObjects();
+  const { list: locations } = useLocations();
   const { profile, canAddObject } = useProfile();
   const { toast } = useToast();
   const object = list.find((o) => o.id === id) ?? null;
@@ -227,7 +226,7 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
                 </Label>
                 {edit ? (
                   <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                    {LOCATIONS.map((l) => (
+                    {locations.map((l) => (
                       <button
                         key={l.id}
                         type="button"
@@ -246,11 +245,11 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
                 ) : (
                   <p className="flex items-center gap-1.5 text-[0.95em]">
                     <Icon
-                      name={locationIcon(object.location)}
+                      name={locIcon(locations, object.location)}
                       size={15}
                       className="text-accent"
                     />
-                    {locationTitle(object.location)}
+                    {locTitle(locations, object.location)}
                   </p>
                 )}
               </div>

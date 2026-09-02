@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,12 +20,15 @@ import RussiaMap from "@/components/desk/RussiaMap";
 import Icon from "@/components/ui/icon";
 import { useToast } from "@/hooks/use-toast";
 import { CITIES, DISTRICTS } from "@/data/geo";
-import { ProjectObject, STATUS_LABEL, KIND_LABEL, LOCATIONS } from "@/data/store";
+import { ProjectObject, STATUS_LABEL, KIND_LABEL } from "@/data/store";
+import { useLocations } from "@/data/locations";
 
 interface ObjectFormProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSave: (o: Omit<ProjectObject, "id">) => void | Promise<unknown>;
+  defaultLocation?: string;
+  defaultProject?: string;
 }
 
 const EMPTY = {
@@ -64,8 +67,28 @@ const dist = (aLon: number, aLat: number, bLon: number, bLat: number) => {
   return Math.sqrt(dx * dx + dy * dy);
 };
 
-const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
-  const [f, setF] = useState(EMPTY);
+const ObjectForm = ({
+  open,
+  onOpenChange,
+  onSave,
+  defaultLocation = "",
+  defaultProject = "",
+}: ObjectFormProps) => {
+  const { list: locations } = useLocations();
+  const [f, setF] = useState({
+    ...EMPTY,
+    location: defaultLocation,
+    field: defaultProject,
+  });
+
+  useEffect(() => {
+    if (open)
+      setF((p) => ({
+        ...p,
+        location: p.location || defaultLocation,
+        field: p.field || defaultProject,
+      }));
+  }, [open, defaultLocation, defaultProject]);
   const [point, setPoint] = useState<{ lon: number; lat: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
@@ -231,7 +254,7 @@ const ObjectForm = ({ open, onOpenChange, onSave }: ObjectFormProps) => {
               Локация
             </Label>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-              {LOCATIONS.map((l) => (
+              {locations.map((l) => (
                 <button
                   key={l.id}
                   type="button"

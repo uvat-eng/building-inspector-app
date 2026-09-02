@@ -81,6 +81,14 @@ def connect():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
 
+def resp_json(data: dict, status: int = 200) -> dict:
+    return {
+        'statusCode': status,
+        'headers': CORS,
+        'body': json.dumps(data, ensure_ascii=False),
+    }
+
+
 def handler(event: dict, context) -> dict:
     """Общий справочник объектов строительства: список, создание, правка и удаление на сервере."""
     method = event.get('httpMethod', 'GET')
@@ -90,6 +98,65 @@ def handler(event: dict, context) -> dict:
     conn = connect()
     conn.autocommit = True
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    params = event.get('queryStringParameters') or {}
+    kind_param = params.get('kind') or ''
+
+    if kind_param == 'locations':
+        if method == 'GET':
+            cur.execute('SELECT * FROM locations ORDER BY sort, title')
+            items = [
+                {
+                    'id': r['id'],
+                    'title': r['title'],
+                    'icon': r['icon'],
+                    'note': r['note'],
+                    'sort': r['sort'],
+                }
+                for r in cur.fetchall()
+            ]
+            cur.close()
+            conn.close()
+            return resp_json({'items': items})
+
+        loc = json.loads(event.get('body') or '{}')
+
+        if method == 'POST':
+            lid = (loc.get('id') or '').strip() or f"loc-{int(time.time() * 1000)}"
+            cur.execute('SELECT COALESCE(MAX(sort), 0) + 1 AS s FROM locations')
+            nxt = cur.fetchone()['s']
+            cur.execute(
+                f"INSERT INTO locations (id, title, icon, note, sort, created_by) VALUES "
+                f"('{esc(lid)}', '{esc(loc.get('title'))}', '{esc(loc.get('icon') or 'MapPin')}', "
+                f"'{esc(loc.get('note'))}', {int(loc.get('sort') or nxt)}, '{esc(loc.get('createdBy'))}') "
+                f"ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, icon = EXCLUDED.icon, "
+                f"note = EXCLUDED.note"
+            )
+            cur.close()
+            conn.close()
+            return resp_json({'id': lid})
+
+        if method == 'PUT':
+            lid = esc(loc.get('id'))
+            sets = []
+            for k, c in (('title', 'title'), ('icon', 'icon'), ('note', 'note')):
+                if k in loc:
+                    sets.append(f"{c} = '{esc(loc[k])}'")
+            if 'sort' in loc:
+                sets.append(f"sort = {int(loc['sort'] or 0)}")
+            if sets:
+                cur.execute(f"UPDATE locations SET {', '.join(sets)} WHERE id = '{lid}'")
+            cur.close()
+            conn.close()
+            return resp_json({'ok': True})
+
+        if method == 'DELETE':
+            lid = esc(loc.get('id') or params.get('id'))
+            cur.execute(f"UPDATE objects SET location = '' WHERE location = '{lid}'")
+            cur.execute(f"DELETE FROM locations WHERE id = '{lid}'")
+            cur.close()
+            conn.close()
+            return resp_json({'ok': True})
 
     if method == 'GET':
         cur.execute('SELECT * FROM objects ORDER BY location, field, title')

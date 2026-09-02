@@ -4,7 +4,8 @@ import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useObjects, groupByLocation, groupByField, locationTitle, locationIcon, NO_FIELD } from '@/data/store';
+import { useObjects, groupByLocation, groupByField, NO_FIELD } from '@/data/store';
+import { useLocations, locTitle, locIcon } from '@/data/locations';
 import { InspectorRollup } from '@/data/rollup';
 import { MARKS, MONTHS, fmtHours } from '@/data/timesheet';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,7 @@ const CODES = ['Я', ...MARKS.map((m) => m.code)];
 
 const BrigadeTimesheet = ({ items, month, year }: Props) => {
   const { list: objects } = useObjects();
+  const { list: locations } = useLocations();
   const { toast } = useToast();
   const days = new Date(year, month + 1, 0).getDate();
   const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -35,7 +37,7 @@ const BrigadeTimesheet = ({ items, month, year }: Props) => {
     });
 
     const used = objects.filter((o) => byObj.has(o.id));
-    const groups = groupByLocation(used).map(
+    const groups = groupByLocation(used, locations.map((l) => l.id)).map(
       ([loc, list]) =>
         [
           loc,
@@ -46,7 +48,7 @@ const BrigadeTimesheet = ({ items, month, year }: Props) => {
         ] as const,
     );
     return { groups, rest };
-  }, [items, objects, objById]);
+  }, [items, objects, objById, locations]);
 
   const countCode = (i: InspectorRollup, code: string) =>
     Object.entries(i.codes ?? {}).filter(([d, c]) => d.startsWith(prefix) && c === code).length;
@@ -77,7 +79,7 @@ const BrigadeTimesheet = ({ items, month, year }: Props) => {
     };
     tree.groups.forEach(([loc, fields]) =>
       fields.forEach(([field, list]) =>
-        push(`${locationTitle(loc)} · ${field === NO_FIELD ? 'без проекта' : field}`, list),
+        push(`${locTitle(locations, loc)} · ${field === NO_FIELD ? 'без проекта' : field}`, list),
       ),
     );
     if (tree.rest.length) push('Без привязки к объекту', tree.rest);
@@ -188,9 +190,9 @@ const BrigadeTimesheet = ({ items, month, year }: Props) => {
             {tree.groups.map(([loc, fields]) => (
               <div key={loc || 'none'}>
                 <div className="flex items-center gap-2 border-b border-foreground/85 bg-foreground px-3 py-2 text-background">
-                  <Icon name={locationIcon(loc)} size={15} className="text-accent" />
+                  <Icon name={locIcon(locations, loc)} size={15} className="text-accent" />
                   <span className="font-head text-[1.05em] uppercase tracking-[0.03em]">
-                    {locationTitle(loc)}
+                    {locTitle(locations, loc)}
                   </span>
                   <span className="text-[0.7em] tracking-[0.1em] opacity-70">
                     {fields.reduce((s, [, l]) => s + l.length, 0)} чел.

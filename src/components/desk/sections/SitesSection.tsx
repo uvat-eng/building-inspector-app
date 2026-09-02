@@ -12,9 +12,10 @@ import {
   groupByField,
   NO_FIELD,
   groupByLocation,
-  locationTitle,
-  locationIcon,
+  inScope,
 } from '@/data/store';
+import { useLocations, locTitle, locIcon } from '@/data/locations';
+import { useScope } from '@/data/scope';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,8 @@ const cell = (o: ProjectObject, key: (typeof COLS)[number]['key']) => {
 
 const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
   const { list, add, loading } = useObjects();
+  const { scope } = useScope();
+  const { list: locations } = useLocations();
   const { profile, canAddObject } = useProfile();
   const { toast } = useToast();
   const [inner, setInner] = useState<string | null>(null);
@@ -74,14 +77,14 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
     return <ObjectPage id={current} onBack={() => setCurrent(null)} />;
   }
 
-  const shown = list.filter((o) =>
+  const shown = inScope(list, scope).filter((o) =>
     query.trim()
-      ? `${o.title} ${o.field} ${o.customer} ${o.regionName} ${locationTitle(o.location)}`
+      ? `${o.title} ${o.field} ${o.customer} ${o.regionName} ${locTitle(locations, o.location)}`
           .toLowerCase()
           .includes(query.trim().toLowerCase())
       : true,
   );
-  const locGroups = groupByLocation(shown).map(
+  const locGroups = groupByLocation(shown, locations.map((l) => l.id)).map(
     ([loc, items]) => [loc, groupByField(items)] as const,
   );
   const fieldCount = locGroups.reduce((s, [, g]) => s + g.length, 0);
@@ -164,11 +167,11 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
                     <div className="flex items-end gap-3 border-b border-foreground/85 bg-foreground px-4 py-2.5 text-background">
                       <span className="min-w-0 flex-1 truncate font-head text-[1.25em] uppercase tracking-[0.03em]">
                         <Icon
-                          name={locationIcon(loc)}
+                          name={locIcon(locations, loc)}
                           size={16}
                           className="mr-2 inline text-accent"
                         />
-                        {locationTitle(loc)}
+                        {locTitle(locations, loc)}
                         <span className="ml-2 text-[0.6em] tracking-[0.1em] opacity-70">
                           {fields.length} проект. · {all.length} об.
                         </span>
@@ -268,7 +271,13 @@ const SitesSection = ({ openId = null, onOpen }: SitesSectionProps) => {
         )}
       </Panel>
 
-      <ObjectForm open={form} onOpenChange={setForm} onSave={add} />
+      <ObjectForm
+        open={form}
+        onOpenChange={setForm}
+        onSave={add}
+        defaultLocation={scope.locationId}
+        defaultProject={scope.project}
+      />
     </div>
   );
 };
