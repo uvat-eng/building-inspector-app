@@ -54,6 +54,8 @@ export interface DailyReport {
   author: string;
   note: string;
   rows: ReportRow[];
+  fileUrl?: string;
+  fileName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,13 +83,36 @@ export const EMPTY_ROW: Omit<ReportRow, 'id'> = {
 
 export const rid = () => Math.random().toString(36).slice(2, 10);
 
-export const uploadReportPhoto = async (objectId: string, file: File) => {
-  const content = await new Promise<string>((resolve, reject) => {
+const toBase64 = (file: File) =>
+  new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+export const IMPORT_ERRORS: Record<string, string> = {
+  no_rows_found: 'В файле не найдено ни одной строки предписания',
+  date_not_found: 'Не удалось определить дату отчёта в файле',
+  file_and_object_required: 'Файл не передан',
+};
+
+export const importReportFile = async (objectId: string, file: File) => {
+  const content = await toBase64(file);
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind: 'import', objectId, fileName: file.name, content }),
+  });
+  const data = (await res.json()) as { item?: DailyReport; error?: string };
+  if (!res.ok || !data.item) {
+    throw new Error(IMPORT_ERRORS[data.error ?? ''] ?? 'Не удалось разобрать файл');
+  }
+  return data.item;
+};
+
+export const uploadReportPhoto = async (objectId: string, file: File) => {
+  const content = await toBase64(file);
   const res = await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
@@ -7,16 +7,17 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { usePersistedState } from '@/hooks/usePersistedState';
-import { DailyReport, statsOf, useReports } from '@/data/reports';
+import { DailyReport, importReportFile, statsOf, useReports } from '@/data/reports';
 import { downloadDailyReport, downloadJournal } from '@/lib/reportXls';
 import DailyReportForm from '@/components/desk/inspection/DailyReportForm';
+import ReportView from '@/components/desk/inspection/ReportView';
 
 interface ReportsCabinetProps {
   object: ProjectObject;
   onBack: () => void;
 }
 
-type View = 'root' | 'daily' | 'daily-new' | 'daily-log';
+type View = 'root' | 'daily' | 'daily-new' | 'daily-log' | 'daily-view';
 
 const MONTHS = [
   'Январь',
@@ -41,10 +42,40 @@ const monthLabel = (key: string) => {
 
 const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
   const { toast } = useToast();
-  const { items, loading, remove } = useReports(object.id);
+  const { items, loading, remove, reload } = useReports(object.id);
   const [view, setView] = usePersistedState<View>(`gsi-reports-view-${object.id}`, 'root');
   const [editing, setEditing] = useState<DailyReport | null>(null);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<DailyReport | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onImport = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setImporting(true);
+    try {
+      let last: DailyReport | null = null;
+      for (const f of Array.from(files)) last = await importReportFile(object.id, f);
+      await reload();
+      toast({
+        title: `Отчётов загружено: ${files.length}`,
+        description: last ? `Распознано строк: ${last.rows.length}` : undefined,
+      });
+      if (last) {
+        setViewing(last);
+        setView('daily-view');
+      }
+    } catch (e) {
+      toast({
+        title: 'Не удалось загрузить отчёт',
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const months = useMemo(() => {
     const m = new Map<string, DailyReport[]>();
@@ -56,6 +87,20 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
   }, [items]);
 
   const totalRows = items.reduce((s, r) => s + r.rows.length, 0);
+
+  if (view === 'daily-view' && viewing) {
+    const fresh = items.find((r) => r.id === viewing.id) ?? viewing;
+    return (
+      <ReportView
+        object={object}
+        report={fresh}
+        onBack={() => {
+          setViewing(null);
+          setView('daily');
+        }}
+      />
+    );
+  }
 
   if (view === 'daily-new') {
     return (
@@ -141,20 +186,41 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
 
         {view === 'daily' && !openMonth && (
           <>
-            <div className="grid flex-none gap-2 sm:grid-cols-2">
+            <div className="grid flex-none gap-2 sm:grid-cols-3">
               <Button
+                onClick={() => fileRef.current?.click()}
+                disabled={importing}
+                className="h-auto justify-start gap-3 rounded-sm bg-accent px-4 py-3.5 text-left text-accent-foreground hover:bg-accent/90"
+              >
+                <Icon
+                  name={importing ? 'Loader2' : 'Upload'}
+                  size={19}
+                  className={importing ? 'animate-spin' : ''}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-head text-[0.95em] uppercase tracking-[0.03em]">
+                    Загрузить отчёт Excel
+                  </span>
+                  <span className="block truncate text-[0.75em] opacity-80">
+                    Файл распознается автоматически
+                  </span>
+                </span>
+              </Button>
+
+              <Button
+                variant="outline"
                 onClick={() => {
                   setEditing(null);
                   setView('daily-new');
                 }}
-                className="h-auto justify-start gap-3 rounded-sm bg-accent px-4 py-3.5 text-left text-accent-foreground hover:bg-accent/90"
+                className="h-auto justify-start gap-3 rounded-sm px-4 py-3.5 text-left"
               >
-                <Icon name="FilePlus2" fallback="FilePlus" size={19} />
+                <Icon name="FilePlus2" fallback="FilePlus" size={19} className="text-accent" />
                 <span className="min-w-0 flex-1">
                   <span className="block font-head text-[0.95em] uppercase tracking-[0.03em]">
-                    Создать новый ежедневный отчёт
+                    Заполнить в приложении
                   </span>
-                  <span className="block truncate text-[0.75em] opacity-80">
+                  <span className="block truncate text-[0.75em] text-muted-foreground">
                     Объект и подрядчики подставятся сами
                   </span>
                 </span>
@@ -175,6 +241,14 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
                   </span>
                 </span>
               </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls,.xlsm"
+                multiple
+                hidden
+                onChange={(e) => onImport(e.target.files)}
+              />
             </div>
 
             <Panel title="Хронология по месяцам" note={`${months.length}`} className="flex-none [&>div]:overflow-visible">
@@ -186,7 +260,7 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
                 <Empty
                   icon="CalendarDays"
                   title="Отчётов пока нет"
-                  hint="Создайте первый ежедневный отчёт — папка месяца появится сама."
+                  hint="Загрузите заполненный файл Excel — папка месяца создастся сама."
                 />
               ) : (
                 <div className="flex flex-col gap-px bg-border">
@@ -225,16 +299,23 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
                 const s = statsOf(r.rows);
                 return (
                   <div key={r.id} className="bg-card px-4 py-3.5">
-                    <div className="flex items-start gap-3">
-                      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-secondary text-accent">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewing(r);
+                        setView('daily-view');
+                      }}
+                      className="flex w-full items-start gap-3 text-left"
+                    >
+                      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
                         <Icon name="FileText" size={18} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="font-head text-[0.95em] uppercase tracking-[0.03em]">
                           Отчёт от {new Date(r.date).toLocaleDateString('ru')}
                         </p>
-                        <p className="mt-0.5 text-[0.76em] text-muted-foreground">
-                          {r.author || 'автор не указан'}
+                        <p className="mt-0.5 truncate text-[0.76em] text-muted-foreground">
+                          {r.rows.length} предписаний · {r.author || 'автор не указан'}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           <Tag tone="dim">Выдано {s.issued}</Tag>
@@ -243,7 +324,8 @@ const ReportsCabinet = ({ object, onBack }: ReportsCabinetProps) => {
                           {s.overdue > 0 && <Tag tone="hot">Срок истёк {s.overdue}</Tag>}
                         </div>
                       </div>
-                    </div>
+                      <Icon name="ChevronRight" size={18} className="mt-1 flex-none opacity-40" />
+                    </button>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       <button

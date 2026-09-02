@@ -9,6 +9,8 @@ import boto3
 import psycopg2
 import psycopg2.extras
 
+from xls_parser import parse_workbook
+
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -39,6 +41,8 @@ def to_report(r) -> dict:
         'author': r['author'],
         'note': r['note'],
         'rows': r['rows_json'] or [],
+        'fileUrl': r.get('file_url') or '',
+        'fileName': r.get('file_name') or '',
         'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
         'updatedAt': r['updated_at'].isoformat() if r['updated_at'] else '',
     }
@@ -85,6 +89,49 @@ def handler(event: dict, context) -> dict:
             )
             base = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket"
             return resp(200, {'url': f'{base}/{key}'})
+
+        if method == 'POST' and body.get('kind') == 'import':
+            content = body.get('content') or ''
+            file_name = body.get('fileName') or 'report.xlsx'
+            object_id = body.get('objectId') or ''
+            if not content or not object_id:
+                return resp(400, {'error': 'file_and_object_required'})
+
+            raw = base64.b64decode(content.split(',')[-1])
+            parsed = parse_workbook(raw)
+            if not parsed['rows']:
+                return resp(400, {'error': 'no_rows_found'})
+
+            safe = re.sub(r'[^A-Za-z0-9._-]+', '_', file_name)[-70:]
+            key = f'reports/{object_id}/src/{uuid.uuid4().hex[:12]}_{safe}'
+            s3 = boto3.client(
+                's3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+            )
+            s3.put_object(
+                Bucket='files',
+                Key=key,
+                Body=raw,
+                ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            base = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket"
+
+            rid = f'rep-{int(time.time() * 1000)}'
+            date = body.get('date') or parsed['date'] or ''
+            if not date:
+                return resp(400, {'error': 'date_not_found'})
+            rows_json = json.dumps(parsed['rows'], ensure_ascii=False)
+            cur.execute(
+                'INSERT INTO daily_reports '
+                '(id, object_id, report_date, author, note, rows_json, file_url, file_name) '
+                f"VALUES ({esc(rid)}, {esc(object_id)}, {esc(date)}::date, "
+                f"{esc(parsed['author'])}, {esc(body.get('note') or '')}, "
+                f"{esc(rows_json)}::jsonb, {esc(base + '/' + key)}, {esc(file_name)}) "
+                'RETURNING *'
+            )
+            return resp(200, {'item': to_report(cur.fetchone())})
 
         if method == 'POST':
             rid = (body.get('id') or '').strip() or f"rep-{int(time.time() * 1000)}"
