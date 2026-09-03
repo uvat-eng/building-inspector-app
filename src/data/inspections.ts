@@ -105,6 +105,50 @@ export interface DefectRow extends InspectionDefect {
   inspDate: string;
 }
 
+export const useAllInspections = () => {
+  const [items, setItems] = useState<Inspection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    const res = await fetch(API);
+    if (!res.ok) throw new Error('load_failed');
+    const { items: list } = (await res.json()) as { items: Inspection[] };
+    setItems(list ?? []);
+    return list ?? [];
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    reload()
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, [reload]);
+
+  return { items, loading, reload };
+};
+
+export const createInspection = async (data: Partial<Inspection>) => {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('create_failed');
+  const { item } = (await res.json()) as { item: Inspection };
+  return item;
+};
+
+export const addDefect = async (inspectionId: string, title: string, deadline = '') => {
+  const res = await fetch(`${API}?action=defect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'defect', inspectionId, title, deadline }),
+  });
+  if (!res.ok) throw new Error('add_failed');
+  const { defect } = (await res.json()) as { defect: InspectionDefect };
+  return defect;
+};
+
 export const useAllDefects = () => {
   const [items, setItems] = useState<DefectRow[]>([]);
   const [loading, setLoading] = useState(true);

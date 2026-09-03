@@ -1,185 +1,272 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Panel from '@/components/desk/Panel';
-import Row from '@/components/desk/Row';
-import Tag from '@/components/desk/Tag';
-import Icon from '@/components/ui/icon';
 import Empty from '@/components/desk/Empty';
-import { Textarea } from '@/components/ui/textarea';
+import Icon from '@/components/ui/icon';
+import Tag from '@/components/desk/Tag';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { DEFECTS, NORM_HINTS, Defect } from '@/data/mock';
+import { cn } from '@/lib/utils';
+import { useObjects } from '@/data/store';
+import { useProfile } from '@/data/profile';
+import { useOrders } from '@/data/orders';
+import {
+  Inspection,
+  useAllInspections,
+  createInspection,
+  addDefect,
+  suggestNorms,
+  deadlineFor,
+  DefectRow,
+  InspectionDefect,
+  useAllDefects,
+} from '@/data/inspections';
+import { MONTHS } from '@/data/timesheet';
+import { orderPayload } from '@/lib/makeOrder';
+import DictateDialog from '@/components/desk/defects/DictateDialog';
 
-const DICTATION = 'Защитный слой бетона на захватке 2 занижен, замер 12 мм при проектных 25 мм';
+const monthKey = (iso: string) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Без даты';
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+};
+
+const fmtDate = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('ru');
+};
 
 const DefectsSection = () => {
-  const [items, setItems] = useState<Defect[]>(DEFECTS);
-  const [text, setText] = useState('');
-  const [rec, setRec] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
   const { toast } = useToast();
+  const { profile } = useProfile();
+  const { list: objects } = useObjects();
+  const { items: inspections, loading, reload } = useAllInspections();
+  const { items: allDefects } = useAllDefects();
+  const { create: createOrder } = useOrders();
 
-  useEffect(() => {
-    if (!rec) return;
-    let i = 0;
-    setText('');
-    const timer = window.setInterval(() => {
-      i += 2;
-      setText(DICTATION.slice(0, i));
-      if (i >= DICTATION.length) {
-        window.clearInterval(timer);
-        setRec(false);
+  const [dictate, setDictate] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [openAct, setOpenAct] = useState<string | null>(null);
+  const [openMonth, setOpenMonth] = useState<string | null>(null);
+
+  const byMonth = useMemo(() => {
+    const map = new Map<string, Inspection[]>();
+    inspections.forEach((i) => {
+      const k = monthKey(i.createdAt);
+      map.set(k, [...(map.get(k) ?? []), i]);
+    });
+    return [...map.entries()];
+  }, [inspections]);
+
+  const defectsOf = (inspId: string) =>
+    allDefects.filter((d: DefectRow) => d.inspectionId === inspId);
+
+  const objTitle = (id: string) => objects.find((o) => o.id === id)?.title ?? 'Объект';
+
+  const saveDictation = async (data: { objectId: string; workType: string; lines: string[] }) => {
+    setBusy(true);
+    try {
+      const insp = await createInspection({
+        objectId: data.objectId,
+        workType: data.workType,
+        inspector: profile.fio,
+      });
+      const deadline = deadlineFor('normal');
+      const created: InspectionDefect[] = [];
+      for (const line of data.lines) {
+        created.push(await addDefect(insp.id, line, deadline));
       }
-    }, 35);
-    return () => window.clearInterval(timer);
-  }, [rec]);
+      suggestNorms(data.lines, true)
+        .then((found) =>
+          Promise.all(
+            created.map((d, k) => {
+              const m = found[k];
+              if (!m?.ref) return null;
+              return fetch(
+                'https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039?action=defect',
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'defect',
+                    id: d.id,
+                    normRef: `${m.ref} — ${m.name}`,
+                  }),
+                },
+              );
+            }),
+          ),
+        )
+        .then(() => reload())
+        .catch(() => undefined);
 
-  const lower = text.toLowerCase();
-  const hints = NORM_HINTS.filter((h) => h.key.some((k) => lower.includes(k)));
-
-  const toggleFixed = (id: string) => {
-    setItems((prev) =>
-      prev.map((d) =>
-        d.id === id
-          ? {
-              ...d,
-              fixed: !d.fixed,
-              tag: !d.fixed ? 'Устранено' : 'В работе',
-              tone: !d.fixed ? 'ok' : 'wait',
-              unread: false,
-            }
-          : d,
-      ),
-    );
+      await reload();
+      setDictate(false);
+      setOpenMonth(monthKey(insp.createdAt));
+      setOpenAct(insp.id);
+      toast({
+        title: `Акт № ${insp.number} создан`,
+        description: `${data.lines.length} замечаний · ${objTitle(data.objectId)} · нормы подбираются`,
+      });
+    } catch {
+      toast({ title: 'Не удалось создать акт', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const open = items.filter((d) => !d.fixed);
-  const current = items.find((d) => d.id === selected) ?? items[0] ?? null;
-
-  const save = () => {
-    if (text.trim().length < 5) {
-      toast({ title: 'Слишком короткое замечание', description: 'Продиктуйте или впишите суть.' });
-      return;
+  const makeOrder = async (insp: Inspection) => {
+    setBusy(true);
+    try {
+      const { data, count } = await orderPayload(insp, objTitle(insp.objectId), profile.fio);
+      const order = await createOrder(data);
+      toast({
+        title: `Предписание № ${order.number} создано`,
+        description: `${count} пунктов · раздел «Акты и документы»`,
+      });
+    } catch {
+      toast({ title: 'Не удалось оформить предписание', variant: 'destructive' });
+    } finally {
+      setBusy(false);
     }
-    const next: Defect = {
-      id: `d${Date.now()}`,
-      no: `П-53/${items.length + 1}`,
-      title: text.trim().slice(0, 70),
-      sub: 'Черновик · срок 3 дня',
-      tag: 'Новое',
-      tone: 'hot',
-      unread: true,
-      norm: hints[0]?.norm ?? 'Пункт нормы не подобран',
-      object: 'ДНС-3',
-      fixed: false,
-    };
-    setItems((prev) => [next, ...prev]);
-    setSelected(next.id);
-    setText('');
-    toast({ title: 'Замечание записано', description: `${next.no} · ${next.norm}` });
   };
 
   return (
-    <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-2 lg:grid-rows-2">
-      <Panel title="Открытые замечания" note={`${open.length} в работе`} className="lg:row-span-2">
-        {items.length === 0 && (
+    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-0.5">
+      <button
+        type="button"
+        onClick={() => setDictate(true)}
+        className="flex flex-none items-center justify-center gap-3 rounded-sm bg-accent px-5 py-5 font-head text-[1.15em] uppercase tracking-[0.06em] text-accent-foreground transition-colors hover:bg-accent/90"
+      >
+        <Icon name="Mic" size={26} />
+        Начать говорить замечания
+      </button>
+
+      <Panel title="Акты замечаний по месяцам" note={`${inspections.length} актов`}>
+        {loading ? (
+          <p className="flex items-center gap-2 p-4 text-[0.85em] text-muted-foreground">
+            <Icon name="Loader2" size={15} className="animate-spin" />
+            Загружаем архив…
+          </p>
+        ) : byMonth.length === 0 ? (
           <Empty
-            icon="TriangleAlert"
-            title="Замечаний нет"
-            hint="Продиктуйте замечание — оно появится здесь с пунктом нормы."
+            icon="ClipboardList"
+            title="Актов пока нет"
+            hint="Нажмите «Начать говорить замечания» — акт соберётся сам."
           />
+        ) : (
+          byMonth.map(([month, list]) => (
+            <div key={month} className="border-b border-border last:border-b-0">
+              <button
+                type="button"
+                onClick={() => setOpenMonth((p) => (p === month ? null : month))}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/60"
+              >
+                <Icon
+                  name={openMonth === month ? 'FolderOpen' : 'Folder'}
+                  size={19}
+                  className="flex-none text-accent"
+                />
+                <span className="min-w-0 flex-1 truncate font-head text-[0.95em] uppercase tracking-[0.04em]">
+                  {month}
+                </span>
+                <span className="flex-none text-[0.8em] text-muted-foreground">
+                  {list.length} актов
+                </span>
+              </button>
+
+              {openMonth === month &&
+                list.map((insp) => {
+                  const items = defectsOf(insp.id);
+                  const isOpen = openAct === insp.id;
+                  return (
+                    <div key={insp.id} className="border-t border-border/60 bg-secondary/20">
+                      <button
+                        type="button"
+                        onClick={() => setOpenAct((p) => (p === insp.id ? null : insp.id))}
+                        className="flex w-full items-center gap-3 px-4 py-3 pl-8 text-left transition-colors hover:bg-secondary/60"
+                      >
+                        <Icon
+                          name={isOpen ? 'ChevronDown' : 'ChevronRight'}
+                          size={16}
+                          className="flex-none text-muted-foreground"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[0.95em]">
+                            Акт № {insp.number}
+                          </span>
+                          <span className="block truncate text-[0.8em] text-muted-foreground">
+                            {fmtDate(insp.createdAt)} · {objTitle(insp.objectId)} ·{' '}
+                            {insp.workType || 'вид работ не указан'}
+                          </span>
+                        </span>
+                        <Tag tone={insp.status === 'done' ? 'ok' : 'wait'}>
+                          {items.length || insp.defectCount || 0} зам.
+                        </Tag>
+                      </button>
+
+                      {isOpen && (
+                        <div className="bg-card px-4 pb-3 pl-8 pt-1">
+                          {items.length === 0 ? (
+                            <p className="py-2 text-[0.84em] text-muted-foreground">
+                              Замечаний в акте нет.
+                            </p>
+                          ) : (
+                            <ol className="flex flex-col">
+                              {items.map((d) => (
+                                <li
+                                  key={d.id}
+                                  className="flex gap-3 border-b border-border/50 py-2.5 last:border-b-0"
+                                >
+                                  <span className="w-5 flex-none text-right font-head text-[0.9em] text-accent">
+                                    {d.pos}
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block text-[0.92em]">{d.title}</span>
+                                    <span className="block text-[0.8em] text-muted-foreground">
+                                      {d.normRef ? (
+                                        d.normRef
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1">
+                                          <Icon name="Sparkles" size={12} /> норма подбирается
+                                        </span>
+                                      )}
+                                      {d.deadline ? ` · срок ${d.deadline}` : ''}
+                                    </span>
+                                  </span>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+
+                          <Button
+                            size="sm"
+                            disabled={busy || items.length === 0}
+                            onClick={() => makeOrder(insp)}
+                            className={cn(
+                              'mt-3 h-9 w-full gap-2 rounded-sm font-head text-[0.85em] uppercase tracking-[0.06em]',
+                              'bg-accent text-accent-foreground hover:bg-accent/90',
+                            )}
+                          >
+                            <Icon name="FileWarning" size={15} />
+                            Сформировать предписание
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          ))
         )}
-        {items.map((d) => (
-          <Row
-            key={d.id}
-            title={`${d.no} · ${d.title}`}
-            sub={`${d.sub} · ${d.norm}`}
-            unread={d.unread}
-            active={d.id === selected}
-            onClick={() => setSelected(d.id)}
-            right={<Tag tone={d.tone}>{d.tag}</Tag>}
-          />
-        ))}
       </Panel>
 
-      <Panel title="Голосовой ввод замечания" note="ИИ-подбор пункта">
-        <div className="flex flex-col gap-3 p-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setRec(true)}
-              className={`flex items-center gap-2 rounded-sm px-4 py-3 font-head text-[0.85em] uppercase tracking-[0.06em] transition-opacity ${
-                rec ? 'animate-pulse bg-accent text-accent-foreground' : 'bg-primary text-primary-foreground hover:opacity-90'
-              }`}
-            >
-              <Icon name={rec ? 'AudioLines' : 'Mic'} size={16} />
-              {rec ? 'Идёт запись…' : 'Продиктовать'}
-            </button>
-            <span className="text-[0.82em] text-muted-foreground">
-              Речь распознаётся на устройстве, работает офлайн
-            </span>
-          </div>
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            placeholder="Суть замечания…"
-            className="rounded-sm"
-          />
-          <div className="min-h-[76px] rounded-sm border border-dashed border-border p-3">
-            <div className="mb-2 text-[0.75em] uppercase tracking-[0.14em] text-muted-foreground">
-              ИИ подобрал пункты норм
-            </div>
-            {hints.length === 0 ? (
-              <p className="text-[0.85em] text-muted-foreground">
-                Начните диктовать — система предложит пункт СП и формулировку.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {hints.map((h) => (
-                  <li key={h.norm} className="animate-fade-in text-[0.88em]">
-                    <span className="font-bold text-accent">{h.norm}</span>
-                    <span className="block text-muted-foreground">{h.text}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={save}
-            className="self-start rounded-sm bg-accent px-6 py-3 font-head text-[0.85em] uppercase tracking-[0.06em] text-accent-foreground transition-opacity hover:opacity-90"
-          >
-            Выдать предписание
-          </button>
-        </div>
-      </Panel>
-
-      <Panel title="Карточка замечания" note={current?.no}>
-        {!current && <Empty icon="FileText" title="Замечание не выбрано" />}
-        {current && (
-          <div className="flex flex-col gap-3 p-4 text-[0.92em]">
-            <div className="font-bold">{current.title}</div>
-            <div className="text-muted-foreground">
-              {current.object} · {current.sub}
-            </div>
-            <div className="rounded-sm bg-secondary px-3 py-2">
-              Пункт нормы: <span className="font-bold text-accent">{current.norm}</span>
-            </div>
-            <label className="flex cursor-pointer items-center gap-3 rounded-sm border border-border px-3 py-3">
-              <input
-                type="checkbox"
-                checked={current.fixed}
-                onChange={() => toggleFixed(current.id)}
-                className="h-4 w-4 accent-[hsl(var(--accent))]"
-              />
-              <span>Замечание устранено — отметка инспектора</span>
-              {current.fixed && <Icon name="Check" size={16} className="ml-auto text-success" />}
-            </label>
-            <p className="text-[0.85em] text-muted-foreground">
-              Накопитель предписаний ведётся по объекту и суммарно по проекту.
-            </p>
-          </div>
-        )}
-      </Panel>
+      <DictateDialog
+        open={dictate}
+        onOpenChange={setDictate}
+        objects={objects}
+        busy={busy}
+        onSave={saveDictation}
+      />
     </div>
   );
 };
