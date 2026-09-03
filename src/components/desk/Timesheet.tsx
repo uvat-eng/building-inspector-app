@@ -57,6 +57,11 @@ const Timesheet = () => {
   const [share, setShare] = useState(false);
 
   const [rows, setRows] = useState<TimeEntry[]>([]);
+  const [shiftForm, setShiftForm] = useState(false);
+  const [shiftFrom, setShiftFrom] = useState('');
+  const [shiftTo, setShiftTo] = useState('');
+  const [shiftObj, setShiftObj] = useState('');
+  const [shiftHours, setShiftHours] = useState({ from: '08:00', to: '20:00' });
   const [objOpen, setObjOpen] = useState<number | null>(null);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -221,6 +226,36 @@ const Timesheet = () => {
     });
   };
 
+  const saveShift = () => {
+    if (!shiftFrom || !shiftTo) {
+      toast({ title: 'Укажите начало и конец вахты', variant: 'destructive' });
+      return;
+    }
+    if (shiftTo < shiftFrom) {
+      toast({ title: 'Дата окончания раньше начала', variant: 'destructive' });
+      return;
+    }
+    const obj = objects.find((o) => o.id === shiftObj);
+    if (!obj) {
+      toast({ title: 'Выберите объект', variant: 'destructive' });
+      return;
+    }
+    const from = new Date(shiftFrom);
+    const to = new Date(shiftTo);
+    let n = 0;
+    for (const d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+      const key = dayKey(d.getFullYear(), d.getMonth(), d.getDate());
+      setDay(key, [
+        { objectId: obj.id, objectTitle: obj.title, from: shiftHours.from, to: shiftHours.to },
+      ]);
+      n += 1;
+    }
+    setShiftForm(false);
+    setYear(from.getFullYear());
+    setMonth(from.getMonth());
+    toast({ title: 'Вахта записана', description: `${n} смен · ${obj.title}` });
+  };
+
   const clearDay = () => {
     if (pick === null) return;
     setDay(dayKey(year, month, pick), null);
@@ -229,7 +264,26 @@ const Timesheet = () => {
 
   return (
     <>
-      <Panel title="Учёт по вахтам" note={`${shifts.length}`}>
+      <Panel
+        title="Учёт по вахтам"
+        note={`${shifts.length}`}
+        action={
+          <button
+            type="button"
+            onClick={() => {
+              const last = shifts[0];
+              setShiftFrom(last?.end || new Date().toISOString().slice(0, 10));
+              setShiftTo('');
+              setShiftObj(objects[0]?.id ?? '');
+              setShiftForm(true);
+            }}
+            className="ml-3 flex flex-none items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.76em] uppercase tracking-[0.06em] text-accent-foreground transition-colors hover:bg-accent/90"
+          >
+            <Icon name="CalendarPlus" size={13} />
+            Записать вахту
+          </button>
+        }
+      >
         {shifts.length === 0 ? (
           <p className="p-4 text-[0.85em] text-muted-foreground">
             Отметьте рабочие дни — вахта соберётся сама, даже если переходит через месяц.
@@ -413,6 +467,110 @@ const Timesheet = () => {
         </div>
       </Panel>
 
+
+      <Dialog open={shiftForm} onOpenChange={setShiftForm}>
+        <DialogContent className="max-w-md rounded-sm border-t-2 border-t-accent">
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.25em] uppercase tracking-[0.03em]">
+              Записать вахту
+            </DialogTitle>
+            <DialogDescription className="text-[0.85em]">
+              Укажите период — смены проставятся в табеле автоматически.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-[0.78em] uppercase tracking-[0.08em]">Начало</Label>
+                <Input
+                  type="date"
+                  value={shiftFrom}
+                  onChange={(e) => setShiftFrom(e.target.value)}
+                  className="rounded-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-[0.78em] uppercase tracking-[0.08em]">Окончание</Label>
+                <Input
+                  type="date"
+                  value={shiftTo}
+                  onChange={(e) => setShiftTo(e.target.value)}
+                  className="rounded-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[0.78em] uppercase tracking-[0.08em]">Объект</Label>
+              {objects.length === 0 ? (
+                <p className="text-[0.82em] text-muted-foreground">
+                  Объекты не назначены — обратитесь к руководителю проекта.
+                </p>
+              ) : (
+                <div className="max-h-40 overflow-y-auto rounded-sm border border-border">
+                  {objects.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => setShiftObj(o.id)}
+                      className={cn(
+                        'flex w-full items-center gap-2 border-b border-border px-3 py-2 text-left text-[0.85em] last:border-b-0',
+                        shiftObj === o.id ? 'bg-accent text-accent-foreground' : 'hover:bg-secondary',
+                      )}
+                    >
+                      <Icon
+                        name={shiftObj === o.id ? 'CircleCheck' : 'Building2'}
+                        size={15}
+                        className="flex-none"
+                      />
+                      <span className="truncate">{o.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-[0.78em] uppercase tracking-[0.08em]">Смена с</Label>
+                <Input
+                  type="time"
+                  value={shiftHours.from}
+                  onChange={(e) => setShiftHours((h) => ({ ...h, from: e.target.value }))}
+                  className="rounded-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-[0.78em] uppercase tracking-[0.08em]">по</Label>
+                <Input
+                  type="time"
+                  value={shiftHours.to}
+                  onChange={(e) => setShiftHours((h) => ({ ...h, to: e.target.value }))}
+                  className="rounded-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-sm"
+                onClick={() => setShiftForm(false)}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={saveShift}
+                className="flex-1 gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+              >
+                <Icon name="Check" size={16} />
+                Записать
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={pick !== null} onOpenChange={(v) => !v && setPick(null)}>
         <DialogContent
