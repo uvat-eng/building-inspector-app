@@ -35,6 +35,10 @@ def to_order(r):
         'status': r['status'],
         'body': b if isinstance(b, dict) else json.loads(b or '{}'),
         'fileUrl': r['file_url'],
+        'stopWorks': bool(r.get('stop_works')),
+        'fixDate': r.get('fix_date') or '',
+        'category': r.get('category') or '',
+        'extendNote': r.get('extend_note') or '',
         'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
     }
 
@@ -148,8 +152,13 @@ def handler(event: dict, context) -> dict:
                 'deadline': 'deadline',
                 'status': 'status',
                 'fileUrl': 'file_url',
+                'fixDate': 'fix_date',
+                'category': 'category',
+                'extendNote': 'extend_note',
             }
             sets = [f"{cols[k]} = '{esc(v)}'" for k, v in patch.items() if k in cols]
+            if 'stopWorks' in patch:
+                sets.append(f"stop_works = {'TRUE' if patch['stopWorks'] else 'FALSE'}")
             if 'body' in patch:
                 sets.append(f"body = '{esc(json.dumps(patch['body'], ensure_ascii=False))}'::jsonb")
             if not sets or not oid:

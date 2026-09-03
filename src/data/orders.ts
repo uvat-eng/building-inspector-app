@@ -38,6 +38,10 @@ export interface Order {
     }[];
   };
   fileUrl: string;
+  stopWorks?: boolean;
+  fixDate?: string;
+  category?: string;
+  extendNote?: string;
   createdAt: string;
 }
 

@@ -39,7 +39,40 @@ export interface InspectionDefect {
   normRef: string;
   severity: Severity;
   photos: string[];
+  fixStatus?: string;
+  fixDate?: string;
+  responsibility?: string;
+  category?: string;
+  measures?: string;
+  ackBy?: string;
+  docRef?: string;
+  place?: string;
+  contractor?: string;
+  extendNote?: string;
+  responsible?: string;
+  createdAt?: string;
 }
+
+export const FIX_STATUSES = ['не устранено', 'устранено', 'в работе'] as const;
+
+export const RESPONSIBILITIES = ['вопрос подрядчика', 'вопрос заказчика'] as const;
+
+export const CATEGORIES = [
+  'ОТ и ТБ',
+  'Аттестация персонала',
+  'Разрешительная документация',
+  'Исполнительная документация',
+  'Складирование и транспортировка',
+  'Входной контроль',
+  'Общестроительные работы',
+  'Сборка и сварка',
+  'Электромонтажные работы',
+  'Оборудование и инструмент',
+  'Отступления от проектных решений',
+  'Геодезические работы',
+  'Антикоррозионные работы',
+  'Освидетельствование работ',
+] as const;
 
 export type Severity = 'critical' | 'normal' | 'minor';
 
@@ -103,7 +136,20 @@ export interface DefectRow extends InspectionDefect {
   workType: string;
   inspector: string;
   inspDate: string;
+  generalContractor?: string;
+  subcontractor?: string;
 }
+
+export const updateDefect = async (id: string, patch: Partial<InspectionDefect>) => {
+  const res = await fetch(`${API}?action=defect`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'defect', id, ...patch }),
+  });
+  if (!res.ok) throw new Error('update_failed');
+  const { defect } = (await res.json()) as { defect: InspectionDefect };
+  return defect;
+};
 
 export const useAllInspections = () => {
   const [items, setItems] = useState<Inspection[]>([]);
@@ -153,15 +199,22 @@ export const useAllDefects = () => {
   const [items, setItems] = useState<DefectRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch(`${API}?action=all_defects`)
-      .then((r) => r.json())
-      .then((d: { items: DefectRow[] }) => setItems(d.items ?? []))
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
+  const reload = useCallback(async () => {
+    const res = await fetch(`${API}?action=all_defects`);
+    if (!res.ok) throw new Error('load_failed');
+    const d = (await res.json()) as { items: DefectRow[] };
+    setItems(d.items ?? []);
+    return d.items ?? [];
   }, []);
 
-  return { items, loading };
+  useEffect(() => {
+    setLoading(true);
+    reload()
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, [reload]);
+
+  return { items, loading, reload };
 };
 
 export const teachNorm = async (text: string, ref: string, author = '') => {

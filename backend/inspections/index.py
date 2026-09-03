@@ -63,6 +63,18 @@ def to_defect(r):
         'normRef': r.get('norm_ref') or '',
         'severity': r.get('severity') or 'normal',
         'photos': photos if isinstance(photos, list) else json.loads(photos or '[]'),
+        'fixStatus': r.get('fix_status') or 'не устранено',
+        'fixDate': r.get('fix_date') or '',
+        'responsibility': r.get('responsibility') or 'вопрос подрядчика',
+        'category': r.get('category') or '',
+        'measures': r.get('measures') or '',
+        'ackBy': r.get('ack_by') or '',
+        'docRef': r.get('doc_ref') or '',
+        'place': r.get('place') or '',
+        'contractor': r.get('contractor') or '',
+        'extendNote': r.get('extend_note') or '',
+        'responsible': r.get('responsible') or '',
+        'createdAt': r['created_at'].isoformat() if r.get('created_at') else '',
     }
 
 
@@ -89,9 +101,9 @@ def handler(event: dict, context) -> dict:
         if method == 'GET' and action == 'all_defects':
             cur.execute(
                 'SELECT d.*, i.number AS insp_number, i.object_id, i.work_type, '
-                'i.inspector, i.created_at AS insp_date '
+                'i.inspector, i.created_at AS insp_date, i.general_contractor, i.subcontractor '
                 'FROM inspection_defects d JOIN inspections i ON i.id = d.inspection_id '
-                'ORDER BY i.created_at DESC, d.pos LIMIT 300'
+                'ORDER BY i.created_at DESC, d.pos LIMIT 2000'
             )
             return resp(
                 200,
@@ -104,6 +116,8 @@ def handler(event: dict, context) -> dict:
                             'workType': r['work_type'] or '',
                             'inspector': r['inspector'] or '',
                             'inspDate': r['insp_date'].isoformat() if r['insp_date'] else '',
+                            'generalContractor': r.get('general_contractor') or '',
+                            'subcontractor': r.get('subcontractor') or '',
                         }
                         for r in cur.fetchall()
                     ]
@@ -238,6 +252,22 @@ def handler(event: dict, context) -> dict:
                 sets.append(f"severity = '{esc(body['severity'])}'")
             if 'photos' in body:
                 sets.append(f"photos = '{esc(json.dumps(body['photos']))}'::jsonb")
+            extra = {
+                'fixStatus': 'fix_status',
+                'fixDate': 'fix_date',
+                'responsibility': 'responsibility',
+                'category': 'category',
+                'measures': 'measures',
+                'ackBy': 'ack_by',
+                'docRef': 'doc_ref',
+                'place': 'place',
+                'contractor': 'contractor',
+                'extendNote': 'extend_note',
+                'responsible': 'responsible',
+            }
+            for k, col in extra.items():
+                if k in body:
+                    sets.append(f"{col} = '{esc(body[k])}'")
             if not sets or not did:
                 return resp(400, {'error': 'nothing_to_update'})
             cur.execute(
