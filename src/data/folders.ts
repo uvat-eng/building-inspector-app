@@ -15,6 +15,8 @@ export interface FolderMeta {
   project?: string;
   place?: string;
   date?: string;
+  periodFrom?: string;
+  periodTo?: string;
   inspector?: string;
   managerFio?: string;
   managerPhone?: string;

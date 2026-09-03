@@ -25,6 +25,8 @@ export interface DraftShot {
 export interface ReportDraft {
   objectId: string;
   date: string;
+  periodFrom: string;
+  periodTo: string;
   contractor: string;
   project: string;
   place: string;
@@ -59,6 +61,12 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
   const { general, subs } = useContractor(objectId);
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [periodFrom, setPeriodFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().slice(0, 10);
+  });
+  const [periodTo, setPeriodTo] = useState(new Date().toISOString().slice(0, 10));
   const [contractor, setContractor] = useState('');
   const [project, setProject] = useState('');
   const [place, setPlace] = useState('');
@@ -119,7 +127,7 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
       toast({ title: 'Добавьте хотя бы одно фото', variant: 'destructive' });
       return;
     }
-    onSave({ objectId, date, contractor, project, place, note, shots });
+    onSave({ objectId, date, periodFrom, periodTo, contractor, project, place, note, shots });
   };
 
   return (
@@ -157,21 +165,37 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Дата отчёта
-            </Label>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="rounded-sm"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
+                Период с
+              </Label>
+              <Input
+                type="date"
+                value={periodFrom}
+                onChange={(e) => setPeriodFrom(e.target.value)}
+                className="rounded-sm"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
+                по
+              </Label>
+              <Input
+                type="date"
+                value={periodTo}
+                onChange={(e) => {
+                  setPeriodTo(e.target.value);
+                  setDate(e.target.value);
+                }}
+                className="rounded-sm"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Подрядная организация · 1-я строка шапки
+              Подрядчик
             </Label>
             <Input
               value={contractor}
@@ -189,12 +213,12 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
 
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Наименование стройки · 2-я строка
+              Объект строительства (каждая строка — с новой строки)
             </Label>
             <Textarea
               value={project}
               onChange={(e) => setProject(e.target.value)}
-              rows={2}
+              rows={3}
               placeholder="Обустройство Восточно-Мессояхского месторождения. Реконструкция кустовых площадок 2025-2026гг."
               className="resize-none rounded-sm text-[0.9em]"
             />
@@ -202,7 +226,7 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
 
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Площадка и виды работ · 3-я строка
+              Площадка / участок работ
             </Label>
             <Input
               value={place}

@@ -60,6 +60,8 @@ const PhotosSection = () => {
           project: draft.project,
           place: draft.place,
           date: `${dateRu} г.`,
+          periodFrom: draft.periodFrom,
+          periodTo: draft.periodTo,
           inspector: profile.fio,
         },
       });
@@ -87,6 +89,8 @@ const PhotosSection = () => {
       project: f.meta?.project ?? '',
       place: f.meta?.place || objTitle(f.objectId),
       date: f.meta?.date || new Date(f.createdAt).toLocaleDateString('ru'),
+      periodFrom: f.meta?.periodFrom,
+      periodTo: f.meta?.periodTo,
       inspector: f.meta?.inspector || f.createdBy,
     },
     photos: f.photos,
