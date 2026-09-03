@@ -29,8 +29,9 @@ import ContractorCard from '@/components/desk/inspection/ContractorCard';
 import FoldersCabinet from '@/components/desk/inspection/FoldersCabinet';
 import CabinetBar from '@/components/desk/CabinetBar';
 import useBackGuard from '@/hooks/use-back-guard';
+import OutfitCabinet from '@/components/desk/outfit/OutfitCabinet';
 
-type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile';
+type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile' | 'outfit';
 
 const VIEW_KEY = 'gsi-cabinet-view-v1';
 const OBJ_KEY = 'gsi-cabinet-object-v1';
@@ -55,6 +56,7 @@ const VIEW_TITLE: Record<View, string> = {
   defects: 'Замечания по всем объектам',
   ordersAll: 'Предписания по всем объектам',
   profile: 'Профиль инспектора',
+  outfit: 'Оборудование и спецодежда',
 };
 
 interface InspectorCabinetProps {
@@ -395,6 +397,24 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
 
           <div className="grid min-h-0 gap-3.5">
             <Timesheet />
+            <button
+              type="button"
+              onClick={() => setView('outfit')}
+              className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+            >
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                <Icon name="HardHat" fallback="Shirt" size={21} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[1.05em] uppercase tracking-[0.03em]">
+                  Оборудование и спецодежда
+                </span>
+                <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                  Учёт СИЗ и приборов, списание и передача на вахте
+                </span>
+              </span>
+              <Icon name="ChevronRight" size={17} className="ml-auto flex-none opacity-40" />
+            </button>
           </div>
         </div>
       )}
@@ -417,6 +437,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
           {objectsPanel}
         </div>
       )}
+
+      {view === 'outfit' && <OutfitCabinet onBack={() => setView('home')} />}
 
       {view === 'timesheet' && (
         <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto">

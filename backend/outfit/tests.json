@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Список спецодежды",
+      "method": "GET",
+      "path": "/?kind=ppe",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Список оборудования",
+      "method": "GET",
+      "path": "/?kind=equipment",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Спецодежда без наименования",
+      "method": "POST",
+      "path": "/?kind=ppe",
+      "body": { "kind": "ppe" },
+      "expectedStatus": 400,
+      "expectedBody": { "error": "title_required" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

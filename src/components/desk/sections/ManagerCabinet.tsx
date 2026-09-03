@@ -24,6 +24,7 @@ import { useUsers } from '@/data/users';
 import { useProfile } from '@/data/profile';
 import { useVehicles } from '@/data/vehicles';
 import { useInspectorsRollup } from '@/data/rollup';
+import WriteoffApprovals from '@/components/desk/outfit/WriteoffApprovals';
 
 interface ManagerCabinetProps {
   onExit?: () => void;
@@ -232,6 +233,8 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
             </div>
           ))}
         </div>
+
+        <WriteoffApprovals />
 
         <ProjectsList
           projects={projects}
