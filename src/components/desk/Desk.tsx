@@ -85,10 +85,6 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
       });
       return;
     }
-    if (section === 'cabinet' && id !== 'cabinet' && !leaveOk.current) {
-      setLeaveTo(id);
-      return;
-    }
     leaveOk.current = false;
     if (id !== section) setHistory((h) => [...h, section]);
     setSection(id);
