@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,15 +15,21 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { compressPhoto } from '@/data/photoQueue';
 import { ProjectObject } from '@/data/store';
-import { WORK_TYPES } from '@/data/inspections';
+import { useContractor } from '@/data/orders';
+
+export interface DraftShot {
+  data: string;
+  caption: string;
+}
 
 export interface ReportDraft {
   objectId: string;
   date: string;
-  workType: string;
+  contractor: string;
+  project: string;
   place: string;
   note: string;
-  photos: string[];
+  shots: DraftShot[];
 }
 
 interface Props {
@@ -34,29 +40,55 @@ interface Props {
   onSave: (draft: ReportDraft) => void;
 }
 
+const CAPTION_HINTS = [
+  'Общий вид места производства работ.',
+  'Монтаж конструкций в проектное положение.',
+  'Механическая зачистка сварного шва и околошовной зоны.',
+  'Контроль катета сварного шва.',
+  'Планировка грунта ручным способом.',
+  'Уплотнение бетонной смеси глубинным вибратором.',
+];
+
 const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) => {
   const { toast } = useToast();
   const camRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [objectId, setObjectId] = useState(objects[0]?.id ?? '');
+  const object = objects.find((o) => o.id === objectId);
+  const { general, subs } = useContractor(objectId);
+
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [workType, setWorkType] = useState('');
+  const [contractor, setContractor] = useState('');
+  const [project, setProject] = useState('');
   const [place, setPlace] = useState('');
   const [note, setNote] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [shots, setShots] = useState<DraftShot[]>([]);
   const [pick, setPick] = useState(false);
   const [loadingShots, setLoadingShots] = useState(false);
+
+  useEffect(() => {
+    if (!object) return;
+    setProject((p) => p || object.field || '');
+    setPlace((p) => p || object.title || '');
+  }, [object]);
+
+  useEffect(() => {
+    if (!contractor && general?.name) setContractor(general.name);
+  }, [general, contractor]);
+
+  const names = [general?.name, ...subs.map((s) => s.name)].filter(Boolean) as string[];
 
   const takeFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     setLoadingShots(true);
     try {
-      const out: string[] = [];
-      for (const f of Array.from(files)) out.push(await compressPhoto(f));
-      setPhotos((p) => [...p, ...out]);
+      const out: DraftShot[] = [];
+      for (const f of Array.from(files))
+        out.push({ data: await compressPhoto(f, 1600, 0.72), caption: '' });
+      setShots((p) => [...p, ...out]);
       setPick(false);
-      toast({ title: `Добавлено фото: ${out.length}` });
+      toast({ title: `Добавлено фото: ${out.length}`, description: 'Подпишите каждый снимок' });
     } catch {
       toast({ title: 'Не удалось прочитать фото', variant: 'destructive' });
     } finally {
@@ -66,16 +98,28 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
     }
   };
 
+  const setCaption = (i: number, caption: string) =>
+    setShots((p) => p.map((s, k) => (k === i ? { ...s, caption } : s)));
+
+  const move = (i: number, d: number) =>
+    setShots((p) => {
+      const next = [...p];
+      const j = i + d;
+      if (j < 0 || j >= next.length) return p;
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+
   const submit = () => {
     if (!objectId) {
       toast({ title: 'Выберите объект', variant: 'destructive' });
       return;
     }
-    if (photos.length === 0) {
+    if (shots.length === 0) {
       toast({ title: 'Добавьте хотя бы одно фото', variant: 'destructive' });
       return;
     }
-    onSave({ objectId, date, workType, place, note, photos });
+    onSave({ objectId, date, contractor, project, place, note, shots });
   };
 
   return (
@@ -91,11 +135,11 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
 
       <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card">
         <h2 className="border-b border-border px-4 py-3 font-head text-[0.88em] uppercase tracking-[0.12em]">
-          Форма фотоотчёта
+          Шапка фотоотчёта
         </h2>
 
         <div className="grid gap-3 p-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <div className="flex flex-col gap-1.5">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
               Объект
             </Label>
@@ -115,7 +159,7 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
 
           <div className="flex flex-col gap-1.5">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Дата съёмки
+              Дата отчёта
             </Label>
             <Input
               type="date"
@@ -125,55 +169,63 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Инспектор
+              Подрядная организация · 1-я строка шапки
             </Label>
-            <Input value={inspector} readOnly className="rounded-sm bg-secondary/50" />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Вид работ
-            </Label>
-            <select
-              value={workType}
-              onChange={(e) => setWorkType(e.target.value)}
-              className="h-10 rounded-sm border border-border bg-card px-2 text-[0.9em]"
-            >
-              <option value="">Не указан</option>
-              {WORK_TYPES.map((w) => (
-                <option key={w} value={w}>
-                  {w}
-                </option>
+            <Input
+              value={contractor}
+              onChange={(e) => setContractor(e.target.value)}
+              list="contractor-list"
+              placeholder="АО «ПремьерСтрой»."
+              className="rounded-sm"
+            />
+            <datalist id="contractor-list">
+              {names.map((n) => (
+                <option key={n} value={n} />
               ))}
-            </select>
+            </datalist>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Место съёмки
+              Наименование стройки · 2-я строка
+            </Label>
+            <Textarea
+              value={project}
+              onChange={(e) => setProject(e.target.value)}
+              rows={2}
+              placeholder="Обустройство Восточно-Мессояхского месторождения. Реконструкция кустовых площадок 2025-2026гг."
+              className="resize-none rounded-sm text-[0.9em]"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
+              Площадка и виды работ · 3-я строка
             </Label>
             <Input
               value={place}
               onChange={(e) => setPlace(e.target.value)}
-              placeholder="Захватка 2, ось 5-7"
+              placeholder="Кустовая площадка № 19. Сети электрические."
               className="rounded-sm"
             />
           </div>
 
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label className="text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-              Описание
+              Примечание (в документ не выводится)
             </Label>
-            <Textarea
+            <Input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              rows={3}
-              placeholder="Что зафиксировано на снимках"
-              className="resize-none rounded-sm text-[0.9em]"
+              className="rounded-sm"
             />
           </div>
+
+          <p className="text-[0.8em] text-muted-foreground sm:col-span-2">
+            Подпись: {inspector || 'инспектор не указан'}
+          </p>
         </div>
       </section>
 
@@ -190,32 +242,65 @@ const PhotoReportForm = ({ objects, inspector, busy, onBack, onSave }: Props) =>
         Фотографировать
       </Button>
 
-      {photos.length > 0 && (
+      {shots.length > 0 && (
         <section className="flex-none rounded-sm border border-border bg-card">
           <h2 className="flex items-center gap-3 border-b border-border px-4 py-3 font-head text-[0.88em] uppercase tracking-[0.12em]">
-            Снимки отчёта
+            Снимки и подписи
             <span className="ml-auto font-body normal-case tracking-normal text-muted-foreground">
-              {photos.length}
+              {shots.length}
             </span>
           </h2>
-          <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-4 md:grid-cols-5">
-            {photos.map((p, k) => (
-              <span key={p.slice(-28)} className="group relative">
-                <img
-                  src={p}
-                  alt={`снимок ${k + 1}`}
-                  className="aspect-square w-full rounded-sm border border-border object-cover"
+          <div className="grid gap-3 p-3 sm:grid-cols-2">
+            {shots.map((s, i) => (
+              <div key={s.data.slice(-32)} className="rounded-sm border border-border p-2">
+                <div className="relative">
+                  <img
+                    src={s.data}
+                    alt={`снимок ${i + 1}`}
+                    className="aspect-[4/3] w-full rounded-sm object-cover"
+                  />
+                  <span className="absolute left-1.5 top-1.5 rounded-sm bg-foreground/80 px-1.5 py-0.5 text-[0.7em] text-background">
+                    {i + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShots((p) => p.filter((_, k) => k !== i))}
+                    className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
+                  >
+                    <Icon name="X" size={13} />
+                  </button>
+                </div>
+                <Input
+                  value={s.caption}
+                  onChange={(e) => setCaption(i, e.target.value)}
+                  list="caption-hints"
+                  placeholder="Подпись под фото"
+                  className="mt-2 h-9 rounded-sm text-[0.86em]"
                 />
-                <button
-                  type="button"
-                  onClick={() => setPhotos((prev) => prev.filter((x) => x !== p))}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
-                >
-                  <Icon name="X" size={12} />
-                </button>
-              </span>
+                <div className="mt-1.5 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    className="flex h-7 flex-1 items-center justify-center rounded-sm border border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent"
+                  >
+                    <Icon name="ArrowLeft" size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    className="flex h-7 flex-1 items-center justify-center rounded-sm border border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent"
+                  >
+                    <Icon name="ArrowRight" size={13} />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
+          <datalist id="caption-hints">
+            {CAPTION_HINTS.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </section>
       )}
 

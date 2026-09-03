@@ -34,6 +34,7 @@ def to_folder(r):
         'month': r.get('month') or '',
         'createdBy': r['created_by'],
         'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
+        'meta': r.get('meta') or {},
         'photos': r.get('photos') or [],
     }
 
@@ -62,8 +63,9 @@ def handler(event: dict, context) -> dict:
                 conds.append(f"f.section = '{esc(section)}'")
             where = f"WHERE {' AND '.join(conds)}" if conds else ''
             cur.execute(
-                'SELECT f.*, COALESCE(json_agg(json_build_object(\'id\', p.id, \'url\', p.url) '
-                "ORDER BY p.created_at) FILTER (WHERE p.id IS NOT NULL), '[]') AS photos "
+                'SELECT f.*, COALESCE(json_agg(json_build_object(\'id\', p.id, \'url\', p.url, '
+                "'caption', p.caption) ORDER BY p.created_at) "
+                "FILTER (WHERE p.id IS NOT NULL), '[]') AS photos "
                 f'FROM photo_folders f LEFT JOIN folder_photos p ON p.folder_id = f.id {where} '
                 'GROUP BY f.id ORDER BY f.created_at DESC'
             )
@@ -86,11 +88,11 @@ def handler(event: dict, context) -> dict:
             s3.put_object(Bucket='files', Key=key, Body=raw, ContentType='image/jpeg')
             url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
             cur.execute(
-                f"INSERT INTO folder_photos (id, folder_id, url) VALUES ('{esc(pid)}', "
-                f"'{esc(folder_id)}', '{esc(url)}')"
+                f"INSERT INTO folder_photos (id, folder_id, url, caption) VALUES ('{esc(pid)}', "
+                f"'{esc(folder_id)}', '{esc(url)}', '{esc(body.get('caption', ''))}')"
             )
             conn.commit()
-            return resp(200, {'id': pid, 'url': url})
+            return resp(200, {'id': pid, 'url': url, 'caption': body.get('caption', '')})
 
         if method == 'POST':
             object_id = body.get('objectId', '')
@@ -101,9 +103,10 @@ def handler(event: dict, context) -> dict:
             fid = uuid.uuid4().hex[:12]
             cur.execute(
                 'INSERT INTO photo_folders (id, object_id, section, subsection, title, note, '
-                f"month, created_by) VALUES ('{esc(fid)}', '{esc(object_id)}', '{esc(section)}', "
+                f"month, created_by, meta) VALUES ('{esc(fid)}', '{esc(object_id)}', '{esc(section)}', "
                 f"'{esc(body.get('subsection', ''))}', '{esc(title)}', '{esc(body.get('note', ''))}', "
-                f"'{esc(body.get('month', ''))}', '{esc(body.get('createdBy', ''))}') RETURNING *"
+                f"'{esc(body.get('month', ''))}', '{esc(body.get('createdBy', ''))}', "
+                f"'{esc(json.dumps(body.get('meta') or {}, ensure_ascii=False))}'::jsonb) RETURNING *"
             )
             conn.commit()
             return resp(200, {'item': to_folder(cur.fetchone())})

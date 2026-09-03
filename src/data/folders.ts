@@ -7,6 +7,17 @@ export type FolderSection = 'tests' | 'ks' | 'incoming' | 'photoreport';
 export interface FolderPhoto {
   id: string;
   url: string;
+  caption?: string;
+}
+
+export interface FolderMeta {
+  contractor?: string;
+  project?: string;
+  place?: string;
+  date?: string;
+  inspector?: string;
+  managerFio?: string;
+  managerPhone?: string;
 }
 
 export interface PhotoFolder {
@@ -19,6 +30,7 @@ export interface PhotoFolder {
   month: string;
   createdBy: string;
   createdAt: string;
+  meta?: FolderMeta;
   photos: FolderPhoto[];
 }
 
@@ -93,6 +105,7 @@ export const useAllFolders = (section: FolderSection) => {
       createdBy?: string;
       month?: string;
       subsection?: string;
+      meta?: FolderMeta;
     }) => {
       const res = await fetch(API, {
         method: 'POST',
@@ -124,11 +137,11 @@ export const useAllFolders = (section: FolderSection) => {
   return { items, loading, create, remove, removePhoto, reload };
 };
 
-export const uploadFolderPhoto = async (folderId: string, dataUrl: string) => {
+export const uploadFolderPhoto = async (folderId: string, dataUrl: string, caption = '') => {
   const res = await fetch(`${API}?action=photo`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'photo', folderId, content: dataUrl }),
+    body: JSON.stringify({ action: 'photo', folderId, content: dataUrl, caption }),
   });
   if (!res.ok) throw new Error('upload_failed');
   return (await res.json()) as FolderPhoto;

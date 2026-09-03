@@ -20,11 +20,7 @@ import {
   PhotoFolder,
 } from '@/data/folders';
 import PhotoReportForm, { ReportDraft } from '@/components/desk/photos/PhotoReportForm';
-
-const parseTitle = (f: PhotoFolder) => {
-  const [head, ...rest] = f.title.split(' · ');
-  return { date: head ?? '', tail: rest.join(' · ') };
-};
+import { downloadPhotoReport, printPhotoReport } from '@/lib/photoReportDoc';
 
 const PhotosSection = () => {
   const { toast } = useToast();
@@ -36,7 +32,7 @@ const PhotosSection = () => {
   const [busy, setBusy] = useState(false);
   const [openMonth, setOpenMonth] = useState<string | null>(monthKey());
   const [openFolder, setOpenFolder] = useState<string | null>(null);
-  const [zoom, setZoom] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<PhotoFolder['photos'][number] | null>(null);
 
   const byMonth = useMemo(() => {
     const map = new Map<string, PhotoFolder[]>();
@@ -52,24 +48,23 @@ const PhotosSection = () => {
   const save = async (draft: ReportDraft) => {
     setBusy(true);
     try {
-      const title = [
-        new Date(draft.date).toLocaleDateString('ru'),
-        objTitle(draft.objectId),
-        draft.workType,
-        draft.place,
-      ]
-        .filter(Boolean)
-        .join(' · ');
-
+      const dateRu = new Date(draft.date).toLocaleDateString('ru');
       const folder = await create({
         objectId: draft.objectId,
-        title,
+        title: [dateRu, draft.contractor, draft.place].filter(Boolean).join(' · '),
         note: draft.note,
         createdBy: profile.fio,
         month: monthKey(new Date(draft.date)),
+        meta: {
+          contractor: draft.contractor,
+          project: draft.project,
+          place: draft.place,
+          date: `${dateRu} г.`,
+          inspector: profile.fio,
+        },
       });
 
-      for (const p of draft.photos) await uploadFolderPhoto(folder.id, p);
+      for (const s of draft.shots) await uploadFolderPhoto(folder.id, s.data, s.caption);
 
       await reload();
       setForm(false);
@@ -77,7 +72,7 @@ const PhotosSection = () => {
       setOpenFolder(folder.id);
       toast({
         title: 'Фотоотчёт сохранён',
-        description: `${draft.photos.length} снимков · папка «${monthLabel(monthKey(new Date(draft.date)))}»`,
+        description: `${draft.shots.length} снимков · папка «${monthLabel(monthKey(new Date(draft.date)))}»`,
       });
     } catch {
       toast({ title: 'Не удалось сохранить фотоотчёт', variant: 'destructive' });
@@ -85,6 +80,17 @@ const PhotosSection = () => {
       setBusy(false);
     }
   };
+
+  const docData = (f: PhotoFolder) => ({
+    meta: {
+      contractor: f.meta?.contractor ?? '',
+      project: f.meta?.project ?? '',
+      place: f.meta?.place || objTitle(f.objectId),
+      date: f.meta?.date || new Date(f.createdAt).toLocaleDateString('ru'),
+      inspector: f.meta?.inspector || f.createdBy,
+    },
+    photos: f.photos,
+  });
 
   if (form) {
     return (
@@ -118,7 +124,7 @@ const PhotosSection = () => {
           <Empty
             icon="Camera"
             title="Снимков пока нет"
-            hint="Нажмите «Создать фотоотчёт»: выберите объект, сделайте снимки — отчёт ляжет в папку текущего месяца."
+            hint="Нажмите «Создать фотоотчёт»: заполните шапку, сделайте снимки — отчёт ляжет в папку своего месяца."
           />
         ) : (
           byMonth.map(([month, list]) => (
@@ -144,7 +150,6 @@ const PhotosSection = () => {
               {openMonth === month &&
                 list.map((f) => {
                   const isOpen = openFolder === f.id;
-                  const { date, tail } = parseTitle(f);
                   return (
                     <div key={f.id} className="border-t border-border/60 bg-secondary/20">
                       <button
@@ -158,9 +163,12 @@ const PhotosSection = () => {
                           className="flex-none text-muted-foreground"
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[0.95em]">{date || f.title}</span>
+                          <span className="block truncate text-[0.95em]">
+                            {f.meta?.date || new Date(f.createdAt).toLocaleDateString('ru')} ·{' '}
+                            {f.meta?.contractor || objTitle(f.objectId)}
+                          </span>
                           <span className="block truncate text-[0.8em] text-muted-foreground">
-                            {tail || objTitle(f.objectId)}
+                            {f.meta?.place || objTitle(f.objectId)}
                             {f.createdBy ? ` · ${f.createdBy}` : ''}
                           </span>
                         </span>
@@ -172,32 +180,66 @@ const PhotosSection = () => {
 
                       {isOpen && (
                         <div className="bg-card px-4 pb-3 pl-8 pt-2">
-                          {f.note && (
-                            <p className="mb-2 text-[0.86em] text-muted-foreground">{f.note}</p>
+                          {f.meta?.project && (
+                            <p className="mb-2 text-[0.86em] text-muted-foreground">
+                              {f.meta.project}
+                            </p>
                           )}
                           {f.photos.length === 0 ? (
-                            <p className="py-2 text-[0.84em] text-muted-foreground">
-                              Снимков нет.
-                            </p>
+                            <p className="py-2 text-[0.84em] text-muted-foreground">Снимков нет.</p>
                           ) : (
-                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                               {f.photos.map((p) => (
                                 <button
                                   key={p.id}
                                   type="button"
-                                  onClick={() => setZoom(p.url)}
-                                  className="overflow-hidden rounded-sm border border-border"
+                                  onClick={() => setZoom(p)}
+                                  className="overflow-hidden rounded-sm border border-border text-left"
                                 >
                                   <img
                                     src={p.url}
-                                    alt="снимок"
+                                    alt={p.caption || 'снимок'}
                                     loading="lazy"
-                                    className="aspect-square w-full object-cover transition-transform duration-300 hover:scale-105"
+                                    className="aspect-[4/3] w-full object-cover transition-transform duration-300 hover:scale-105"
                                   />
+                                  <span className="block px-2 py-1.5 text-[0.78em] leading-snug text-muted-foreground">
+                                    {p.caption || 'без подписи'}
+                                  </span>
                                 </button>
                               ))}
                             </div>
                           )}
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              className="h-9 flex-1 gap-1.5 rounded-sm bg-accent font-head text-[0.82em] uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+                              onClick={() =>
+                                downloadPhotoReport(
+                                  docData(f),
+                                  `Фотоотчёт ${f.meta?.date || ''}`.trim(),
+                                )
+                              }
+                            >
+                              <Icon name="FileDown" size={15} />
+                              Скачать в Word
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-9 flex-1 gap-1.5 rounded-sm text-[0.82em] uppercase tracking-[0.06em]"
+                              onClick={() => {
+                                if (!printPhotoReport(docData(f)))
+                                  toast({
+                                    title: 'Разрешите всплывающие окна',
+                                    variant: 'destructive',
+                                  });
+                              }}
+                            >
+                              <Icon name="Printer" size={15} className="text-accent" />
+                              Печать
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -211,8 +253,17 @@ const PhotosSection = () => {
       <Dialog open={!!zoom} onOpenChange={(v) => !v && setZoom(null)}>
         <DialogContent className="max-w-3xl rounded-sm border-t-2 border-t-accent p-0">
           <DialogTitle className="sr-only">Снимок фотоотчёта</DialogTitle>
-          <DialogDescription className="sr-only">Просмотр фотографии</DialogDescription>
-          {zoom && <img src={zoom} alt="снимок" className="max-h-[80vh] w-full object-contain" />}
+          <DialogDescription className="sr-only">
+            {zoom?.caption || 'Просмотр фотографии'}
+          </DialogDescription>
+          {zoom && (
+            <>
+              <img src={zoom.url} alt="снимок" className="max-h-[74vh] w-full object-contain" />
+              {zoom.caption && (
+                <p className="px-5 pb-5 text-center text-[0.9em]">{zoom.caption}</p>
+              )}
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
