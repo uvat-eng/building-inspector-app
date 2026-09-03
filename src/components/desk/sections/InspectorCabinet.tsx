@@ -393,8 +393,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
             ))}
           </div>
 
-          <div className="grid min-h-0 gap-3.5 lg:grid-cols-2">
-            {objectsPanel}
+          <div className="grid min-h-0 gap-3.5">
             <Timesheet />
           </div>
         </div>
