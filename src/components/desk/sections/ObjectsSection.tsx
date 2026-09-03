@@ -6,6 +6,7 @@ import Icon from '@/components/ui/icon';
 import Empty from '@/components/desk/Empty';
 import RussiaMap from '@/components/desk/RussiaMap';
 import Summary from '@/components/desk/Summary';
+import InspectorSummary from '@/components/desk/InspectorSummary';
 import ObjectForm from '@/components/desk/ObjectForm';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +39,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
   const [open, setOpen] = useState<ProjectObject | null>(null);
   const [form, setForm] = useState(false);
 
-  const canSeeMap = ['admin', 'director', 'manager', 'pm', 'coordinator', 'mechanic'].includes(
+  const canSeeMap = ['admin', 'director', 'manager', 'pm', 'coordinator', 'mechanic', 'engineer'].includes(
     profile.role,
   );
 
@@ -66,9 +67,15 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
         </Panel>
       )}
 
-      <Panel title="Сводная информация" note="суммируется по всем объектам" className="flex-none">
-        <Summary objects={list} />
-      </Panel>
+      {canSeeMap ? (
+        <Panel title="Сводная информация" note="суммируется по всем объектам" className="flex-none">
+          <Summary objects={list} />
+        </Panel>
+      ) : (
+        <Panel title="Моя работа" note="по вашим объектам" className="flex-none">
+          <InspectorSummary objects={list} />
+        </Panel>
+      )}
 
       <Panel
         title="Объекты строительства"
