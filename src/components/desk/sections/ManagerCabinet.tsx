@@ -25,6 +25,7 @@ import { useProfile } from '@/data/profile';
 import { useVehicles } from '@/data/vehicles';
 import { useInspectorsRollup } from '@/data/rollup';
 import WriteoffApprovals from '@/components/desk/outfit/WriteoffApprovals';
+import IndReportsCabinet from '@/components/desk/indreports/IndReportsCabinet';
 
 interface ManagerCabinetProps {
   onExit?: () => void;
@@ -42,6 +43,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   const [openProject, setOpenProject] = useState<string | null>(null);
   const [openObject, setOpenObject] = useState<string | null>(null);
   const [passOpen, setPassOpen] = useState(false);
+  const [indOpen, setIndOpen] = useState(false);
 
   const projects = useMemo<Project[]>(() => {
     const map = new Map<string, Project>();
@@ -196,6 +198,25 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
     { icon: 'FileWarning', label: 'Открытых предписаний', value: ordersOpen },
   ];
 
+  if (indOpen) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: 'Руководитель проекта', icon: 'SquarePen', onClick: () => setIndOpen(false) },
+            { label: 'Индивидуальные отчёты' },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setIndOpen(false)}
+          onExit={onExit}
+          actions={passButton}
+        />
+        <IndReportsCabinet />
+        {passDialog}
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
       <CabinetBar
@@ -233,6 +254,25 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
             </div>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={() => setIndOpen(true)}
+          className="group flex flex-none items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+        >
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+            <Icon name="ClipboardPen" size={21} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+              Индивидуальные отчёты инспекторов
+            </span>
+            <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+              Архив по годам, месяцам и дням · правка и выгрузка
+            </span>
+          </span>
+          <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+        </button>
 
         <WriteoffApprovals />
 

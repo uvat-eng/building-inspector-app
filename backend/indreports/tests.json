@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "name": "Список отчётов",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Создание без вида отчёта",
+      "method": "POST",
+      "path": "/",
+      "body": { "objectId": "obj-test" },
+      "expectedStatus": 400
+    },
+    {
+      "name": "Правка без идентификатора",
+      "method": "PUT",
+      "path": "/",
+      "body": { "number": "1" },
+      "expectedStatus": 400
+    }
+  ]
+}

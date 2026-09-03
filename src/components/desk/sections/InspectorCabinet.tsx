@@ -32,8 +32,17 @@ import useBackGuard from '@/hooks/use-back-guard';
 import OutfitCabinet from '@/components/desk/outfit/OutfitCabinet';
 import DefectsSection from '@/components/desk/sections/DefectsSection';
 import { downloadOrder, downloadOrdersDigest } from '@/lib/orderDoc';
+import IndReportsCabinet from '@/components/desk/indreports/IndReportsCabinet';
 
-type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile' | 'outfit';
+type View =
+  | 'home'
+  | 'objects'
+  | 'timesheet'
+  | 'defects'
+  | 'ordersAll'
+  | 'indreports'
+  | 'profile'
+  | 'outfit';
 
 type ObjView =
   | 'menu'
@@ -54,6 +63,7 @@ const VIEW_TITLE: Record<View, string> = {
   timesheet: 'Табель учёта времени',
   defects: 'Замечания по всем объектам',
   ordersAll: 'Предписания по всем объектам',
+  indreports: 'Индивидуальные ежедневные отчёты',
   profile: 'Профиль инспектора',
   outfit: 'Оборудование и спецодежда',
 };
@@ -380,6 +390,25 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
             ))}
           </div>
 
+          <button
+            type="button"
+            onClick={() => setView('indreports')}
+            className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+              <Icon name="ClipboardPen" size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                Индивидуальный ежедневный отчёт
+              </span>
+              <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                6 видов формы · архив по годам, месяцам и дням
+              </span>
+            </span>
+            <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+          </button>
+
           <div className="grid min-h-0 gap-3.5">
             <Timesheet />
             <button
@@ -432,6 +461,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       )}
 
       {view === 'defects' && <DefectsSection />}
+
+      {view === 'indreports' && <IndReportsCabinet onBack={() => setView('home')} />}
 
       {view === 'ordersAll' && (
         <Panel
