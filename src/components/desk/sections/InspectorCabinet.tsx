@@ -7,7 +7,7 @@ import Tag from '@/components/desk/Tag';
 import { useProfile, ROLE_LABEL } from '@/data/profile';
 import Timesheet from '@/components/desk/Timesheet';
 import { useObjects } from '@/data/store';
-import { useSummary, useAllDefects, SEVERITY } from '@/data/inspections';
+import { useSummary } from '@/data/inspections';
 import ReportsCabinet from '@/components/desk/inspection/ReportsCabinet';
 import ObjectMenuAlerts from '@/components/desk/inspection/ObjectMenuAlerts';
 import { useOrders } from '@/data/orders';
@@ -30,6 +30,7 @@ import FoldersCabinet from '@/components/desk/inspection/FoldersCabinet';
 import CabinetBar from '@/components/desk/CabinetBar';
 import useBackGuard from '@/hooks/use-back-guard';
 import OutfitCabinet from '@/components/desk/outfit/OutfitCabinet';
+import DefectsSection from '@/components/desk/sections/DefectsSection';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile' | 'outfit';
 
@@ -79,7 +80,6 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
   const { sheet } = useTimesheet();
   const { current } = useUsers();
   const summary = useSummary();
-  const { items: allDefects, loading: defectsLoading } = useAllDefects();
   const { items: allOrders } = useOrders();
   const spec = profile.specialties ?? [];
 
@@ -430,36 +430,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
         </div>
       )}
 
-      {view === 'defects' && (
-        <Panel title="Замечания по всем объектам" note={`${allDefects.length}`}>
-          {defectsLoading ? (
-            <Empty icon="Loader2" title="Загрузка…" hint="Собираем замечания со всех объектов." />
-          ) : allDefects.length === 0 ? (
-            <Empty
-              icon="TriangleAlert"
-              title="Замечаний нет"
-              hint="Замечания появятся после выездов на объект."
-            />
-          ) : (
-            allDefects.map((d) => (
-              <Row
-                key={d.id}
-                title={d.title}
-                sub={[
-                  objects.find((o) => o.id === d.objectId)?.title ?? 'Объект',
-                  `акт № ${d.inspNumber}`,
-                  d.normRef || 'норма не указана',
-                ].join(' · ')}
-                right={
-                  <Tag tone={d.severity === 'critical' ? 'hot' : d.severity === 'minor' ? 'dim' : 'wait'}>
-                    {d.deadline || SEVERITY[d.severity || 'normal'].label}
-                  </Tag>
-                }
-              />
-            ))
-          )}
-        </Panel>
-      )}
+      {view === 'defects' && <DefectsSection />}
 
       {view === 'ordersAll' && (
         <Panel title="Предписания по всем объектам" note={`${allOrders.length}`}>
