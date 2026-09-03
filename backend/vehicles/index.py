@@ -31,6 +31,11 @@ def resp(code, body):
 def to_vehicle(r):
     return {
         'id': r['id'],
+        'assetType': r['asset_type'] or 'vehicle',
+        'invNo': r['inv_no'] or '',
+        'objectId': r['object_id'] or '',
+        'verifiedTo': r['verified_to'] or '',
+        'holder': r['holder'] or '',
         'plate': r['plate'],
         'model': r['model'],
         'kind': r['kind'],
@@ -75,7 +80,9 @@ def handler(event: dict, context) -> dict:
 
     try:
         if method == 'GET':
-            cur.execute('SELECT * FROM vehicles ORDER BY created_at DESC')
+            asset_type = params.get('asset_type', '')
+            where = f"WHERE asset_type = '{esc(asset_type)}'" if asset_type else ''
+            cur.execute(f'SELECT * FROM vehicles {where} ORDER BY created_at DESC')
             items = [to_vehicle(r) for r in cur.fetchall()]
             cur.execute('SELECT * FROM vehicle_logs ORDER BY date DESC, created_at DESC')
             logs = [to_log(r) for r in cur.fetchall()]
@@ -106,18 +113,24 @@ def handler(event: dict, context) -> dict:
         if method == 'POST':
             plate = body.get('plate', '').strip()
             model = body.get('model', '').strip()
-            if not plate or not model:
+            asset_type = body.get('assetType') or 'vehicle'
+            if asset_type == 'vehicle' and (not plate or not model):
                 return resp(400, {'error': 'plate_and_model_required'})
+            if asset_type != 'vehicle' and not model:
+                return resp(400, {'error': 'model_required'})
             vid = uuid.uuid4().hex[:12]
             cur.execute(
-                'INSERT INTO vehicles (id, plate, model, kind, driver, location_id, odometer, '
-                'fuel_norm, service_at, osago_to, status, note, created_by) VALUES ('
-                f"'{esc(vid)}', '{esc(plate)}', '{esc(model)}', "
+                'INSERT INTO vehicles (id, asset_type, plate, model, kind, driver, location_id, '
+                'odometer, fuel_norm, service_at, osago_to, status, note, created_by, inv_no, '
+                'object_id, verified_to, holder) VALUES ('
+                f"'{esc(vid)}', '{esc(asset_type)}', '{esc(plate)}', '{esc(model)}', "
                 f"'{esc(body.get('vehicleKind') or 'car')}', '{esc(body.get('driver', ''))}', "
                 f"'{esc(body.get('locationId', ''))}', {int(num(body.get('odometer')))}, "
                 f"{num(body.get('fuelNorm'))}, '{esc(body.get('serviceAt', ''))}', "
                 f"'{esc(body.get('osagoTo', ''))}', '{esc(body.get('status') or 'На линии')}', "
-                f"'{esc(body.get('note', ''))}', '{esc(body.get('createdBy', ''))}') RETURNING *"
+                f"'{esc(body.get('note', ''))}', '{esc(body.get('createdBy', ''))}', "
+                f"'{esc(body.get('invNo', ''))}', '{esc(body.get('objectId', ''))}', "
+                f"'{esc(body.get('verifiedTo', ''))}', '{esc(body.get('holder', ''))}') RETURNING *"
             )
             row = cur.fetchone()
             conn.commit()
@@ -136,6 +149,11 @@ def handler(event: dict, context) -> dict:
                 'osagoTo': 'osago_to',
                 'status': 'status',
                 'note': 'note',
+                'invNo': 'inv_no',
+                'objectId': 'object_id',
+                'verifiedTo': 'verified_to',
+                'holder': 'holder',
+                'assetType': 'asset_type',
             }
             num_cols = {'odometer': 'odometer', 'fuelNorm': 'fuel_norm'}
             sets = [f"{text_cols[k]} = '{esc(v)}'" for k, v in patch.items() if k in text_cols]

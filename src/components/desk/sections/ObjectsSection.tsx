@@ -42,7 +42,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
     if (!canAddObject) {
       toast({
         title: 'Недостаточно прав',
-        description: `Добавлять объекты может только менеджер проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+        description: `Добавлять объекты могут менеджер, координатор и руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
         variant: 'destructive',
       });
       return;
@@ -180,7 +180,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
                       if (!canAddObject) {
                         toast({
                           title: 'Недостаточно прав',
-                          description: `Корректировать объект может только менеджер проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+                          description: `Корректировать объект могут менеджер, координатор и руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
                           variant: 'destructive',
                         });
                         return;

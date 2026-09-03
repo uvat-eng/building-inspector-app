@@ -68,7 +68,11 @@ def handler(event: dict, context) -> dict:
                 row = cur.fetchone()
                 if not row:
                     return resp(404, {'error': 'not_found'})
-                if row['password'] != body.get('password'):
+                sent = str(body.get('password') or '')
+                stored = str(row['password'] or '')
+                if stored and stored != sent:
+                    return resp(403, {'error': 'wrong_password'})
+                if not stored and sent:
                     return resp(403, {'error': 'wrong_password'})
                 return resp(200, {'item': row_to_user(row)})
 
@@ -80,11 +84,12 @@ def handler(event: dict, context) -> dict:
                 row = cur.fetchone()
                 if not row:
                     return resp(404, {'error': 'not_found'})
-                if row['password'] != old:
+                stored = str(row['password'] or '')
+                if stored and stored != str(old or ''):
                     return resp(403, {'error': 'wrong_password'})
                 if len(new) < 4:
                     return resp(400, {'error': 'too_short'})
-                if new == old:
+                if stored and new == stored:
                     return resp(400, {'error': 'same_password'})
                 cur.execute(
                     f"UPDATE users SET password = '{esc(new)}', must_change_password = false "
@@ -104,7 +109,11 @@ def handler(event: dict, context) -> dict:
             elif by_id:
                 cur.execute(f"SELECT role FROM users WHERE id = '{by_id}'")
                 r = cur.fetchone()
-                allowed = bool(r and r['role'] in ('admin', 'pm', 'coordinator', 'director'))
+                allowed = bool(
+                    r
+                    and r['role']
+                    in ('admin', 'pm', 'coordinator', 'director', 'manager', 'engineer')
+                )
             if not allowed:
                 return resp(403, {'error': 'not_allowed'})
 

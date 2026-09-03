@@ -59,15 +59,16 @@ export const ROLE_ICON: Record<Role, string> = {
   driver: 'Truck',
 };
 
-const CAN_EDIT: Role[] = ['admin', 'pm'];
+const CAN_EDIT: Role[] = ['admin', 'pm', 'coordinator', 'manager'];
 
-export const CAN_ADD_LOCATION: Role[] = ['admin', 'director', 'pm', 'coordinator'];
+export const CAN_ADD_LOCATION: Role[] = ['admin', 'director', 'pm', 'coordinator', 'manager'];
 
 export const ROLE_SECTIONS: Record<Role, string[]> = {
   admin: [
     'cabinet',
     'objects',
     'staff',
+    'assets',
     'sites',
     'inspections',
     'defects',
@@ -79,6 +80,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'cabinet',
     'objects',
     'staff',
+    'assets',
     'sites',
     'inspections',
     'defects',
@@ -90,6 +92,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'cabinet',
     'objects',
     'staff',
+    'assets',
     'sites',
     'inspections',
     'defects',
@@ -97,15 +100,48 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'documents',
     'reports',
   ],
-  pm: ['cabinet', 'objects', 'staff', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
-  manager: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
-  engineer: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents', 'reports'],
+  pm: [
+    'cabinet',
+    'objects',
+    'staff',
+    'assets',
+    'sites',
+    'inspections',
+    'defects',
+    'photos',
+    'documents',
+    'reports',
+  ],
+  manager: [
+    'cabinet',
+    'objects',
+    'staff',
+    'assets',
+    'sites',
+    'inspections',
+    'defects',
+    'photos',
+    'documents',
+    'reports',
+  ],
+  engineer: [
+    'cabinet',
+    'objects',
+    'staff',
+    'assets',
+    'sites',
+    'defects',
+    'photos',
+    'documents',
+    'reports',
+  ],
   inspector: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents'],
-  mechanic: ['cabinet', 'objects', 'inspections'],
+  mechanic: ['cabinet', 'objects', 'assets', 'inspections'],
   driver: ['objects', 'inspections'],
 };
 
-export const EDIT_HINT = 'Вносить и изменять месторождения, проекты и объекты может только менеджер проекта.';
+export const EDIT_HINT =
+  'Вносить и изменять месторождения, проекты и объекты могут менеджер, координатор и руководитель проекта.';
 
 export const SPECIALTIES = [
   'Инженер-электрик',
@@ -130,7 +166,26 @@ export interface Profile {
   specialties: string[];
 }
 
-export const CAN_MANAGE_USERS: Role[] = ['admin', 'pm', 'coordinator', 'director'];
+export const CAN_MANAGE_USERS: Role[] = [
+  'admin',
+  'pm',
+  'coordinator',
+  'director',
+  'manager',
+  'engineer',
+];
+
+export const CAN_MANAGE_ASSETS: Role[] = [
+  'admin',
+  'pm',
+  'coordinator',
+  'director',
+  'manager',
+  'engineer',
+  'mechanic',
+];
+
+export const CREATABLE_ROLES: Role[] = ['inspector', 'driver', 'mechanic'];
 
 export const isAdminProfile = (p: Profile) => (p.baseRole ?? p.role) === 'admin';
 
@@ -190,6 +245,7 @@ export const useProfile = () => {
     isAdmin: admin,
     viewingAs: admin && profile.role !== 'admin' ? profile.role : null,
     canAddObject: admin || CAN_EDIT.includes(profile.role),
+    canManageAssets: admin || CAN_MANAGE_ASSETS.includes(profile.role),
     canManageUsers: admin || CAN_MANAGE_USERS.includes(profile.role),
     canAddLocation: admin || CAN_ADD_LOCATION.includes(profile.role),
   };

@@ -108,7 +108,7 @@ const LoginDialog = ({
               : 'Не удалось войти',
         description:
           code === 'not_found'
-            ? 'Логин и пароль выдаёт менеджер или координатор проекта.'
+            ? 'Учётную запись создаёт руководитель, координатор или менеджер проекта.'
             : undefined,
         variant: 'destructive',
       });
@@ -194,8 +194,13 @@ const LoginDialog = ({
               onChange={(e) => setPass(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (empty ? createFirst() : doLogin())}
               className="rounded-sm"
-              placeholder="••••••••"
+              placeholder={empty ? '••••••••' : 'Первый вход — оставьте пустым'}
             />
+            {!empty && (
+              <p className="text-[0.72em] leading-snug text-muted-foreground">
+                Входите впервые — не заполняйте это поле. Система сама попросит задать пароль.
+              </p>
+            )}
           </div>
 
           <Button
@@ -213,8 +218,8 @@ const LoginDialog = ({
 
           {!adminMode && (
             <p className="rounded-sm border border-border bg-secondary/50 px-3 py-2.5 text-center text-[0.78em] leading-snug text-muted-foreground">
-              Учётные записи создаёт менеджер или координатор проекта. Он же выдаёт пароль и
-              открывает доступ к локациям.
+              Учётные записи создаёт руководитель, координатор или менеджер проекта. Первый вход
+              выполняется по ФИО без пароля — свой пароль вы зададите сами.
             </p>
           )}
         </div>

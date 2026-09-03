@@ -16,6 +16,8 @@ import InspectorCabinet from '@/components/desk/sections/InspectorCabinet';
 import ManagerCabinet from '@/components/desk/sections/ManagerCabinet';
 import MechanicCabinet from '@/components/desk/sections/MechanicCabinet';
 import StaffSection from '@/components/desk/sections/StaffSection';
+import ChangePassword from '@/components/desk/ChangePassword';
+import AssetsSection from '@/components/desk/sections/AssetsSection';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,7 +55,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const [objectEdit, setObjectEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const { profile, save, isAdmin, viewingAs } = useProfile();
-  const { current } = useUsers();
+  const { current, reload: reloadUsers } = useUsers();
   const { toast } = useToast();
   const { scope } = useScope();
   const { list: locations } = useLocations();
@@ -156,6 +158,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
       />
     ),
     staff: <StaffSection />,
+    assets: <AssetsSection />,
     objects: <ObjectsSection onOpenObject={openObject} />,
     sites: objectId ? (
       <ObjectPage id={objectId} editOnOpen={objectEdit} onBack={closeObject} />
@@ -252,6 +255,26 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
           {content}
         </div>
       </main>
+
+      <Dialog open={!!current && !current.password} onOpenChange={() => undefined}>
+        <DialogContent
+          className="max-w-md rounded-sm [&>button]:hidden"
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.2em] uppercase tracking-[0.03em]">
+              Задайте свой пароль
+            </DialogTitle>
+            <DialogDescription className="text-[0.85em]">
+              Первый вход выполнен без пароля. Придумайте постоянный — дальше входить будете
+              только с ним.
+            </DialogDescription>
+          </DialogHeader>
+          {current && <ChangePassword user={current} onDone={reloadUsers} />}
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="w-[260px] border-0 bg-card p-0">

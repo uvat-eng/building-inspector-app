@@ -18,6 +18,7 @@ const ERRORS: Record<string, string> = {
 };
 
 const ChangePassword = ({ user, onDone }: Props) => {
+  const first = !user.password;
   const { toast } = useToast();
   const [oldPass, setOldPass] = useState('');
   const [newPass, setNewPass] = useState('');
@@ -75,13 +76,14 @@ const ChangePassword = ({ user, onDone }: Props) => {
       {user.mustChangePassword && (
         <p className="flex items-start gap-2 rounded-sm border border-accent/40 bg-accent/10 px-3 py-2.5 text-[0.82em] leading-snug">
           <Icon name="TriangleAlert" size={15} className="mt-0.5 flex-none text-accent" />
-          Вы вошли под временным паролем. Придумайте свой постоянный — его не будет знать никто,
-          кроме вас.
+          {first
+            ? 'Это ваш первый вход. Придумайте постоянный пароль — его не будет знать никто, кроме вас.'
+            : 'Вы вошли под временным паролем. Придумайте свой постоянный — его не будет знать никто, кроме вас.'}
         </p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {input('Текущий пароль', oldPass, setOldPass, 'Выданный вам')}
+      <div className={first ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3 sm:grid-cols-3'}>
+        {!first && input('Текущий пароль', oldPass, setOldPass, 'Выданный вам')}
         {input('Новый пароль', newPass, setNewPass, 'Минимум 4 символа')}
         {input('Повторите новый', repeat, setRepeat, 'Ещё раз')}
       </div>
@@ -96,7 +98,7 @@ const ChangePassword = ({ user, onDone }: Props) => {
           size={16}
           className={busy ? 'animate-spin' : ''}
         />
-        {busy ? 'Меняем…' : 'Изменить пароль'}
+        {busy ? 'Сохраняем…' : first ? 'Задать пароль' : 'Изменить пароль'}
       </Button>
     </div>
   );

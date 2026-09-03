@@ -2,7 +2,33 @@ import { useCallback, useEffect, useState } from 'react';
 
 const API = 'https://functions.poehali.dev/68e74250-3805-448a-90f0-6fa74f3f0739';
 
+export type AssetType = 'vehicle' | 'cabin' | 'device';
 export type VehicleKind = 'car' | 'truck' | 'bus' | 'special';
+
+export const ASSET_LABEL: Record<AssetType, string> = {
+  vehicle: 'Техника',
+  cabin: 'Вагоны и бытовки',
+  device: 'Измерительный инструмент',
+};
+
+export const ASSET_ICON: Record<AssetType, string> = {
+  vehicle: 'Truck',
+  cabin: 'Container',
+  device: 'Gauge',
+};
+
+export const CABIN_KINDS = ['Вагон-дом', 'Бытовка', 'Штабной вагон', 'Столовая', 'Склад'];
+
+export const DEVICE_KINDS = [
+  'Нивелир',
+  'Тахеометр',
+  'Толщиномер',
+  'Твердомер',
+  'Дальномер',
+  'Тепловизор',
+  'Рулетка / линейка',
+  'Прочий прибор',
+];
 export type VehicleStatus = 'На линии' | 'ТО' | 'Ремонт' | 'Стоянка';
 export type LogKind = 'service' | 'fuel' | 'waybill';
 
@@ -36,6 +62,11 @@ export const LOG_ICON: Record<LogKind, string> = {
 
 export interface Vehicle {
   id: string;
+  assetType: AssetType;
+  invNo: string;
+  objectId: string;
+  verifiedTo: string;
+  holder: string;
   plate: string;
   model: string;
   kind: VehicleKind;
@@ -65,21 +96,21 @@ export interface VehicleLog {
 export type VehicleDraft = Partial<Omit<Vehicle, 'id' | 'kind'>> & {
   plate: string;
   model: string;
-  vehicleKind?: VehicleKind;
+  vehicleKind?: VehicleKind | string;
 };
 
-export const useVehicles = () => {
+export const useVehicles = (assetType?: AssetType) => {
   const [items, setItems] = useState<Vehicle[]>([]);
   const [logs, setLogs] = useState<VehicleLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    const res = await fetch(API);
+    const res = await fetch(assetType ? `${API}?asset_type=${assetType}` : API);
     if (!res.ok) throw new Error('load_failed');
     const data = (await res.json()) as { items: Vehicle[]; logs: VehicleLog[] };
     setItems(data.items ?? []);
     setLogs(data.logs ?? []);
-  }, []);
+  }, [assetType]);
 
   useEffect(() => {
     setLoading(true);
@@ -92,13 +123,13 @@ export const useVehicles = () => {
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(draft),
+      body: JSON.stringify({ assetType: assetType ?? 'vehicle', ...draft }),
     });
     if (!res.ok) throw new Error('create_failed');
     const { item } = (await res.json()) as { item: Vehicle };
     setItems((p) => [item, ...p]);
     return item;
-  }, []);
+  }, [assetType]);
 
   const update = useCallback(async (id: string, patch: Record<string, string | number>) => {
     const res = await fetch(API, {

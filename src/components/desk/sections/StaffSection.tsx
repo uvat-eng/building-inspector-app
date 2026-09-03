@@ -20,6 +20,8 @@ import {
   ROLE_ICON,
   ROLE_NOTE,
   ROLE_ORDER,
+  CREATABLE_ROLES,
+  isAdminProfile,
   Role,
   SPECIALTIES,
 } from '@/data/profile';
@@ -38,7 +40,6 @@ const StaffSection = () => {
 
   const [form, setForm] = useState(false);
   const [nFio, setNFio] = useState('');
-  const [nPass, setNPass] = useState('');
   const [nRole, setNRole] = useState<Role>('inspector');
   const [nPhone, setNPhone] = useState('');
   const [nLocs, setNLocs] = useState<string[]>([]);
@@ -46,6 +47,7 @@ const StaffSection = () => {
   const [busy, setBusy] = useState(false);
 
   const canManage = canManageUsers;
+  const roleChoices = isAdminProfile(profile) ? ROLE_ORDER : CREATABLE_ROLES;
 
   const toggle = (arr: string[], v: string) =>
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -53,10 +55,6 @@ const StaffSection = () => {
   const createUser = async () => {
     if (nFio.trim().split(/\s+/).length < 2) {
       toast({ title: 'Укажите фамилию, имя и отчество', variant: 'destructive' });
-      return;
-    }
-    if (nPass.length < 4) {
-      toast({ title: 'Пароль минимум 4 символа', variant: 'destructive' });
       return;
     }
     if (nRole === 'inspector' && nLocs.length === 0) {
@@ -68,7 +66,7 @@ const StaffSection = () => {
       await registerUser(
         {
           fio: nFio.trim().replace(/\s+/g, ' '),
-          password: nPass,
+          password: '',
           role: nRole,
           group: '',
           org: profile.org,
@@ -82,11 +80,10 @@ const StaffSection = () => {
       );
       toast({
         title: 'Учётная запись создана',
-        description: `${nFio.trim()} · пароль ${nPass} — передайте лично.`,
+        description: `${nFio.trim()} — первый вход без пароля, система попросит задать свой.`,
       });
       setForm(false);
       setNFio('');
-      setNPass('');
       setNPhone('');
       setNLocs([]);
       setNSpec([]);
@@ -340,18 +337,13 @@ const StaffSection = () => {
               />
             </div>
 
+            <div className="rounded-sm border border-accent/40 bg-accent/[0.06] px-3 py-2.5 text-[0.8em] leading-snug text-muted-foreground">
+              <span className="font-bold text-foreground">Пароль не нужен.</span> Сотрудник входит
+              по своим ФИО с пустым полем пароля, после первого входа система сама попросит его
+              задать постоянный пароль.
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
-                  Пароль
-                </Label>
-                <Input
-                  value={nPass}
-                  onChange={(e) => setNPass(e.target.value)}
-                  className="rounded-sm"
-                  placeholder="Минимум 4 символа"
-                />
-              </div>
               <div className="space-y-1.5">
                 <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
                   Телефон
@@ -370,7 +362,7 @@ const StaffSection = () => {
                 Должность
               </Label>
               <div className="grid gap-1.5 sm:grid-cols-2">
-                {ROLE_ORDER.map((r) => (
+                {roleChoices.map((r) => (
                   <button
                     key={r}
                     type="button"
