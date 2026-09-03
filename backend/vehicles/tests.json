@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Список техники",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "items": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Создание без госномера",
+      "method": "POST",
+      "path": "/",
+      "body": { "model": "УАЗ" },
+      "expectedStatus": 400,
+      "expectedBody": { "error": "plate_and_model_required" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

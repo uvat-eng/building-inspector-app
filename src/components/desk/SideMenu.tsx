@@ -16,9 +16,13 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => {
   const { current } = useUsers();
   const allowed = current && !isAdmin ? ROLE_SECTIONS[profile.role] : null;
   const isManager = ['pm', 'coordinator', 'director'].includes(profile.role);
-  const items = (allowed ? MENU.filter((m) => allowed.includes(m.id)) : MENU).map((m) =>
-    m.id === 'cabinet' && isManager ? { ...m, label: 'Кабинет менеджера', icon: 'FileSignature' } : m,
-  );
+  const isMechanic = profile.role === 'mechanic';
+  const items = (allowed ? MENU.filter((m) => allowed.includes(m.id)) : MENU).map((m) => {
+    if (m.id !== 'cabinet') return m;
+    if (isMechanic) return { ...m, label: 'Кабинет механика', icon: 'Wrench' };
+    if (isManager) return { ...m, label: 'Кабинет менеджера', icon: 'FileSignature' };
+    return m;
+  });
   return (
   <nav
     className={cn(

@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import LoginDialog from '@/components/desk/LoginDialog';
 import InspectorCabinet from '@/components/desk/sections/InspectorCabinet';
 import ManagerCabinet from '@/components/desk/sections/ManagerCabinet';
+import MechanicCabinet from '@/components/desk/sections/MechanicCabinet';
 import StaffSection from '@/components/desk/sections/StaffSection';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
@@ -132,7 +133,14 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
 
 
   const content = {
-    cabinet: ['admin', 'pm', 'coordinator', 'director', 'manager', 'engineer'].includes(profile.role) ? (
+    cabinet: profile.role === 'mechanic' ? (
+      <MechanicCabinet
+        onExit={() => {
+          leaveOk.current = true;
+          select('objects');
+        }}
+      />
+    ) : ['admin', 'pm', 'coordinator', 'director', 'manager', 'engineer'].includes(profile.role) ? (
       <ManagerCabinet
         onExit={() => {
           leaveOk.current = true;

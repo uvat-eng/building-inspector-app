@@ -8,6 +8,7 @@ export type Role =
   | 'manager'
   | 'engineer'
   | 'inspector'
+  | 'mechanic'
   | 'driver';
 
 export const ROLE_ORDER: Role[] = [
@@ -18,6 +19,7 @@ export const ROLE_ORDER: Role[] = [
   'manager',
   'engineer',
   'inspector',
+  'mechanic',
   'driver',
 ];
 
@@ -29,6 +31,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   manager: 'Руководитель проекта',
   engineer: 'Старший инженер',
   inspector: 'Инспектор СК',
+  mechanic: 'Механик',
   driver: 'Водитель',
 };
 
@@ -40,6 +43,7 @@ export const ROLE_NOTE: Record<Role, string> = {
   manager: 'Управление объектом, персоналом и техникой',
   engineer: 'Замечания, предписания, проверка исполнительной документации',
   inspector: 'Выезды, фотофиксация и оформление замечаний на объекте',
+  mechanic: 'Автопарк, техобслуживание, путевые листы и топливо',
   driver: 'График выездов и маршруты, доступ только на просмотр',
 };
 
@@ -51,6 +55,7 @@ export const ROLE_ICON: Record<Role, string> = {
   manager: 'Briefcase',
   engineer: 'Ruler',
   inspector: 'HardHat',
+  mechanic: 'Wrench',
   driver: 'Truck',
 };
 
@@ -96,6 +101,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
   manager: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents', 'reports'],
   engineer: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents', 'reports'],
   inspector: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents'],
+  mechanic: ['cabinet', 'objects', 'inspections'],
   driver: ['objects', 'inspections'],
 };
 
