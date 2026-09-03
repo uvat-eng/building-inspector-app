@@ -38,11 +38,15 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
   const [open, setOpen] = useState<ProjectObject | null>(null);
   const [form, setForm] = useState(false);
 
+  const canSeeMap = ['admin', 'director', 'manager', 'pm', 'coordinator', 'mechanic'].includes(
+    profile.role,
+  );
+
   const tryAdd = () => {
     if (!canAddObject) {
       toast({
         title: 'Недостаточно прав',
-        description: `Добавлять объекты могут менеджер, координатор и руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
+        description: `Добавлять объекты может руководитель проекта. Ваша роль: ${ROLE_LABEL[profile.role]}.`,
         variant: 'destructive',
       });
       return;
@@ -56,9 +60,11 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
         Хорошая работа — хорошая зарплата. Плохая работа — <span className="text-accent">нет зарплаты, совсем</span>.
       </div>
 
-      <Panel title="Карта объектов России" className="flex-none">
-        <RussiaMap objects={list} onPick={(o) => setOpen(o)} />
-      </Panel>
+      {canSeeMap && (
+        <Panel title="Карта объектов России" className="flex-none">
+          <RussiaMap objects={list} onPick={(o) => setOpen(o)} />
+        </Panel>
+      )}
 
       <Panel title="Сводная информация" note="суммируется по всем объектам" className="flex-none">
         <Summary objects={list} />
@@ -72,7 +78,7 @@ const ObjectsSection = ({ onOpenObject }: ObjectsSectionProps) => {
           <Button
             size="sm"
             onClick={tryAdd}
-            title={canAddObject ? undefined : 'Доступно менеджеру проекта'}
+            title={canAddObject ? undefined : 'Доступно руководителю проекта'}
             className={`ml-3 h-8 gap-1.5 rounded-sm px-3 font-head text-[0.85em] uppercase tracking-[0.06em] ${
               canAddObject
                 ? 'bg-accent text-accent-foreground hover:bg-accent/90'
