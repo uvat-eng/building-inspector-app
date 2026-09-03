@@ -42,7 +42,7 @@ const ContractorCard = ({ object, onBack }: ContractorCardProps) => {
   const [form, setForm] = useState<Contractor>(EMPTY_CONTRACTOR);
   const [busy, setBusy] = useState(false);
 
-  const canEdit = ['pm', 'coordinator', 'director'].includes(profile.role);
+  const canEdit = ['pm', 'coordinator', 'manager', 'director'].includes(profile.role);
 
   useEffect(() => {
     if (edit) setForm(edit);

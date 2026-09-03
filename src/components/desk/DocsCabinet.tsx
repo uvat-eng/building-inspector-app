@@ -59,7 +59,7 @@ const DocsCabinet = ({ object, onBack, only, sections, title: pageTitle, hint }:
   const fileRef = useRef<HTMLInputElement>(null);
 
   const manualUpload = !!sections?.every((s) => s === 'pos' || s === 'ppr');
-  const canUpload = manualUpload || ['pm', 'coordinator', 'director'].includes(profile.role);
+  const canUpload = manualUpload || ['pm', 'coordinator', 'manager', 'director'].includes(profile.role);
 
   const bySection = useMemo(() => {
     const map: Record<DocSection, ProjectDoc[]> = {

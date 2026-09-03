@@ -15,7 +15,7 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => {
   const { profile, isAdmin } = useProfile();
   const { current } = useUsers();
   const allowed = current && !isAdmin ? ROLE_SECTIONS[profile.role] : null;
-  const isManager = ['pm', 'coordinator', 'director'].includes(profile.role);
+  const isManager = ['pm', 'coordinator', 'manager', 'director'].includes(profile.role);
   const isMechanic = profile.role === 'mechanic';
   const items = (allowed ? MENU.filter((m) => allowed.includes(m.id)) : MENU).map((m) => {
     if (m.id !== 'cabinet') return m;

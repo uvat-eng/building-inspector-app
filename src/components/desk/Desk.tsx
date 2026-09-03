@@ -320,7 +320,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
         open={loginOpen}
         onOpenChange={setLoginOpen}
         onEntered={(r) =>
-          ['inspector', 'admin', 'pm', 'coordinator', 'director'].includes(r) && select('cabinet')
+          ['inspector', 'admin', 'pm', 'coordinator', 'manager', 'director'].includes(r) && select('cabinet')
         }
       />
     </div>
