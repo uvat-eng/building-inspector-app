@@ -15,6 +15,7 @@ import LoginDialog from '@/components/desk/LoginDialog';
 import InspectorCabinet from '@/components/desk/sections/InspectorCabinet';
 import ManagerCabinet from '@/components/desk/sections/ManagerCabinet';
 import MechanicCabinet from '@/components/desk/sections/MechanicCabinet';
+import DriverCabinet from '@/components/desk/sections/DriverCabinet';
 import StaffSection from '@/components/desk/sections/StaffSection';
 import ChangePassword from '@/components/desk/ChangePassword';
 import AssetsSection from '@/components/desk/sections/AssetsSection';
@@ -135,7 +136,14 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
 
 
   const content = {
-    cabinet: profile.role === 'mechanic' ? (
+    cabinet: profile.role === 'driver' ? (
+      <DriverCabinet
+        onExit={() => {
+          leaveOk.current = true;
+          select('objects');
+        }}
+      />
+    ) : profile.role === 'mechanic' ? (
       <MechanicCabinet
         onExit={() => {
           leaveOk.current = true;

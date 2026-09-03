@@ -20,6 +20,7 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => {
   const items = (allowed ? MENU.filter((m) => allowed.includes(m.id)) : MENU).map((m) => {
     if (m.id !== 'cabinet') return m;
     if (isMechanic) return { ...m, label: 'Кабинет механика', icon: 'Wrench' };
+    if (profile.role === 'driver') return { ...m, label: 'Кабинет водителя', icon: 'Truck' };
     if (isManager) return { ...m, label: 'Кабинет менеджера', icon: 'FileSignature' };
     return m;
   });

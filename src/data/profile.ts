@@ -137,7 +137,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
   ],
   inspector: ['cabinet', 'objects', 'sites', 'defects', 'photos', 'documents'],
   mechanic: ['cabinet', 'objects', 'assets', 'inspections'],
-  driver: ['objects', 'inspections'],
+  driver: ['cabinet', 'objects', 'inspections'],
 };
 
 export const EDIT_HINT =

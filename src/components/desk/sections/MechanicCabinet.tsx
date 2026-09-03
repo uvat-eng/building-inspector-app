@@ -19,6 +19,7 @@ import CabinetBar from '@/components/desk/CabinetBar';
 import ChangePassword from '@/components/desk/ChangePassword';
 import useBackGuard from '@/hooks/use-back-guard';
 import VehicleForm from '@/components/desk/mechanic/VehicleForm';
+import { downloadWaybills } from '@/lib/waybillXls';
 import LogDialog from '@/components/desk/mechanic/LogDialog';
 import VehicleCard, { STATUS_TONE } from '@/components/desk/mechanic/VehicleCard';
 import {
@@ -167,6 +168,21 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
                 Пароль
               </button>
             )}
+            <button
+              type="button"
+              onClick={() =>
+                downloadWaybills(
+                  logs.filter((l) => l.kind === 'waybill'),
+                  items,
+                  'Автопарк · весь период',
+                  new Date().toLocaleDateString('ru'),
+                )
+              }
+              className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
+            >
+              <Icon name="Download" size={14} className="text-accent" />
+              Путевые листы
+            </button>
             <button
               type="button"
               onClick={() => openForm(null)}

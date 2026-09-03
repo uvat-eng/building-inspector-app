@@ -27,6 +27,7 @@ import {
 } from '@/data/profile';
 import { useUsers, updateUser, removeUser, registerUser, User } from '@/data/users';
 import { useLocations } from '@/data/locations';
+import { useFields } from '@/data/fields';
 
 const StaffSection = () => {
   const { profile, canManageUsers } = useProfile();
@@ -44,6 +45,8 @@ const StaffSection = () => {
   const [nPhone, setNPhone] = useState('');
   const [nLocs, setNLocs] = useState<string[]>([]);
   const [nSpec, setNSpec] = useState<string[]>([]);
+  const [nProject, setNProject] = useState('');
+  const { list: fields } = useFields(nLocs.length === 1 ? nLocs[0] : undefined);
   const [busy, setBusy] = useState(false);
 
   const canManage = canManageUsers;
@@ -57,6 +60,10 @@ const StaffSection = () => {
       toast({ title: 'Укажите фамилию, имя и отчество', variant: 'destructive' });
       return;
     }
+    if ((nRole === 'driver' || nRole === 'mechanic') && !nProject.trim()) {
+      toast({ title: 'Выберите проект', description: 'Путевые листы заполняются по проекту.', variant: 'destructive' });
+      return;
+    }
     if (nRole === 'inspector' && nLocs.length === 0) {
       toast({ title: 'Назначьте хотя бы одну локацию', variant: 'destructive' });
       return;
@@ -68,7 +75,7 @@ const StaffSection = () => {
           fio: nFio.trim().replace(/\s+/g, ' '),
           password: '',
           role: nRole,
-          group: '',
+          group: nProject.trim(),
           org: profile.org,
           phone: nPhone.trim(),
           locations: nLocs,
@@ -87,6 +94,7 @@ const StaffSection = () => {
       setNPhone('');
       setNLocs([]);
       setNSpec([]);
+      setNProject('');
       reload();
     } catch (e) {
       const c = (e as Error).message;
@@ -412,6 +420,44 @@ const StaffSection = () => {
                 у них доступ ко всем.
               </p>
             </div>
+
+            {(nRole === 'driver' || nRole === 'mechanic') && (
+              <div className="space-y-1.5">
+                <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+                  Проект — подставится в путевые листы
+                </Label>
+                {nLocs.length === 1 && fields.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {fields.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setNProject(f.title)}
+                        className={cn(
+                          'rounded-sm border px-2.5 py-1.5 text-[0.85em] transition-colors',
+                          nProject === f.title
+                            ? 'border-accent bg-accent text-accent-foreground'
+                            : 'border-input hover:bg-secondary',
+                        )}
+                      >
+                        {f.title}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <Input
+                    value={nProject}
+                    onChange={(e) => setNProject(e.target.value)}
+                    className="rounded-sm"
+                    placeholder={
+                      nLocs.length === 1
+                        ? 'Название проекта'
+                        : 'Отметьте одну локацию — появится список проектов'
+                    }
+                  />
+                )}
+              </div>
+            )}
 
             {nRole === 'inspector' && (
               <div className="space-y-1.5">
