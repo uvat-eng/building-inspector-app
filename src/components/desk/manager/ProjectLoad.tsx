@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { ProjectObject } from '@/data/store';
@@ -11,8 +11,10 @@ interface ProjectLoadProps {
 }
 
 interface Card {
+  id: 'staff' | 'tech' | 'cabin';
   icon: string;
   label: string;
+  unit: string;
   fact: number;
   plan: number;
 }
@@ -40,26 +42,59 @@ const ProjectLoad = ({ objects, cabinObjectIds }: ProjectLoadProps) => {
     };
   }, [rollup, ids, objects]);
 
+  const cabinsByObject = useMemo(() => {
+    const map = new Map<string, number>();
+    cabinObjectIds.forEach((id) => map.set(id, (map.get(id) ?? 0) + 1));
+    return map;
+  }, [cabinObjectIds]);
+
   const cards: Card[] = [
     {
+      id: 'staff',
       icon: 'HardHat',
       label: 'Инспекторы',
+      unit: 'чел.',
       fact: sumBy(objects, (o) => o.staffFact),
       plan: sumBy(objects, (o) => o.staffPlan),
     },
     {
+      id: 'tech',
       icon: 'Truck',
       label: 'Техника',
+      unit: 'ед.',
       fact: sumBy(objects, (o) => o.techFact),
       plan: sumBy(objects, (o) => o.techPlan),
     },
     {
+      id: 'cabin',
       icon: 'Container',
       label: 'Вагоны',
+      unit: 'шт.',
       fact: cabinObjectIds.filter((id) => ids.has(id)).length,
       plan: sumBy(objects, (o) => o.cabins),
     },
   ];
+
+  const [open, setOpen] = useState<Card['id'] | null>(null);
+  const card = cards.find((c) => c.id === open) ?? null;
+
+  const gapRows = card
+    ? objects
+        .map((o) => {
+          const plan =
+            card.id === 'staff' ? o.staffPlan : card.id === 'tech' ? o.techPlan : o.cabins;
+          const fact =
+            card.id === 'staff'
+              ? o.staffFact
+              : card.id === 'tech'
+                ? o.techFact
+                : (cabinsByObject.get(o.id) ?? 0);
+          return { o, plan, fact, gap: plan - fact };
+        })
+        .sort((a, b) => b.gap - a.gap)
+    : [];
+
+  const shortage = gapRows.filter((r) => r.gap > 0);
 
   const chip = (label: string, value: number, tone?: string) => (
     <span className="flex items-baseline gap-1.5 rounded-sm border border-border bg-secondary/40 px-2.5 py-1.5">
@@ -81,7 +116,15 @@ const ProjectLoad = ({ objects, cabinObjectIds }: ProjectLoadProps) => {
         {cards.map((c) => {
           const p = pct(c.fact, c.plan);
           return (
-            <div key={c.label} className="rounded-sm border border-border bg-background px-3 py-3">
+            <button
+              key={c.label}
+              type="button"
+              onClick={() => setOpen(open === c.id ? null : c.id)}
+              className={cn(
+                'rounded-sm border bg-background px-3 py-3 text-left transition-colors hover:border-accent',
+                open === c.id ? 'border-accent' : 'border-border',
+              )}
+            >
               <div className="flex items-center gap-2 text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
                 <Icon name={c.icon} fallback="Circle" size={14} className="text-accent" />
                 {c.label}
@@ -96,13 +139,65 @@ const ProjectLoad = ({ objects, cabinObjectIds }: ProjectLoadProps) => {
                   style={{ width: `${Math.min(100, p)}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[0.76em] text-muted-foreground">
+              <p className="mt-1.5 flex items-center gap-1 text-[0.76em] text-muted-foreground">
                 укомплектовано на {p}%
+                <Icon
+                  name={open === c.id ? 'ChevronUp' : 'ChevronDown'}
+                  size={13}
+                  className="ml-auto text-accent"
+                />
               </p>
-            </div>
+            </button>
           );
         })}
       </div>
+
+      {card && (
+        <div className="mt-3 rounded-sm border border-border bg-background">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <Icon name={card.icon} fallback="Circle" size={14} className="text-accent" />
+            <span className="font-head text-[0.8em] uppercase tracking-[0.1em]">
+              {card.label} — чего не хватает
+            </span>
+            <span className="ml-auto text-[0.76em] text-muted-foreground">
+              {shortage.length ? `недобор ${card.plan - card.fact} ${card.unit}` : 'недобора нет'}
+            </span>
+          </div>
+
+          {gapRows.length === 0 ? (
+            <p className="px-3 py-3 text-[0.82em] text-muted-foreground">
+              В проекте пока нет объектов.
+            </p>
+          ) : (
+            gapRows.map((r) => (
+              <div
+                key={r.o.id}
+                className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-b-0"
+              >
+                <Icon
+                  name={r.gap > 0 ? 'TriangleAlert' : 'CircleCheck'}
+                  size={14}
+                  className={cn('flex-none', r.gap > 0 ? 'text-destructive' : 'text-emerald-600')}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[0.85em]">{r.o.title}</span>
+                  <span className="block truncate text-[0.74em] text-muted-foreground">
+                    {r.gap > 0
+                      ? `не хватает ${r.gap} ${card.unit}`
+                      : r.gap < 0
+                        ? `сверх плана ${-r.gap} ${card.unit}`
+                        : 'укомплектован полностью'}
+                  </span>
+                </span>
+                <span className="flex-none font-head text-[0.95em]">
+                  <span className={cn(loadTone(r.fact, r.plan))}>{r.fact}</span>
+                  <span className="text-muted-foreground"> / {r.plan}</span>
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {chip('Замечаний выдано', stats.defects)}
