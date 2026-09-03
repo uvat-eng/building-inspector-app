@@ -15,6 +15,11 @@ export interface ProjectObject {
   customer: string;
   customerLogo?: string;
   contractNo: string;
+  objectCode?: string;
+  contractDate?: string;
+  assignDocNo?: string;
+  assignDocDate?: string;
+  customerRep?: string;
   contractSum: number;
   regionId: string;
   regionName: string;

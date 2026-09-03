@@ -45,6 +45,11 @@ const EMPTY = {
   customer: "",
   customerLogo: "",
   contractNo: "",
+  contractDate: "",
+  objectCode: "",
+  assignDocNo: "",
+  assignDocDate: "",
+  customerRep: "",
   contractSum: "",
   address: "",
   stage: "",
@@ -142,6 +147,11 @@ const ObjectForm = ({
         customer: f.customer.trim(),
         customerLogo: f.customerLogo.trim() || undefined,
         contractNo: f.contractNo.trim(),
+        contractDate: f.contractDate.trim(),
+        objectCode: f.objectCode.trim(),
+        assignDocNo: f.assignDocNo.trim(),
+        assignDocDate: f.assignDocDate.trim(),
+        customerRep: f.customerRep.trim(),
         contractSum: n(f.contractSum),
         regionId: anchor?.n ?? "point",
         regionName:
@@ -332,6 +342,21 @@ const ObjectForm = ({
           </div>
           {field("contractNo", "Номер договора")}
           {field("contractSum", "Сумма договора, ₽", { inputMode: "numeric" })}
+          {field("contractDate", "Дата договора", { placeholder: "01.03.2026" })}
+          {field("objectCode", "Шифр объекта", {
+            placeholder: "2022-560-НТЦ-Р-КСПГ",
+          })}
+          {field("assignDocNo", "Документ о назначении НСК, №", {
+            placeholder: "401",
+          })}
+          {field("assignDocDate", "Дата документа о назначении", {
+            placeholder: "25.10.2025",
+          })}
+          <div className="sm:col-span-2">
+            {field("customerRep", "Представитель заказчика", {
+              placeholder: "Главный энергетик Гречишкин А.В.",
+            })}
+          </div>
 
           <div className="space-y-1.5">
             <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
