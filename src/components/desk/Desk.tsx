@@ -32,9 +32,9 @@ import { SectionId, MENU } from '@/data/mock';
 import { useProfile, ROLE_SECTIONS, ROLE_LABEL, Role } from '@/data/profile';
 import { useModule } from '@/data/modules';
 import { useScope } from '@/data/scope';
-import { useLocations } from '@/data/locations';
 import ModulePicker from '@/components/desk/ModulePicker';
 import ScopePicker from '@/components/desk/ScopePicker';
+import ScopeCrumbs from '@/components/desk/ScopeCrumbs';
 import { useUsers } from '@/data/users';
 import { useToast } from '@/hooks/use-toast';
 import useBackGuard from '@/hooks/use-back-guard';
@@ -59,7 +59,6 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const { current, reload: reloadUsers } = useUsers();
   const { toast } = useToast();
   const { scope } = useScope();
-  const { list: locations } = useLocations();
 
   useEffect(() => {
     localStorage.setItem(SECTION_KEY, section);
@@ -189,40 +188,12 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
         <DeskHeader onLogin={() => setLoginOpen(true)} onMenu={() => setMenuOpen(true)} />
       </div>
 
-      <div className="flex flex-none animate-rise items-center gap-1.5 overflow-x-auto border-b border-border bg-card px-4 py-2 text-[0.75em] uppercase tracking-[0.08em] [animation-delay:0.07s] sm:px-[22px]">
-        <button
-          type="button"
-          onClick={onLeaveModule}
-          className="flex flex-none items-center gap-1.5 text-muted-foreground transition-colors hover:text-accent"
-        >
-          <Icon name="ShieldCheck" size={13} />
-          Строительный контроль
-        </button>
-        <Icon name="ChevronRight" size={11} className="flex-none text-muted-foreground/60" />
-        <button
-          type="button"
-          onClick={onLeaveScope}
-          className="flex-none truncate text-muted-foreground transition-colors hover:text-accent"
-        >
-          {locations.find((l) => l.id === scope.locationId)?.title ?? 'Все локации'}
-        </button>
-        <Icon name="ChevronRight" size={11} className="flex-none text-muted-foreground/60" />
-        <button
-          type="button"
-          onClick={onLeaveScope}
-          className="flex-none truncate text-foreground transition-colors hover:text-accent"
-        >
-          {scope.project || 'Все проекты'}
-        </button>
-        <button
-          type="button"
-          onClick={onLeaveScope}
-          className="ml-auto flex flex-none items-center gap-1 text-muted-foreground transition-colors hover:text-accent"
-          title="Сменить локацию или проект"
-        >
-          <Icon name="Repeat" size={13} />
-          <span className="hidden sm:inline">Сменить</span>
-        </button>
+      <div className="animate-rise [animation-delay:0.07s]">
+        <ScopeCrumbs
+          onLeaveModule={onLeaveModule}
+          onLeaveScope={onLeaveScope}
+          onCabinet={() => select('cabinet')}
+        />
       </div>
 
       {viewingAs && (
