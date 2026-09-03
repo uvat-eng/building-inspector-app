@@ -1,0 +1,6 @@
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS asset_class TEXT NOT NULL DEFAULT 'vehicle';
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS object_id TEXT DEFAULT '';
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS serial_no TEXT DEFAULT '';
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS verified_to TEXT DEFAULT '';
+
+CREATE INDEX IF NOT EXISTS idx_vehicles_class ON vehicles(asset_class);
