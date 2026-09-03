@@ -35,7 +35,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
   const { profile } = useProfile();
   const { items, loading, create, update } = useInspections(object.id);
   const { general: contractor, subs } = useContractor(object.id);
-  const { create: createOrder } = useOrders(object.id);
+  const { items: orders, create: createOrder } = useOrders(object.id);
 
   const [view, setView] = usePersistedState<View>(`gsi-insp-view-${object.id}`, 'menu');
   const [activeId, setActiveId] = usePersistedState<string | null>(
@@ -44,6 +44,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
   );
   const active = items.find((i) => i.id === activeId) ?? null;
   const [ask, setAsk] = useState<Inspection | null>(null);
+  const last = items[0] ?? null;
   const [busy, setBusy] = useState(false);
 
   const startNew = async (data: {
@@ -222,48 +223,66 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
         {view === 'menu' ? (
           <Panel title="Что делаем" note={`${items.length} осмотров`}>
             <div className="grid gap-px bg-border sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setView('new')}
-                className="group flex items-center gap-3 bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
-              >
-                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
-                  <Icon name="ClipboardPlus" size={21} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-head text-[1em] uppercase tracking-[0.03em]">
-                    Новый осмотр
+              {[
+                {
+                  icon: 'ClipboardPlus',
+                  label: 'Новый осмотр',
+                  note: 'Заполнить параметры и составить акт',
+                  run: () => setView('new'),
+                },
+                {
+                  icon: 'ClipboardList',
+                  label: 'Акты замечаний',
+                  note: loading ? 'Загрузка…' : `${items.length} актов по объекту`,
+                  run: () => setView('list'),
+                },
+                {
+                  icon: 'FileWarning',
+                  label: 'Сформировать предписание',
+                  note: last
+                    ? `По акту № ${last.number}`
+                    : 'Сначала составьте акт замечаний',
+                  run: () => (last ? makeOrder(last) : toast({ title: 'Актов пока нет', variant: 'destructive' })),
+                },
+                {
+                  icon: 'FileCheck2',
+                  label: 'Выданные предписания',
+                  note: `${orders.length} по объекту`,
+                  run: () => onOrdersOpen?.(),
+                },
+                {
+                  icon: 'FileSpreadsheet',
+                  label: 'Реестр актов проверок',
+                  note: 'Выгрузка в Excel',
+                  run: exportRegistry,
+                },
+              ].map((t) => (
+                <button
+                  key={t.label}
+                  type="button"
+                  disabled={busy}
+                  onClick={t.run}
+                  className="group flex items-center gap-3 bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background disabled:opacity-60"
+                >
+                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                    <Icon name={t.icon} fallback="Circle" size={21} />
                   </span>
-                  <span className="block truncate text-[0.78em] text-muted-foreground group-hover:text-background/70">
-                    Заполнить параметры и составить акт
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-head text-[1em] uppercase tracking-[0.03em]">
+                      {t.label}
+                    </span>
+                    <span className="block truncate text-[0.78em] text-muted-foreground group-hover:text-background/70">
+                      {t.note}
+                    </span>
                   </span>
-                </span>
-                <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setView('list')}
-                className="group flex items-center gap-3 bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
-              >
-                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
-                  <Icon name="ClipboardList" size={21} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-head text-[1em] uppercase tracking-[0.03em]">
-                    Реестр осмотров
-                  </span>
-                  <span className="block truncate text-[0.78em] text-muted-foreground group-hover:text-background/70">
-                    {loading ? 'Загрузка…' : `${items.length} записей по объекту`}
-                  </span>
-                </span>
-                <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
-              </button>
+                  <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
+                </button>
+              ))}
             </div>
           </Panel>
         ) : (
           <Panel
-            title="Реестр осмотров"
+            title="Акты замечаний"
             note={`${items.length}`}
             action={
               items.length > 0 ? (
@@ -281,8 +300,8 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
             {items.length === 0 ? (
               <Empty
                 icon="ClipboardList"
-                title="Осмотров пока нет"
-                hint="Начните с кнопки «Новый осмотр»."
+                title="Актов замечаний пока нет"
+                hint="Начните с кнопки «Новый осмотр» — по нему сформируется акт."
               />
             ) : (
               items.map((i, idx) => (

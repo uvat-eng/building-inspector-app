@@ -50,8 +50,8 @@ const ITEMS: MenuItem[] = [
   {
     id: 'inspections',
     icon: 'ClipboardCheck',
-    label: 'Проверки объекта',
-    note: 'Новый осмотр и реестр осмотров',
+    label: 'Проверки и акты замечаний',
+    note: 'Осмотры, акты замечаний, предписания',
     ready: true,
   },
   {
