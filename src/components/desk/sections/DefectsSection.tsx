@@ -117,7 +117,13 @@ const DefectsSection = () => {
   const makeOrder = async (insp: Inspection) => {
     setBusy(true);
     try {
-      const { data, count } = await orderPayload(insp, objTitle(insp.objectId), profile.fio);
+      const { data, count } = await orderPayload(
+        insp,
+        objTitle(insp.objectId),
+        profile.fio,
+        '',
+        objects.find((o) => o.id === insp.objectId) ?? null,
+      );
       const order = await createOrder(data);
       toast({
         title: `Предписание № ${order.number} создано`,

@@ -31,6 +31,7 @@ import CabinetBar from '@/components/desk/CabinetBar';
 import useBackGuard from '@/hooks/use-back-guard';
 import OutfitCabinet from '@/components/desk/outfit/OutfitCabinet';
 import DefectsSection from '@/components/desk/sections/DefectsSection';
+import { downloadOrder, downloadOrdersDigest } from '@/lib/orderDoc';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile' | 'outfit';
 
@@ -433,7 +434,28 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       {view === 'defects' && <DefectsSection />}
 
       {view === 'ordersAll' && (
-        <Panel title="Предписания по всем объектам" note={`${allOrders.length}`}>
+        <Panel
+          title="Предписания по всем объектам"
+          note={`${allOrders.length}`}
+          action={
+            allOrders.length > 0 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  downloadOrdersDigest(allOrders, {
+                    title: 'Сводный реестр по всем объектам',
+                    objectTitle: (o) =>
+                      objects.find((ob) => ob.id === o.objectId)?.title ?? 'Объект',
+                  })
+                }
+                className="ml-3 flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.82em] tracking-[0.04em] text-accent-foreground transition-colors hover:bg-accent/90"
+              >
+                <Icon name="FileDown" size={14} />
+                Сводный отчёт
+              </button>
+            ) : undefined
+          }
+        >
           {allOrders.length === 0 ? (
             <Empty
               icon="FileWarning"
@@ -450,6 +472,9 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
                   o.issuedTo || '—',
                   new Date(o.createdAt).toLocaleDateString('ru'),
                 ].join(' · ')}
+                onClick={() =>
+                  downloadOrder(o, null)
+                }
                 right={<Tag tone={o.status === 'done' ? 'ok' : 'wait'}>{o.deadline || '—'}</Tag>}
               />
             ))

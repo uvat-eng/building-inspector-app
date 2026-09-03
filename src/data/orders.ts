@@ -18,6 +18,17 @@ export interface Order {
     generalContractor?: string;
     subcontractor?: string;
     objectTitle?: string;
+    objectCode?: string;
+    inspectionOrg?: string;
+    contractNo?: string;
+    contractDate?: string;
+    assignDocNo?: string;
+    assignDocDate?: string;
+    customerName?: string;
+    customerRep?: string;
+    time?: string;
+    stopNote?: string;
+    stopWorks?: string;
     items?: {
       pos: number;
       title: string;

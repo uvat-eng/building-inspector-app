@@ -1,5 +1,6 @@
 import { Inspection, suggestNorms } from '@/data/inspections';
 import { Order } from '@/data/orders';
+import { ProjectObject } from '@/data/store';
 
 const INSPECTIONS_API = 'https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039';
 
@@ -17,6 +18,7 @@ export const orderPayload = async (
   objectTitle: string,
   inspectorFallback: string,
   issuedToFallback = '',
+  object?: ProjectObject | null,
 ) => {
   const res = await fetch(`${INSPECTIONS_API}?id=${encodeURIComponent(insp.id)}`);
   const { defects } = (await res.json()) as { defects: DefectLite[] };
@@ -68,6 +70,11 @@ export const orderPayload = async (
       generalContractor: insp.generalContractor,
       subcontractor: insp.subcontractor,
       objectTitle,
+      objectCode: object?.contractNo || '',
+      inspectionOrg: 'ООО «ГЛОБАЛ-Стройинжиниринг»',
+      contractNo: object?.contractNo || '',
+      customerName: object?.customer || '',
+      time: new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
       items: defects.map((d) => ({
         pos: d.pos,
         title: d.title,

@@ -5,7 +5,7 @@ import Tag from '@/components/desk/Tag';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useOrders, useContractor, Order } from '@/data/orders';
-import { downloadOrder } from '@/lib/orderDoc';
+import { downloadOrder, downloadOrdersDigest } from '@/lib/orderDoc';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import OrderView from '@/components/desk/inspection/OrderView';
 
@@ -59,7 +59,27 @@ const OrdersCabinet = ({ object, onBack }: OrdersCabinetProps) => {
           </p>
         </section>
 
-        <Panel title="Сквозной перечень" note={`${items.length}`}>
+        <Panel
+          title="Сквозной перечень"
+          note={`${items.length}`}
+          action={
+            items.length > 0 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  downloadOrdersDigest(items, {
+                    title: object.title,
+                    objectTitle: () => object.title,
+                  })
+                }
+                className="ml-3 flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.82em] tracking-[0.04em] text-accent-foreground transition-colors hover:bg-accent/90"
+              >
+                <Icon name="FileDown" size={14} />
+                Сводный отчёт
+              </button>
+            ) : undefined
+          }
+        >
           {items.length === 0 ? (
             <Empty
               icon="FileWarning"
