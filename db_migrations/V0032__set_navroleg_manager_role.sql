@@ -1,0 +1,1 @@
+UPDATE users SET role = 'manager', password = '007', must_change_password = false WHERE fio_key = 'navroleg';
