@@ -33,9 +33,6 @@ import OutfitCabinet from '@/components/desk/outfit/OutfitCabinet';
 
 type View = 'home' | 'objects' | 'timesheet' | 'defects' | 'ordersAll' | 'profile' | 'outfit';
 
-const VIEW_KEY = 'gsi-cabinet-view-v1';
-const OBJ_KEY = 'gsi-cabinet-object-v1';
-
 type ObjView =
   | 'menu'
   | 'docs'
@@ -64,27 +61,14 @@ interface InspectorCabinetProps {
 }
 
 const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
-  const [view, setView] = useState<View>(
-    () => (localStorage.getItem(VIEW_KEY) as View) || 'home',
-  );
-
-  useEffect(() => {
-    localStorage.setItem(VIEW_KEY, view);
-  }, [view]);
+  const [view, setView] = useState<View>('home');
 
   useEffect(() => {
     runDailyArchive();
   }, []);
 
-  const [openObject, setOpenObject] = useState<string | null>(
-    () => localStorage.getItem(OBJ_KEY),
-  );
+  const [openObject, setOpenObject] = useState<string | null>(null);
   const [objectView, setObjectView] = useState<ObjView>('menu');
-
-  useEffect(() => {
-    if (openObject) localStorage.setItem(OBJ_KEY, openObject);
-    else localStorage.removeItem(OBJ_KEY);
-  }, [openObject]);
 
   useEffect(() => {
     setObjectView('menu');
