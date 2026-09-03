@@ -9,10 +9,10 @@
       "bodyMatcher": "partial"
     },
     {
-      "name": "Запрос без объекта",
+      "name": "Сводный список",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 400
+      "expectedStatus": 200
     },
     {
       "name": "Загрузка без раздела",

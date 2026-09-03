@@ -139,3 +139,18 @@ export const useSignedDocs = (objectId: string, section: SignedSection) => {
 };
 
 export default useSignedDocs;
+
+export const useAllSignedDocs = () => {
+  const [items, setItems] = useState<SignedDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(API)
+      .then((r) => r.json())
+      .then((d: { items: SignedDoc[] }) => setItems(d.items ?? []))
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { items, loading };
+};

@@ -72,12 +72,13 @@ def handler(event: dict, context) -> dict:
     try:
         if method == 'GET':
             object_id = params.get('object_id') or ''
-            if not object_id:
-                return resp(400, {'error': 'object_id_required'})
-            where = f"WHERE object_id = '{esc(object_id)}'"
+            conds = []
+            if object_id:
+                conds.append(f"object_id = '{esc(object_id)}'")
             section = params.get('section') or ''
             if section:
-                where += f" AND section = '{esc(section)}'"
+                conds.append(f"section = '{esc(section)}'")
+            where = f"WHERE {' AND '.join(conds)}" if conds else ''
             cur.execute(f'SELECT * FROM signed_docs {where} ORDER BY created_at DESC')
             return resp(200, {'items': [to_doc(r) for r in cur.fetchall()]})
 

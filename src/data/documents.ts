@@ -141,3 +141,17 @@ export const useDocuments = (objectId: string) => {
 
   return { items, loading, uploading, upload, remove, reload };
 };
+export const useAllDocuments = () => {
+  const [items, setItems] = useState<ProjectDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(API)
+      .then((r) => r.json())
+      .then((d: { items: ProjectDoc[] }) => setItems(d.items ?? []))
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { items, loading };
+};
