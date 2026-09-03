@@ -118,8 +118,8 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
         {loc ? 'Локации' : 'Должность'}
       </button>
       <span className="flex items-center gap-2">
-        <span className="hidden items-center gap-1.5 font-head text-[0.82em] uppercase tracking-[0.08em] text-muted-foreground sm:inline-flex">
-          {isAdmin && <Icon name="ShieldUser" fallback="Shield" size={13} className="text-accent" />}
+        <span className="hidden items-center gap-1.5 font-head text-[1em] font-bold uppercase tracking-[0.06em] text-accent sm:inline-flex">
+          {isAdmin && <Icon name="ShieldUser" fallback="Shield" size={15} className="text-accent" />}
           {profile.fio ? `${ROLE_LABEL[profile.role]} · ${profile.fio}` : 'Вход не выполнен'}
         </span>
         <Button
