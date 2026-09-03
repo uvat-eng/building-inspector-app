@@ -1,108 +1,221 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Icon from '@/components/ui/icon';
 import Empty from '@/components/desk/Empty';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { PHOTOS, Photo } from '@/data/mock';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useProfile } from '@/data/profile';
+import { useObjects } from '@/data/store';
+import {
+  useAllFolders,
+  uploadFolderPhoto,
+  monthKey,
+  monthLabel,
+  PhotoFolder,
+} from '@/data/folders';
+import PhotoReportForm, { ReportDraft } from '@/components/desk/photos/PhotoReportForm';
+
+const parseTitle = (f: PhotoFolder) => {
+  const [head, ...rest] = f.title.split(' · ');
+  return { date: head ?? '', tail: rest.join(' · ') };
+};
 
 const PhotosSection = () => {
-  const [open, setOpen] = useState<Photo | null>(null);
-  const idx = open ? PHOTOS.findIndex((p) => p.id === open.id) : -1;
-  const step = (d: number) => setOpen(PHOTOS[(idx + d + PHOTOS.length) % PHOTOS.length]);
+  const { toast } = useToast();
+  const { profile } = useProfile();
+  const { list: objects } = useObjects();
+  const { items, loading, create, reload } = useAllFolders('photoreport');
+
+  const [form, setForm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [openMonth, setOpenMonth] = useState<string | null>(monthKey());
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<string | null>(null);
+
+  const byMonth = useMemo(() => {
+    const map = new Map<string, PhotoFolder[]>();
+    items.forEach((f) => {
+      const key = f.month || monthKey(new Date(f.createdAt));
+      map.set(key, [...(map.get(key) ?? []), f]);
+    });
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [items]);
+
+  const objTitle = (id: string) => objects.find((o) => o.id === id)?.title ?? 'Объект';
+
+  const save = async (draft: ReportDraft) => {
+    setBusy(true);
+    try {
+      const title = [
+        new Date(draft.date).toLocaleDateString('ru'),
+        objTitle(draft.objectId),
+        draft.workType,
+        draft.place,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
+      const folder = await create({
+        objectId: draft.objectId,
+        title,
+        note: draft.note,
+        createdBy: profile.fio,
+        month: monthKey(new Date(draft.date)),
+      });
+
+      for (const p of draft.photos) await uploadFolderPhoto(folder.id, p);
+
+      await reload();
+      setForm(false);
+      setOpenMonth(monthKey(new Date(draft.date)));
+      setOpenFolder(folder.id);
+      toast({
+        title: 'Фотоотчёт сохранён',
+        description: `${draft.photos.length} снимков · папка «${monthLabel(monthKey(new Date(draft.date)))}»`,
+      });
+    } catch {
+      toast({ title: 'Не удалось сохранить фотоотчёт', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (form) {
+    return (
+      <PhotoReportForm
+        objects={objects}
+        inspector={profile.fio}
+        busy={busy}
+        onBack={() => setForm(false)}
+        onSave={save}
+      />
+    );
+  }
 
   return (
-    <>
-      <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-[2fr_1fr]">
-        <Panel title="Фотоотчёты" note={`${PHOTOS.length}`}>
-          {PHOTOS.length === 0 && (
-            <Empty
-              icon="Camera"
-              title="Снимков пока нет"
-              hint="Фото с объекта появятся здесь: с датой, координатами и привязкой к замечанию."
-            />
-          )}
-          <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-3">
-            {PHOTOS.map((p, i) => (
+    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+      <Button
+        onClick={() => setForm(true)}
+        className="h-14 flex-none gap-3 rounded-sm bg-accent font-head text-[1.05em] uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+      >
+        <Icon name="Camera" size={22} />
+        Создать фотоотчёт
+      </Button>
+
+      <Panel title="Фотоотчёты по месяцам" note={`${items.length}`}>
+        {loading ? (
+          <p className="flex items-center gap-2 p-4 text-[0.85em] text-muted-foreground">
+            <Icon name="Loader2" size={15} className="animate-spin" />
+            Загружаем архив…
+          </p>
+        ) : byMonth.length === 0 ? (
+          <Empty
+            icon="Camera"
+            title="Снимков пока нет"
+            hint="Нажмите «Создать фотоотчёт»: выберите объект, сделайте снимки — отчёт ляжет в папку текущего месяца."
+          />
+        ) : (
+          byMonth.map(([month, list]) => (
+            <div key={month} className="border-b border-border last:border-b-0">
               <button
-                key={p.id}
                 type="button"
-                onClick={() => setOpen(p)}
-                className="group animate-fade-in overflow-hidden rounded-sm border border-border text-left"
-                style={{ animationDelay: `${i * 40}ms` }}
+                onClick={() => setOpenMonth((p) => (p === month ? null : month))}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/60"
               >
-                <span className="block aspect-[4/3] overflow-hidden">
-                  <img
-                    src={p.src}
-                    alt={p.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                <Icon
+                  name={openMonth === month ? 'FolderOpen' : 'Folder'}
+                  size={19}
+                  className="flex-none text-accent"
+                />
+                <span className="min-w-0 flex-1 truncate font-head text-[0.95em] uppercase tracking-[0.04em]">
+                  {monthLabel(month)}
                 </span>
-                <span className="block px-2.5 py-2">
-                  <span className="block truncate text-[0.9em]">{p.title}</span>
-                  <span className="mt-0.5 block truncate text-[0.78em] text-muted-foreground">
-                    {p.meta}
-                  </span>
+                <span className="flex-none text-[0.8em] text-muted-foreground">
+                  {list.length} отчётов
                 </span>
               </button>
-            ))}
-          </div>
-        </Panel>
 
-        <Panel title="Правила съёмки" note="на объекте">
-          <ul className="space-y-3 p-4 text-[0.9em]">
-            {[
-              ['MapPin', 'Каждый снимок с координатами и временем — подделать дату нельзя'],
-              ['Link', 'Фото привязывается к замечанию или акту одним касанием'],
-              ['WifiOff', 'Съёмка работает без сети: выгрузка на сервер при появлении связи'],
-              ['ShieldCheck', 'Оригиналы хранятся на едином сервере компании'],
-            ].map(([icon, text]) => (
-              <li key={text} className="flex gap-3">
-                <Icon name={icon} size={16} className="mt-0.5 flex-none text-accent" />
-                <span className="text-muted-foreground">{text}</span>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      </div>
+              {openMonth === month &&
+                list.map((f) => {
+                  const isOpen = openFolder === f.id;
+                  const { date, tail } = parseTitle(f);
+                  return (
+                    <div key={f.id} className="border-t border-border/60 bg-secondary/20">
+                      <button
+                        type="button"
+                        onClick={() => setOpenFolder((p) => (p === f.id ? null : f.id))}
+                        className="flex w-full items-center gap-3 px-4 py-3 pl-8 text-left transition-colors hover:bg-secondary/60"
+                      >
+                        <Icon
+                          name={isOpen ? 'ChevronDown' : 'ChevronRight'}
+                          size={16}
+                          className="flex-none text-muted-foreground"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[0.95em]">{date || f.title}</span>
+                          <span className="block truncate text-[0.8em] text-muted-foreground">
+                            {tail || objTitle(f.objectId)}
+                            {f.createdBy ? ` · ${f.createdBy}` : ''}
+                          </span>
+                        </span>
+                        <span className="flex flex-none items-center gap-1.5 text-[0.8em] text-muted-foreground">
+                          <Icon name="Image" size={14} className="text-accent" />
+                          {f.photos.length}
+                        </span>
+                      </button>
 
-      <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent className="max-w-2xl rounded-sm border-t-2 border-t-accent p-0">
-          {open && (
-            <>
-              <DialogTitle className="sr-only">{open.title}</DialogTitle>
-              <DialogDescription className="sr-only">{open.meta}</DialogDescription>
-              <img src={open.src} alt={open.title} className="max-h-[65vh] w-full object-cover" />
-              <div className="flex items-center gap-3 px-5 pb-5">
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-head text-[0.95em] uppercase tracking-[0.08em]">
-                    {open.title}
-                  </div>
-                  <div className="truncate text-[0.82em] text-muted-foreground">{open.meta}</div>
-                  <div className="mt-1 text-[0.8em] text-accent">{open.tag}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => step(-1)}
-                  aria-label="Предыдущее фото"
-                  className="rounded-sm border border-border p-2 transition-colors hover:bg-secondary"
-                >
-                  <Icon name="ChevronLeft" size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => step(1)}
-                  aria-label="Следующее фото"
-                  className="rounded-sm border border-border p-2 transition-colors hover:bg-secondary"
-                >
-                  <Icon name="ChevronRight" size={18} />
-                </button>
-              </div>
-            </>
-          )}
+                      {isOpen && (
+                        <div className="bg-card px-4 pb-3 pl-8 pt-2">
+                          {f.note && (
+                            <p className="mb-2 text-[0.86em] text-muted-foreground">{f.note}</p>
+                          )}
+                          {f.photos.length === 0 ? (
+                            <p className="py-2 text-[0.84em] text-muted-foreground">
+                              Снимков нет.
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                              {f.photos.map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => setZoom(p.url)}
+                                  className="overflow-hidden rounded-sm border border-border"
+                                >
+                                  <img
+                                    src={p.url}
+                                    alt="снимок"
+                                    loading="lazy"
+                                    className="aspect-square w-full object-cover transition-transform duration-300 hover:scale-105"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          ))
+        )}
+      </Panel>
+
+      <Dialog open={!!zoom} onOpenChange={(v) => !v && setZoom(null)}>
+        <DialogContent className="max-w-3xl rounded-sm border-t-2 border-t-accent p-0">
+          <DialogTitle className="sr-only">Снимок фотоотчёта</DialogTitle>
+          <DialogDescription className="sr-only">Просмотр фотографии</DialogDescription>
+          {zoom && <img src={zoom} alt="снимок" className="max-h-[80vh] w-full object-contain" />}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
 
