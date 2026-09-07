@@ -25,6 +25,7 @@ import { useProfile } from '@/data/profile';
 import { useVehicles } from '@/data/vehicles';
 import { useInspectorsRollup } from '@/data/rollup';
 import WriteoffApprovals from '@/components/desk/outfit/WriteoffApprovals';
+import ObjectLoadBoard from '@/components/desk/chief/ObjectLoadBoard';
 import IndReportsCabinet from '@/components/desk/indreports/IndReportsCabinet';
 import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
 import JournalCabinet from '@/components/desk/journal/JournalCabinet';
@@ -405,6 +406,13 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
           </span>
           <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
         </button>
+
+        <ObjectLoadBoard
+          objects={objects}
+          canEdit
+          title="Люди и техника на объектах"
+          note="план / факт · вносят старшие инспекторы"
+        />
 
         <WriteoffApprovals />
 

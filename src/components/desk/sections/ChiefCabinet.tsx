@@ -19,6 +19,7 @@ import ByInspector from '@/components/desk/chief/ByInspector';
 import TeamTimesheet from '@/components/desk/chief/TeamTimesheet';
 import AssetTimesheet from '@/components/desk/chief/AssetTimesheet';
 import FleetPanel from '@/components/desk/chief/FleetPanel';
+import ObjectLoadBoard from '@/components/desk/chief/ObjectLoadBoard';
 import RequestsCabinet from '@/components/desk/chief/RequestsCabinet';
 import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
 import DocControlCabinet from '@/components/desk/docs/DocControlCabinet';
@@ -316,7 +317,7 @@ const ChiefCabinet = ({ onExit }: ChiefCabinetProps) => {
             ))}
           </div>
 
-          {objects.length === 0 && (
+          {objects.length === 0 ? (
             <Panel title="Объекты не закреплены">
               <Empty
                 icon="Building2"
@@ -324,6 +325,12 @@ const ChiefCabinet = ({ onExit }: ChiefCabinetProps) => {
                 hint="Руководитель проекта или директор закрепляет объекты в разделе «Персонал»."
               />
             </Panel>
+          ) : (
+            <ObjectLoadBoard
+              objects={objects}
+              canEdit
+              note="план / факт · данные видят руководитель и директор"
+            />
           )}
 
           {TILES.map((group, gi) => (
