@@ -17,6 +17,7 @@ import { useUsers } from '@/data/users';
 import { useChiefScope } from '@/data/chief';
 import ByInspector from '@/components/desk/chief/ByInspector';
 import TeamTimesheet from '@/components/desk/chief/TeamTimesheet';
+import AssetTimesheet from '@/components/desk/chief/AssetTimesheet';
 import FleetPanel from '@/components/desk/chief/FleetPanel';
 import RequestsCabinet from '@/components/desk/chief/RequestsCabinet';
 import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
@@ -36,6 +37,8 @@ type View =
   | 'card'
   | 'staffsheet'
   | 'techsheet'
+  | 'vehsheet'
+  | 'cabinsheet'
   | 'fleet'
   | 'material'
   | 'ticket'
@@ -51,8 +54,10 @@ const VIEW_TITLE: Record<View, string> = {
   tables: 'Отчёты таблицы',
   geodesy: 'Акты дубля геодезии',
   card: 'Контрольные карточки объектов',
-  staffsheet: 'Табель персонала',
-  techsheet: 'Табель техники и водителей',
+  staffsheet: 'Табель инспекторов',
+  techsheet: 'Табель водителей',
+  vehsheet: 'Табель транспорта',
+  cabinsheet: 'Табель вагонов и бытовок',
   fleet: 'Транспорт',
   material: 'Заявки на материалы и обеспечение',
   ticket: 'Заявки на покупку билетов',
@@ -125,14 +130,26 @@ const TILES: Tile[][] = [
     {
       id: 'staffsheet',
       icon: 'CalendarClock',
-      title: 'Табель персонала',
+      title: 'Табель инспекторов',
       note: 'Пообъектно · табель проекта для бухгалтерии и кадров',
     },
     {
       id: 'techsheet',
-      icon: 'Truck',
-      title: 'Табель техники и водителей',
+      icon: 'IdCard',
+      title: 'Табель водителей',
       note: 'Смены и часы по каждому водителю',
+    },
+    {
+      id: 'vehsheet',
+      icon: 'Truck',
+      title: 'Табель транспорта',
+      note: 'Часы работы, простои, ТО и ремонт по машинам',
+    },
+    {
+      id: 'cabinsheet',
+      icon: 'Container',
+      title: 'Табель вагонов и бытовок',
+      note: 'Дни эксплуатации по каждому вагон-дому',
     },
     {
       id: 'fleet',
@@ -244,6 +261,10 @@ const ChiefCabinet = ({ onExit }: ChiefCabinetProps) => {
         return <TeamTimesheet mode="staff" />;
       case 'techsheet':
         return <TeamTimesheet mode="tech" />;
+      case 'vehsheet':
+        return <AssetTimesheet kind="vehicle" />;
+      case 'cabinsheet':
+        return <AssetTimesheet kind="cabin" />;
       case 'fleet':
         return <FleetPanel />;
       case 'material':

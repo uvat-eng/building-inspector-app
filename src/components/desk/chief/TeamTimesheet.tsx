@@ -93,7 +93,7 @@ const TeamTimesheet = ({ mode, onBack }: TeamTimesheetProps) => {
   const totalHours = rows.reduce((a, r) => a + r.hours, 0);
   const totalDays = rows.reduce((a, r) => a + r.workDays, 0);
 
-  const title = mode === 'tech' ? 'Табель техники и водителей' : 'Табель персонала';
+  const title = mode === 'tech' ? 'Табель водителей' : 'Табель инспекторов';
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">

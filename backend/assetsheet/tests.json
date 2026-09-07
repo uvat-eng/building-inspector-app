@@ -1,0 +1,7 @@
+{
+  "tests": [
+    { "name": "Табель техники", "method": "GET", "path": "/?kind=vehicle", "expectedStatus": 200 },
+    { "name": "Сохранение пустого списка", "method": "POST", "path": "/", "body": { "items": [] }, "expectedStatus": 200 },
+    { "name": "Удаление без параметров", "method": "DELETE", "path": "/", "expectedStatus": 400 }
+  ]
+}
