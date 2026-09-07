@@ -31,6 +31,9 @@ FIELDS = {
     'responsibility': 'responsibility',
     'orderNote': 'order_note',
     'category': 'category',
+    'sourceKind': 'source_kind',
+    'sourceId': 'source_id',
+    'sourceNumber': 'source_number',
 }
 
 
@@ -108,6 +111,28 @@ def handler(event: dict, context) -> dict:
             )
             url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
             return resp(200, {'url': url})
+
+        if method == 'POST' and body.get('action') == 'import':
+            rows = body.get('items') or []
+            if not rows:
+                return resp(400, {'error': 'items_required'})
+            created = []
+            for item in rows[:300]:
+                if not item.get('content'):
+                    continue
+                rid = uuid.uuid4().hex[:12]
+                date_sql = f"'{esc(item['date'])}'" if item.get('date') else 'CURRENT_DATE'
+                cols = ['id', 'entry_date', 'updated_by'] + list(FIELDS.values())
+                vals = [f"'{esc(rid)}'", date_sql, f"'{esc(item.get('authorFio', ''))}'"] + [
+                    f"'{esc(item.get(k, ''))}'" for k in FIELDS
+                ]
+                cur.execute(
+                    f"INSERT INTO inspector_journal ({', '.join(cols)}) "
+                    f"VALUES ({', '.join(vals)}) RETURNING *"
+                )
+                created.append(to_item(cur.fetchone()))
+            conn.commit()
+            return resp(200, {'items': created, 'count': len(created)})
 
         if method == 'POST':
             if not body.get('objectTitle'):

@@ -10,6 +10,7 @@ import { useProfile } from '@/data/profile';
 import { useObjects } from '@/data/store';
 import JournalEntryDialog from '@/components/desk/journal/JournalEntryDialog';
 import JournalSendDialog from '@/components/desk/journal/JournalSendDialog';
+import JournalImportDialog from '@/components/desk/journal/JournalImportDialog';
 import { downloadJournal } from '@/lib/journalXls';
 import { JournalEntry, groupByObject, isFixed, useJournal } from '@/data/journal';
 
@@ -32,13 +33,14 @@ const JournalCabinet = ({ onBack }: JournalCabinetProps) => {
     profile.role,
   );
 
-  const { items, loading, create, update, remove } = useJournal(
+  const { items, loading, create, update, remove, importMany } = useJournal(
     canSeeAll ? {} : { authorId: profile.fio },
   );
 
   const [dialog, setDialog] = useState(false);
   const [editing, setEditing] = useState<JournalEntry | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [who, setWho] = useState<string>('');
   const [openTab, setOpenTab] = useState<string | null>(null);
@@ -61,6 +63,29 @@ const JournalCabinet = ({ onBack }: JournalCabinetProps) => {
 
   const inspectorName = who || profile.fio;
   const openCount = shown.filter((e) => !isFixed(e.fixStatus)).length;
+
+  const usedSources = useMemo(
+    () => new Set(items.map((e) => e.sourceId).filter(Boolean) as string[]),
+    [items],
+  );
+
+  const runImport = async (rows: Partial<JournalEntry>[]) => {
+    try {
+      const n = await importMany(
+        rows.map((r) => ({
+          ...r,
+          projectTitle: profile.group || 'Обустройство Восточно-Мессояхского месторождения',
+        })),
+      );
+      if (rows[0]?.objectTitle) setOpenTab(rows[0].objectTitle);
+      toast({
+        title: `Подгружено записей: ${n}`,
+        description: 'Проверьте и при необходимости отредактируйте.',
+      });
+    } catch {
+      toast({ title: 'Не удалось подгрузить', variant: 'destructive' });
+    }
+  };
 
   const save = async (patch: Partial<JournalEntry>) => {
     if (!patch.objectTitle?.trim()) {
@@ -162,6 +187,14 @@ const JournalCabinet = ({ onBack }: JournalCabinetProps) => {
           Добавить запись
         </Button>
         <Button
+          onClick={() => setImportOpen(true)}
+          variant="outline"
+          className="flex-1 gap-2 rounded-sm font-head text-[0.85em] uppercase tracking-[0.06em]"
+        >
+          <Icon name="Download" size={16} className="text-accent" />
+          Подгрузить замечания
+        </Button>
+        <Button
           onClick={() => downloadJournal(shown, inspectorName)}
           variant="outline"
           className="flex-1 gap-2 rounded-sm font-head text-[0.85em] uppercase tracking-[0.06em]"
@@ -235,6 +268,11 @@ const JournalCabinet = ({ onBack }: JournalCabinetProps) => {
                         {ruDate(e.date)} · {e.contractor || '—'}
                         {e.category ? ` · ${e.category}` : ''}
                         {e.fixDate ? ` · устранено ${ruDate(e.fixDate)}` : ''}
+                        {e.sourceNumber
+                          ? ` · из ${e.sourceKind === 'order' ? 'предписания' : 'акта'} № ${
+                              e.sourceNumber
+                            }`
+                          : ''}
                         {canSeeAll ? ` · ${e.authorFio}` : ''}
                       </span>
                     </span>
@@ -281,6 +319,14 @@ const JournalCabinet = ({ onBack }: JournalCabinetProps) => {
           setEditing(null);
         }}
         onSave={save}
+      />
+
+      <JournalImportDialog
+        open={importOpen}
+        inspector={profile.fio}
+        existingSourceIds={usedSources}
+        onClose={() => setImportOpen(false)}
+        onImport={runImport}
       />
 
       <JournalSendDialog

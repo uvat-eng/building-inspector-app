@@ -33,6 +33,9 @@ export interface JournalEntry {
   responsibility: string;
   orderNote: string;
   category: string;
+  sourceKind?: string;
+  sourceId?: string;
+  sourceNumber?: string;
   createdAt: string;
   updatedAt: string;
   updatedBy: string;
@@ -90,7 +93,22 @@ export const useJournal = (filter: { authorId?: string } = {}) => {
     await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
   }, []);
 
-  return { items, loading, reload, create, update, remove };
+  const importMany = useCallback(async (rows: Partial<JournalEntry>[]) => {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'import', items: rows }),
+    });
+    if (!res.ok) throw new Error('import_failed');
+    const { items: list, count } = (await res.json()) as {
+      items: JournalEntry[];
+      count: number;
+    };
+    setItems((p) => [...list, ...p]);
+    return count;
+  }, []);
+
+  return { items, loading, reload, create, update, remove, importMany };
 };
 
 export interface JournalStat {
