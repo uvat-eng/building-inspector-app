@@ -37,6 +37,7 @@ import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
 import JournalCabinet from '@/components/desk/journal/JournalCabinet';
 import PhotosSection from '@/components/desk/sections/PhotosSection';
 import DocControlCabinet from '@/components/desk/docs/DocControlCabinet';
+import ObjectDocsCabinet from '@/components/desk/objectdocs/ObjectDocsCabinet';
 
 type View =
   | 'home'
@@ -49,6 +50,9 @@ type View =
   | 'journal'
   | 'photos'
   | 'doccontrol'
+  | 'tables'
+  | 'geodesy'
+  | 'card'
   | 'profile'
   | 'outfit';
 
@@ -76,6 +80,9 @@ const VIEW_TITLE: Record<View, string> = {
   journal: 'Индивидуальный журнал ИСК',
   photos: 'Фотоотчёты',
   doccontrol: 'Отчёт по документации',
+  tables: 'Отчёты таблицы',
+  geodesy: 'Акты дубля геодезии',
+  card: 'Контрольная карточка объекта',
   profile: 'Профиль инспектора',
   outfit: 'Оборудование и спецодежда',
 };
@@ -497,6 +504,63 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
             <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
           </button>
 
+          <button
+            type="button"
+            onClick={() => setView('tables')}
+            className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+              <Icon name="Table2" size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                Отчёты таблицы
+              </span>
+              <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                Сводки по объектам и подрядчикам · ручная корректировка в Excel
+              </span>
+            </span>
+            <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setView('geodesy')}
+            className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+              <Icon name="Ruler" size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                Акты дубля геодезии
+              </span>
+              <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                Фото с телефона или файл · хранение и свод по объектам
+              </span>
+            </span>
+            <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setView('card')}
+            className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+              <Icon name="ClipboardCheck" size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                Контрольная карточка объекта
+              </span>
+              <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                Сводка уходит в раздел объекта · доступна всей команде
+              </span>
+            </span>
+            <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+          </button>
+
           <div className="grid min-h-0 gap-3.5">
             <Timesheet />
             <button
@@ -559,6 +623,16 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       {view === 'photos' && <PhotosSection onBack={() => setView('home')} />}
 
       {view === 'doccontrol' && <DocControlCabinet onBack={() => setView('home')} />}
+
+      {view === 'tables' && (
+        <ObjectDocsCabinet section="tables" onBack={() => setView('home')} />
+      )}
+
+      {view === 'geodesy' && (
+        <ObjectDocsCabinet section="geodesy" onBack={() => setView('home')} />
+      )}
+
+      {view === 'card' && <ObjectDocsCabinet section="card" onBack={() => setView('home')} />}
 
       {view === 'ordersAll' && (
         <Panel

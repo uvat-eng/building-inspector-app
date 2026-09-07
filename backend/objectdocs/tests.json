@@ -1,0 +1,19 @@
+{
+  "tests": [
+    { "name": "Список документов", "method": "GET", "path": "/", "expectedStatus": 200 },
+    {
+      "name": "Загрузка без файла",
+      "method": "POST",
+      "path": "/",
+      "body": { "section": "tables" },
+      "expectedStatus": 400
+    },
+    {
+      "name": "Правка без идентификатора",
+      "method": "PUT",
+      "path": "/",
+      "body": { "note": "тест" },
+      "expectedStatus": 400
+    }
+  ]
+}

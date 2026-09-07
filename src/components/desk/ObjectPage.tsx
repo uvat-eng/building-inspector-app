@@ -5,6 +5,7 @@ import Tag from '@/components/desk/Tag';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import RussiaMap from '@/components/desk/RussiaMap';
+import ObjectCardPanel from '@/components/desk/objectdocs/ObjectCardPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -450,6 +451,8 @@ const ObjectPage = ({ id, editOnOpen = false, onBack }: ObjectPageProps) => {
             <Row title="Начало работ" sub="по договору" right={<span>{object.start || '—'}</span>} />
             <Row title="Срок завершения" sub="по договору" right={<span>{object.deadline || '—'}</span>} />
           </Panel>
+
+          <ObjectCardPanel objectId={object.id} />
 
           <Panel title="Исполнительная документация" note="акты и фотоотчёты">
             <Empty
