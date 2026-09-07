@@ -22,7 +22,11 @@ import {
 import PhotoReportForm, { ReportDraft } from '@/components/desk/photos/PhotoReportForm';
 import { downloadPhotoReport, printPhotoReport } from '@/lib/photoReportDoc';
 
-const PhotosSection = () => {
+interface PhotosSectionProps {
+  onBack?: () => void;
+}
+
+const PhotosSection = ({ onBack }: PhotosSectionProps) => {
   const { toast } = useToast();
   const { profile } = useProfile();
   const { list: objects } = useObjects();
@@ -110,6 +114,17 @@ const PhotosSection = () => {
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex w-fit flex-none items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
+        >
+          <Icon name="ArrowLeft" size={14} className="text-accent" />
+          К обзору
+        </button>
+      )}
+
       <Button
         onClick={() => setForm(true)}
         className="h-14 flex-none gap-3 rounded-sm bg-accent font-head text-[1.05em] uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
