@@ -3,13 +3,14 @@ import { useCallback, useEffect, useState } from 'react';
 export interface Settings {
   manager_email: string;
   manager_name: string;
+  customer_email: string;
 }
 
 const API = 'https://functions.poehali.dev/85ad61a8-9c07-4682-bc53-d03d5acfef15';
 const KEY = 'gsi-settings-v1';
 const EVENT = 'gsi-settings-changed';
 
-const empty: Settings = { manager_email: '', manager_name: '' };
+const empty: Settings = { manager_email: '', manager_name: '', customer_email: '' };
 
 const read = (): Settings => {
   try {

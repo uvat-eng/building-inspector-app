@@ -27,6 +27,7 @@ import { useInspectorsRollup } from '@/data/rollup';
 import WriteoffApprovals from '@/components/desk/outfit/WriteoffApprovals';
 import IndReportsCabinet from '@/components/desk/indreports/IndReportsCabinet';
 import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
+import JournalCabinet from '@/components/desk/journal/JournalCabinet';
 
 interface ManagerCabinetProps {
   onExit?: () => void;
@@ -46,6 +47,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   const [passOpen, setPassOpen] = useState(false);
   const [indOpen, setIndOpen] = useState(false);
   const [rollupOpen, setRollupOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
 
   const projects = useMemo<Project[]>(() => {
     const map = new Map<string, Project>();
@@ -200,6 +202,29 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
     { icon: 'FileWarning', label: 'Открытых предписаний', value: ordersOpen },
   ];
 
+  if (journalOpen) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            {
+              label: 'Руководитель проекта',
+              icon: 'SquarePen',
+              onClick: () => setJournalOpen(false),
+            },
+            { label: 'Индивидуальные журналы ИСК' },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setJournalOpen(false)}
+          onExit={onExit}
+          actions={passButton}
+        />
+        <JournalCabinet />
+        {passDialog}
+      </div>
+    );
+  }
+
   if (rollupOpen) {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">
@@ -313,6 +338,25 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
             </span>
             <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
               Архив по годам, месяцам и дням · правка и выгрузка
+            </span>
+          </span>
+          <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setJournalOpen(true)}
+          className="group flex flex-none items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+        >
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+            <Icon name="BookText" size={21} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+              Индивидуальные журналы ИСК
+            </span>
+            <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+              Журналы всех инспекторов · просмотр, правка и выгрузка
             </span>
           </span>
           <Icon name="ArrowRight" size={17} className="flex-none text-accent" />

@@ -11,7 +11,7 @@ CORS = {
     'Content-Type': 'application/json',
 }
 
-ALLOWED = {'manager_email', 'manager_name'}
+ALLOWED = {'manager_email', 'manager_name', 'customer_email'}
 
 
 def esc(v):

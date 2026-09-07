@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "Список записей журнала",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Запись без объекта",
+      "method": "POST",
+      "path": "/",
+      "body": { "content": "текст" },
+      "expectedStatus": 400
+    },
+    {
+      "name": "Правка без идентификатора",
+      "method": "PUT",
+      "path": "/",
+      "body": { "content": "текст" },
+      "expectedStatus": 400
+    }
+  ]
+}
