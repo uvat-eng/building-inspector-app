@@ -27,12 +27,14 @@ import {
 } from '@/data/profile';
 import { useUsers, updateUser, removeUser, registerUser, User } from '@/data/users';
 import { useLocations } from '@/data/locations';
+import { useObjects } from '@/data/store';
 import { useFields } from '@/data/fields';
 
 const StaffSection = () => {
   const { profile, canManageUsers } = useProfile();
   const { users, current, reload } = useUsers();
   const { list: locations } = useLocations();
+  const { list: objects } = useObjects();
   const { toast } = useToast();
 
   const [reset, setReset] = useState<User | null>(null);
@@ -50,6 +52,8 @@ const StaffSection = () => {
   const [busy, setBusy] = useState(false);
 
   const canManage = canManageUsers;
+  const canAssign = ['manager', 'director', 'admin', 'pm'].includes(profile.role);
+  const chiefs = users.filter((u: User) => u.role === 'engineer');
   const roleChoices = isAdminProfile(profile) ? ROLE_ORDER : CREATABLE_ROLES;
 
   const toggle = (arr: string[], v: string) =>
@@ -114,6 +118,16 @@ const StaffSection = () => {
 
   const setUserLocs = async (u: User, ids: string[]) => {
     await updateUser(u.id, { locations: ids });
+    reload();
+  };
+
+  const setUserObjects = async (u: User, ids: string[]) => {
+    await updateUser(u.id, { objects: ids });
+    reload();
+  };
+
+  const setUserChief = async (u: User, fio: string) => {
+    await updateUser(u.id, { chief: fio });
     reload();
   };
 
@@ -252,6 +266,77 @@ const StaffSection = () => {
               </p>
             )}
           </div>
+
+          {canAssign && (
+            <div>
+              <span className="text-[0.8em] uppercase tracking-[0.1em] text-muted-foreground">
+                Закреплённые объекты ({u.objects?.length ?? 0})
+              </span>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {objects.map((o) => {
+                  const on = u.objects?.includes(o.id);
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => setUserObjects(u, toggle(u.objects ?? [], o.id))}
+                      className={cn(
+                        'flex items-center gap-1.5 rounded-sm border px-2 py-1 text-[0.9em] transition-colors',
+                        on
+                          ? 'border-accent bg-accent text-accent-foreground'
+                          : 'border-input bg-card hover:bg-secondary',
+                      )}
+                    >
+                      <Icon name={on ? 'Check' : 'Building2'} size={13} />
+                      {o.title}
+                    </button>
+                  );
+                })}
+              </div>
+              {u.objects?.length === 0 && (
+                <p className="mt-1 text-[0.9em] text-muted-foreground">
+                  Объекты не закреплены — сотрудник видит только свою локацию.
+                </p>
+              )}
+            </div>
+          )}
+
+          {canAssign && ['inspector', 'driver', 'mechanic'].includes(u.role) && (
+            <div>
+              <span className="text-[0.8em] uppercase tracking-[0.1em] text-muted-foreground">
+                Старший инспектор
+              </span>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setUserChief(u, '')}
+                  className={cn(
+                    'rounded-sm border px-2 py-1 text-[0.9em] transition-colors',
+                    !u.chief
+                      ? 'border-accent bg-accent text-accent-foreground'
+                      : 'border-input bg-card hover:bg-secondary',
+                  )}
+                >
+                  Не назначен
+                </button>
+                {chiefs.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setUserChief(u, c.fio)}
+                    className={cn(
+                      'rounded-sm border px-2 py-1 text-[0.9em] transition-colors',
+                      u.chief === c.fio
+                        ? 'border-accent bg-accent text-accent-foreground'
+                        : 'border-input bg-card hover:bg-secondary',
+                    )}
+                  >
+                    {c.fio}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {canManage && (
             <div className="flex flex-wrap gap-2 pt-1">

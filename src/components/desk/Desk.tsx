@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import LoginDialog from '@/components/desk/LoginDialog';
 import InspectorCabinet from '@/components/desk/sections/InspectorCabinet';
 import ManagerCabinet from '@/components/desk/sections/ManagerCabinet';
+import ChiefCabinet from '@/components/desk/sections/ChiefCabinet';
 import MechanicCabinet from '@/components/desk/sections/MechanicCabinet';
 import DriverCabinet from '@/components/desk/sections/DriverCabinet';
 import StaffSection from '@/components/desk/sections/StaffSection';
@@ -145,7 +146,14 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
           select('objects');
         }}
       />
-    ) : ['admin', 'pm', 'coordinator', 'director', 'manager', 'engineer'].includes(profile.role) ? (
+    ) : profile.role === 'engineer' ? (
+      <ChiefCabinet
+        onExit={() => {
+          leaveOk.current = true;
+          select('objects');
+        }}
+      />
+    ) : ['admin', 'pm', 'coordinator', 'director', 'manager'].includes(profile.role) ? (
       <ManagerCabinet
         onExit={() => {
           leaveOk.current = true;

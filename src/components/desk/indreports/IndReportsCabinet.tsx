@@ -13,10 +13,11 @@ import { downloadIndReport } from '@/lib/indReportDoc';
 import { IndReport, KIND_META, groupByDate, useIndReports } from '@/data/indreports';
 
 interface IndReportsCabinetProps {
+  author?: string;
   onBack?: () => void;
 }
 
-const IndReportsCabinet = ({ onBack }: IndReportsCabinetProps) => {
+const IndReportsCabinet = ({ onBack, author }: IndReportsCabinetProps) => {
   const { toast } = useToast();
   const { profile } = useProfile();
   const { list: objects } = useObjects();
@@ -27,7 +28,7 @@ const IndReportsCabinet = ({ onBack }: IndReportsCabinetProps) => {
   const authorId = profile.fio;
 
   const { items, loading, create, update, remove } = useIndReports(
-    canSeeAll ? {} : { authorId },
+    author ? { authorId: author } : canSeeAll ? {} : { authorId },
   );
 
   const [form, setForm] = useState(false);

@@ -1,0 +1,7 @@
+{
+  "tests": [
+    { "name": "Список заявок", "method": "GET", "path": "/", "expectedStatus": 200 },
+    { "name": "Заявка без названия", "method": "POST", "path": "/", "body": {}, "expectedStatus": 400 },
+    { "name": "Правка без идентификатора", "method": "PUT", "path": "/", "body": { "status": "x" }, "expectedStatus": 400 }
+  ]
+}

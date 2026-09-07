@@ -27,7 +27,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   coordinator: 'Координатор проекта',
   pm: 'Менеджер проекта',
   manager: 'Руководитель проекта',
-  engineer: 'Старший инженер',
+  engineer: 'Старший инспектор',
   inspector: 'Инспектор СК',
   mechanic: 'Механик',
   driver: 'Водитель',
@@ -39,7 +39,7 @@ export const ROLE_NOTE: Record<Role, string> = {
   coordinator: 'Координация работ и графики выездов',
   pm: 'Договоры с заказчиком, месторождения, проекты и объекты — внесение и правка',
   manager: 'Проекты, объекты, договоры, персонал и техника',
-  engineer: 'Замечания, предписания, проверка исполнительной документации',
+  engineer: 'Свод по своим инспекторам, табели, заявки и авансовые отчёты',
   inspector: 'Выезды, фотофиксация и оформление замечаний на объекте',
   mechanic: 'Автопарк, техобслуживание, путевые листы и топливо',
   driver: 'График выездов и маршруты, доступ только на просмотр',
@@ -51,7 +51,7 @@ export const ROLE_ICON: Record<Role, string> = {
   coordinator: 'Network',
   pm: 'FileSignature',
   manager: 'Briefcase',
-  engineer: 'Ruler',
+  engineer: 'ShieldCheck',
   inspector: 'HardHat',
   mechanic: 'Wrench',
   driver: 'Truck',
@@ -162,6 +162,9 @@ export interface Profile {
   org: string;
   locations: string[];
   specialties: string[];
+  objects?: string[];
+  chief?: string;
+  userId?: string;
 }
 
 export const CAN_MANAGE_USERS: Role[] = [

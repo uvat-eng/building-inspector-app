@@ -150,7 +150,7 @@ const writeLocal = (sheet: Timesheet) => {
   window.dispatchEvent(new Event(EVENT));
 };
 
-const fetchSheet = async (userId: string): Promise<Timesheet> => {
+export const fetchSheet = async (userId: string): Promise<Timesheet> => {
   const res = await fetch(`${API}?user_id=${encodeURIComponent(userId)}`);
   if (!res.ok) throw new Error('load_failed');
   const { sheet } = (await res.json()) as { sheet: Timesheet };

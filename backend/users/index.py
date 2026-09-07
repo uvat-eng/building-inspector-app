@@ -33,6 +33,8 @@ def row_to_user(r):
         'locations': r['locations'] or [],
         'mustChangePassword': bool(r.get('must_change_password')),
         'specialties': r['specialties'] or [],
+        'objects': r['objects'] or [],
+        'chief': r.get('chief') or '',
         'certificates': r['certificates'] or [],
         'educations': r['educations'] or [],
         'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
@@ -153,14 +155,14 @@ def handler(event: dict, context) -> dict:
                 sets.append(f"fio = '{esc(fio)}'")
                 sets.append(f"fio_key = '{esc(norm(fio))}'")
             for k, col in (('password', 'password'), ('role', 'role'), ('group', '"group"'),
-                           ('org', 'org'), ('phone', 'phone')):
+                           ('org', 'org'), ('phone', 'phone'), ('chief', 'chief')):
                 if k in patch:
                     sets.append(f"{col} = '{esc(patch[k])}'")
             if 'mustChangePassword' in patch:
                 sets.append(
                     f"must_change_password = {'true' if patch['mustChangePassword'] else 'false'}"
                 )
-            for k in ('locations', 'specialties', 'certificates', 'educations'):
+            for k in ('locations', 'specialties', 'certificates', 'educations', 'objects'):
                 if k in patch:
                     val = json.dumps(patch[k], ensure_ascii=False)
                     sets.append(f"{k} = '{esc(val)}'::jsonb")

@@ -16,6 +16,7 @@ import { JournalEntry, groupByObject, isFixed, useJournal } from '@/data/journal
 
 interface JournalCabinetProps {
   onBack?: () => void;
+  author?: string;
 }
 
 const ruDate = (v?: string) => {
@@ -24,7 +25,7 @@ const ruDate = (v?: string) => {
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('ru');
 };
 
-const JournalCabinet = ({ onBack }: JournalCabinetProps) => {
+const JournalCabinet = ({ onBack, author }: JournalCabinetProps) => {
   const { toast } = useToast();
   const { profile } = useProfile();
   const { list: objects } = useObjects();
@@ -34,7 +35,7 @@ const JournalCabinet = ({ onBack }: JournalCabinetProps) => {
   );
 
   const { items, loading, create, update, remove, importMany } = useJournal(
-    canSeeAll ? {} : { authorId: profile.fio },
+    author ? { authorId: author } : canSeeAll ? {} : { authorId: profile.fio },
   );
 
   const [dialog, setDialog] = useState(false);

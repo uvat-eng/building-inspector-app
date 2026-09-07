@@ -26,6 +26,8 @@ export interface User {
   org: string;
   phone: string;
   locations: string[];
+  objects?: string[];
+  chief?: string;
   mustChangePassword?: boolean;
   specialties: string[];
   certificates: Certificate[];

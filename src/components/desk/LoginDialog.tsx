@@ -61,6 +61,9 @@ const LoginDialog = ({
       group: user.group,
       locations: user.locations ?? [],
       specialties: user.specialties,
+      objects: user.objects ?? [],
+      chief: user.chief ?? '',
+      userId: user.id,
       org: user.org,
     });
     toast({
