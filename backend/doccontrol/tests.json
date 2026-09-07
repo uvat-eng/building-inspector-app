@@ -1,0 +1,19 @@
+{
+  "tests": [
+    { "name": "Сводка по документации", "method": "GET", "path": "/", "expectedStatus": 200 },
+    {
+      "name": "Проверка без подрядчика",
+      "method": "POST",
+      "path": "/?kind=check",
+      "body": { "kind": "check" },
+      "expectedStatus": 400
+    },
+    {
+      "name": "Правка без идентификатора",
+      "method": "PUT",
+      "path": "/?kind=check",
+      "body": { "kind": "check" },
+      "expectedStatus": 400
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+CREATE TABLE IF NOT EXISTS doc_checks (
+  id TEXT PRIMARY KEY,
+  contractor TEXT NOT NULL DEFAULT '',
+  object_title TEXT NOT NULL DEFAULT '',
+  section TEXT NOT NULL DEFAULT '',
+  folder TEXT NOT NULL DEFAULT '',
+  rep_ntn TEXT NOT NULL DEFAULT '',
+  planned INTEGER NOT NULL DEFAULT 0,
+  archived INTEGER NOT NULL DEFAULT 0,
+  certs INTEGER NOT NULL DEFAULT 0,
+  sent1 INTEGER NOT NULL DEFAULT 0,
+  back1 INTEGER NOT NULL DEFAULT 0,
+  issued1 INTEGER NOT NULL DEFAULT 0,
+  date1 TEXT NOT NULL DEFAULT '',
+  sent2 INTEGER NOT NULL DEFAULT 0,
+  back2 INTEGER NOT NULL DEFAULT 0,
+  open2 INTEGER NOT NULL DEFAULT 0,
+  issued2 INTEGER NOT NULL DEFAULT 0,
+  date2 TEXT NOT NULL DEFAULT '',
+  author_id TEXT NOT NULL DEFAULT '',
+  author_fio TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_dc_contractor ON doc_checks (contractor);
+
+CREATE TABLE IF NOT EXISTS doc_defects (
+  id TEXT PRIMARY KEY,
+  check_id TEXT NOT NULL DEFAULT '',
+  entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  contractor TEXT NOT NULL DEFAULT '',
+  object_title TEXT NOT NULL DEFAULT '',
+  position TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  recorded_by TEXT NOT NULL DEFAULT '',
+  ack_by TEXT NOT NULL DEFAULT '',
+  fix_status TEXT NOT NULL DEFAULT 'не устранено',
+  fix_date TEXT NOT NULL DEFAULT '',
+  author_id TEXT NOT NULL DEFAULT '',
+  author_fio TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_dd_contractor ON doc_defects (contractor);
+
+CREATE TABLE IF NOT EXISTS doc_files (
+  id TEXT PRIMARY KEY,
+  contractor TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'itd',
+  title TEXT NOT NULL DEFAULT '',
+  file_name TEXT NOT NULL DEFAULT '',
+  url TEXT NOT NULL DEFAULT '',
+  size_kb INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT '',
+  uploaded_by TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_df_contractor ON doc_files (contractor);
