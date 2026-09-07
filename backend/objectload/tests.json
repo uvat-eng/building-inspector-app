@@ -1,0 +1,7 @@
+{
+  "tests": [
+    { "name": "История за неделю", "method": "GET", "path": "/?days=7", "expectedStatus": 200 },
+    { "name": "Сохранение пустого списка", "method": "POST", "path": "/", "body": { "items": [] }, "expectedStatus": 200 },
+    { "name": "Метод не поддержан", "method": "DELETE", "path": "/", "expectedStatus": 405 }
+  ]
+}

@@ -17,7 +17,9 @@ import { cn } from '@/lib/utils';
 import { useObjects, ProjectObject } from '@/data/store';
 import { useUsers, User } from '@/data/users';
 import { useVehicles, Vehicle, KIND_LABEL } from '@/data/vehicles';
-import { ROLE_LABEL } from '@/data/profile';
+import { ROLE_LABEL, useProfile } from '@/data/profile';
+import { LoadDay, lastDays, shortDay, today, useObjectLoad } from '@/data/objectload';
+import LoadHistory from '@/components/desk/chief/LoadHistory';
 
 interface ObjectLoadBoardProps {
   objects: ProjectObject[];
@@ -38,12 +40,16 @@ const TONE_CLASS: Record<string, string> = {
 
 const ObjectLoadBoard = ({ objects, canEdit, title, note }: ObjectLoadBoardProps) => {
   const { toast } = useToast();
+  const { profile } = useProfile();
   const { update } = useObjects();
+  const { byObject: history, save: saveDay } = useObjectLoad(14);
+  const week = useMemo(() => lastDays(7), []);
   const { users } = useUsers();
   const { items: assets } = useVehicles();
 
   const [open, setOpen] = useState<string | null>(null);
   const [edit, setEdit] = useState<ProjectObject | null>(null);
+  const [day, setDay] = useState(today());
   const [form, setForm] = useState({
     staffPlan: '0',
     staffFact: '0',
@@ -84,13 +90,50 @@ const ObjectLoadBoard = ({ objects, canEdit, title, note }: ObjectLoadBoardProps
     [objects],
   );
 
-  const startEdit = (o: ProjectObject) => {
+  const weekTotals = useMemo(() => {
+    const out: Record<string, LoadDay> = {};
+    week.forEach((d) => {
+      const sum = objects.reduce(
+        (a, o) => {
+          const rec = history.get(o.id)?.[d];
+          if (!rec) return a;
+          return {
+            staffPlan: a.staffPlan + rec.staffPlan,
+            staffFact: a.staffFact + rec.staffFact,
+            techPlan: a.techPlan + rec.techPlan,
+            techFact: a.techFact + rec.techFact,
+            has: true,
+          };
+        },
+        { staffPlan: 0, staffFact: 0, techPlan: 0, techFact: 0, has: false },
+      );
+      if (!sum.has) return;
+      out[d] = {
+        id: d,
+        objectId: 'all',
+        day: d,
+        staffPlan: sum.staffPlan,
+        staffFact: sum.staffFact,
+        techPlan: sum.techPlan,
+        techFact: sum.techFact,
+        cabins: 0,
+        note: '',
+        authorFio: '',
+      };
+    });
+    return out;
+  }, [objects, history, week]);
+
+  const startEdit = (o: ProjectObject, pick?: string) => {
+    const d = pick ?? today();
+    const rec: LoadDay | undefined = history.get(o.id)?.[d];
+    setDay(d);
     setForm({
-      staffPlan: String(o.staffPlan ?? 0),
-      staffFact: String(o.staffFact ?? 0),
-      techPlan: String(o.techPlan ?? 0),
-      techFact: String(o.techFact ?? 0),
-      cabins: String(o.cabins ?? 0),
+      staffPlan: String(rec?.staffPlan ?? o.staffPlan ?? 0),
+      staffFact: String(rec?.staffFact ?? (d === today() ? (o.staffFact ?? 0) : 0)),
+      techPlan: String(rec?.techPlan ?? o.techPlan ?? 0),
+      techFact: String(rec?.techFact ?? (d === today() ? (o.techFact ?? 0) : 0)),
+      cabins: String(rec?.cabins ?? o.cabins ?? 0),
     });
     setEdit(o);
   };
@@ -98,16 +141,18 @@ const ObjectLoadBoard = ({ objects, canEdit, title, note }: ObjectLoadBoardProps
   const save = async () => {
     if (!edit) return;
     setBusy(true);
+    const nums = {
+      staffPlan: Number(form.staffPlan) || 0,
+      staffFact: Number(form.staffFact) || 0,
+      techPlan: Number(form.techPlan) || 0,
+      techFact: Number(form.techFact) || 0,
+      cabins: Number(form.cabins) || 0,
+    };
     try {
-      await update(edit.id, {
-        staffPlan: Number(form.staffPlan) || 0,
-        staffFact: Number(form.staffFact) || 0,
-        techPlan: Number(form.techPlan) || 0,
-        techFact: Number(form.techFact) || 0,
-        cabins: Number(form.cabins) || 0,
-      });
+      await saveDay([{ ...nums, objectId: edit.id, day, authorFio: profile.fio }]);
+      if (day === today()) await update(edit.id, nums);
       setEdit(null);
-      toast({ title: 'Данные обновлены', description: edit.title });
+      toast({ title: `Данные за ${shortDay(day)} сохранены`, description: edit.title });
     } catch {
       toast({ title: 'Не удалось сохранить', variant: 'destructive' });
     } finally {
@@ -190,6 +235,17 @@ const ObjectLoadBoard = ({ objects, canEdit, title, note }: ObjectLoadBoardProps
                     )}
                   </div>
 
+                  <div className="px-4 pb-3 pl-16">
+                    <p className="mb-1 text-[0.68em] uppercase tracking-[0.1em] text-muted-foreground">
+                      Явка людей за неделю
+                    </p>
+                    <LoadHistory
+                      days={week}
+                      sheet={history.get(o.id) ?? {}}
+                      onPick={canEdit ? (d) => startEdit(o, d) : undefined}
+                    />
+                  </div>
+
                   {open === o.id && (
                     <div className="grid gap-3 border-t border-border/50 px-4 py-3 pl-16 sm:grid-cols-2">
                       <div>
@@ -254,6 +310,13 @@ const ObjectLoadBoard = ({ objects, canEdit, title, note }: ObjectLoadBoardProps
               );
             })}
 
+            <div className="border-t border-border bg-secondary/40 px-4 py-3">
+              <p className="mb-1.5 text-[0.68em] uppercase tracking-[0.1em] text-muted-foreground">
+                Динамика по всем объектам за неделю
+              </p>
+              <LoadHistory days={week} sheet={weekTotals} />
+            </div>
+
             <div className="flex items-center gap-3 bg-secondary/40 px-4 py-2.5 text-[0.84em]">
               <span className="font-head uppercase tracking-[0.06em]">Итого по объектам</span>
               <span className="ml-auto">
@@ -283,6 +346,19 @@ const ObjectLoadBoard = ({ objects, canEdit, title, note }: ObjectLoadBoardProps
               План берётся из договора, факт вносите ежедневно.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-[0.7em] uppercase tracking-[0.1em] text-muted-foreground">
+              Дата
+            </Label>
+            <Input
+              type="date"
+              value={day}
+              max={today()}
+              onChange={(e) => edit && startEdit(edit, e.target.value)}
+              className="h-9 rounded-sm text-[0.88em]"
+            />
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             {(
