@@ -54,7 +54,11 @@ const StaffSection = () => {
   const canManage = canManageUsers;
   const canAssign = ['manager', 'director', 'admin', 'pm'].includes(profile.role);
   const chiefs = users.filter((u: User) => u.role === 'engineer');
-  const roleChoices = isAdminProfile(profile) ? ROLE_ORDER : CREATABLE_ROLES;
+  const roleChoices = isAdminProfile(profile)
+    ? ROLE_ORDER
+    : ['manager', 'director', 'pm'].includes(profile.role)
+      ? (['engineer', ...CREATABLE_ROLES] as typeof CREATABLE_ROLES)
+      : CREATABLE_ROLES;
 
   const toggle = (arr: string[], v: string) =>
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];

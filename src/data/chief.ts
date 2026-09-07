@@ -1,17 +1,27 @@
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { useUsers, User } from '@/data/users';
 import { useObjects } from '@/data/store';
 import { useProfile } from '@/data/profile';
+import { ChiefScopeContext } from '@/data/chiefScope';
 
 export const useChiefScope = () => {
   const { profile } = useProfile();
   const { users } = useUsers();
   const { list: objects } = useObjects();
+  const override = useContext(ChiefScopeContext);
 
-  const wide = ['admin', 'director', 'manager', 'pm', 'coordinator'].includes(profile.role);
+  const wide =
+    !override && ['admin', 'director', 'manager', 'pm', 'coordinator'].includes(profile.role);
 
-  const myObjectIds = useMemo(() => profile.objects ?? [], [profile.objects]);
-  const myLocations = useMemo(() => profile.locations ?? [], [profile.locations]);
+  const myObjectIds = useMemo(
+    () => override?.objectIds ?? profile.objects ?? [],
+    [override, profile.objects],
+  );
+  const myLocations = useMemo(
+    () => (override ? [] : (profile.locations ?? [])),
+    [override, profile.locations],
+  );
+  const chiefFio = override?.chiefFio ?? profile.fio;
 
   const scopeObjects = useMemo(() => {
     if (wide) return objects;
@@ -24,17 +34,15 @@ export const useChiefScope = () => {
   const scopeTitles = useMemo(() => scopeObjects.map((o) => o.title), [scopeObjects]);
 
   const team = useMemo(() => {
-    const staff = users.filter((u: User) =>
-      ['inspector', 'driver', 'mechanic'].includes(u.role),
-    );
+    const staff = users.filter((u: User) => ['inspector', 'driver', 'mechanic'].includes(u.role));
     if (wide) return staff;
     return staff.filter(
       (u: User) =>
-        u.chief === profile.fio ||
+        u.chief === chiefFio ||
         (u.objects ?? []).some((id) => scopeObjectIds.includes(id)) ||
         (u.locations ?? []).some((l) => myLocations.includes(l)),
     );
-  }, [users, wide, profile.fio, scopeObjectIds, myLocations]);
+  }, [users, wide, chiefFio, scopeObjectIds, myLocations]);
 
   const inspectors = useMemo(() => team.filter((u: User) => u.role === 'inspector'), [team]);
   const drivers = useMemo(() => team.filter((u: User) => u.role === 'driver'), [team]);

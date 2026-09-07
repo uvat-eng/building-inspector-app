@@ -3,7 +3,8 @@ import Icon from '@/components/ui/icon';
 import Tag from '@/components/desk/Tag';
 import CabinetBar from '@/components/desk/CabinetBar';
 import ChangePassword from '@/components/desk/ChangePassword';
-import ProjectsList from '@/components/desk/manager/ProjectsList';
+import ProjectMnemo from '@/components/desk/manager/ProjectMnemo';
+import ProjectChiefs from '@/components/desk/manager/ProjectChiefs';
 import ProjectLoad from '@/components/desk/manager/ProjectLoad';
 import ProjectTabs from '@/components/desk/manager/ProjectTabs';
 import ObjectRoutes from '@/components/desk/manager/ObjectRoutes';
@@ -185,6 +186,15 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
 
           <ProjectLoad objects={project.objects} cabinObjectIds={cabinObjectIds} />
 
+          <ProjectChiefs projectTitle={project.title} objects={project.objects} />
+
+          <ObjectLoadBoard
+            objects={project.objects}
+            canEdit
+            title="Люди и техника на объектах проекта"
+            note="план / факт · история по дням"
+          />
+
           <ProjectTabs
             projectTitle={project.title}
             objects={project.objects}
@@ -331,6 +341,19 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
           ))}
         </div>
 
+        <section className="flex-none">
+          <p className="mb-1.5 text-[0.74em] uppercase tracking-[0.12em] text-muted-foreground">
+            Мнемосхема проектов по локациям · люди / техника / вагоны, план и факт
+          </p>
+          <ProjectMnemo
+            projects={projects}
+            onOpen={(key) => {
+              setOpenProject(key);
+              setOpenObject(null);
+            }}
+          />
+        </section>
+
         <button
           type="button"
           onClick={() => setRollupOpen(true)}
@@ -415,15 +438,6 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
         />
 
         <WriteoffApprovals />
-
-        <ProjectsList
-          projects={projects}
-          cabinObjectIds={cabinObjectIds}
-          onOpen={(key) => {
-            setOpenProject(key);
-            setOpenObject(null);
-          }}
-        />
       </div>
 
       {passDialog}
