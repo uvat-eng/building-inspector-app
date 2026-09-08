@@ -31,6 +31,8 @@ import IndReportsCabinet from '@/components/desk/indreports/IndReportsCabinet';
 import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
 import JournalCabinet from '@/components/desk/journal/JournalCabinet';
 import DocControlCabinet from '@/components/desk/docs/DocControlCabinet';
+import ContractsCabinet from '@/components/desk/director/ContractsCabinet';
+import ProjectManagers from '@/components/desk/director/ProjectManagers';
 
 interface ManagerCabinetProps {
   onExit?: () => void;
@@ -52,6 +54,11 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   const [rollupOpen, setRollupOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [contractsOpen, setContractsOpen] = useState(false);
+  const [pmOpen, setPmOpen] = useState(false);
+
+  const isDirector = ['director', 'admin'].includes(profile.role);
+  const cabinetTitle = isDirector ? 'Директор' : 'Руководитель проекта';
 
   const projects = useMemo<Project[]>(() => {
     const map = new Map<string, Project>();
@@ -129,7 +136,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
           object={active}
           crumbs={[
             {
-              label: 'Руководитель проекта',
+              label: cabinetTitle,
               icon: 'SquarePen',
               onClick: () => {
                 setOpenObject(null);
@@ -153,7 +160,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
         <CabinetBar
           crumbs={[
             {
-              label: 'Руководитель проекта',
+              label: cabinetTitle,
               icon: 'SquarePen',
               onClick: () => setOpenProject(null),
             },
@@ -215,13 +222,51 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
     { icon: 'FileWarning', label: 'Открытых предписаний', value: ordersOpen },
   ];
 
+  if (contractsOpen) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: cabinetTitle, icon: 'SquarePen', onClick: () => setContractsOpen(false) },
+            { label: 'Договоры с заказчиком' },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setContractsOpen(false)}
+          onExit={onExit}
+          actions={passButton}
+        />
+        <ContractsCabinet />
+        {passDialog}
+      </div>
+    );
+  }
+
+  if (pmOpen) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: cabinetTitle, icon: 'SquarePen', onClick: () => setPmOpen(false) },
+            { label: 'Руководители проектов' },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setPmOpen(false)}
+          onExit={onExit}
+          actions={passButton}
+        />
+        <ProjectManagers />
+        {passDialog}
+      </div>
+    );
+  }
+
   if (docsOpen) {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">
         <CabinetBar
           crumbs={[
             {
-              label: 'Руководитель проекта',
+              label: cabinetTitle,
               icon: 'SquarePen',
               onClick: () => setDocsOpen(false),
             },
@@ -244,7 +289,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
         <CabinetBar
           crumbs={[
             {
-              label: 'Руководитель проекта',
+              label: cabinetTitle,
               icon: 'SquarePen',
               onClick: () => setJournalOpen(false),
             },
@@ -267,7 +312,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
         <CabinetBar
           crumbs={[
             {
-              label: 'Руководитель проекта',
+              label: cabinetTitle,
               icon: 'SquarePen',
               onClick: () => setRollupOpen(false),
             },
@@ -289,7 +334,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">
         <CabinetBar
           crumbs={[
-            { label: 'Руководитель проекта', icon: 'SquarePen', onClick: () => setIndOpen(false) },
+            { label: cabinetTitle, icon: 'SquarePen', onClick: () => setIndOpen(false) },
             { label: 'Индивидуальные отчёты' },
           ]}
           backLabel="К обзору"
@@ -306,7 +351,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
       <CabinetBar
-        crumbs={[{ label: 'Руководитель проекта', icon: 'SquarePen' }]}
+        crumbs={[{ label: cabinetTitle, icon: 'SquarePen' }]}
         onExit={onExit}
         actions={passButton}
       />
@@ -314,7 +359,10 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
       <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 sm:px-6 sm:py-5">
           <h1 className="font-head text-[19px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[28px]">
-            Кабинет <span className="text-accent">руководителя проекта</span>
+            Кабинет{' '}
+            <span className="text-accent">
+              {isDirector ? 'директора' : 'руководителя проекта'}
+            </span>
           </h1>
           <p className="mt-1.5 text-[0.88em] text-muted-foreground">
             {profile.fio || current?.fio || 'ФИО не указано'} ·{' '}
@@ -353,6 +401,48 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
             }}
           />
         </section>
+
+        {isDirector && (
+          <>
+            <button
+              type="button"
+              onClick={() => setContractsOpen(true)}
+              className="group flex flex-none items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+            >
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                <Icon name="FileSignature" size={21} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                  Договоры с заказчиком на СК
+                </span>
+                <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                  Суммы договоров · акты выполненных работ, оплата и остаток
+                </span>
+              </span>
+              <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPmOpen(true)}
+              className="group flex flex-none items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+            >
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                <Icon name="Briefcase" size={21} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                  Руководители проектов
+                </span>
+                <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                  Создание учётной записи и закрепление за проектами и объектами
+                </span>
+              </span>
+              <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+            </button>
+          </>
+        )}
 
         <button
           type="button"

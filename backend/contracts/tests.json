@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "Список договоров",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Акт без договора запрещён",
+      "method": "POST",
+      "path": "/?kind=act",
+      "body": { "number": "1" },
+      "expectedStatus": 400
+    },
+    {
+      "name": "Удаление без id",
+      "method": "DELETE",
+      "path": "/",
+      "expectedStatus": 400
+    }
+  ]
+}
