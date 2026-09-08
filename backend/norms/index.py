@@ -12,6 +12,7 @@ import psycopg2.extras
 import requests
 import urllib3
 
+import archive
 from norms_db import RULES, FALLBACK
 
 urllib3.disable_warnings()
@@ -219,7 +220,7 @@ def giga_token(auth, ctx):
     return token
 
 
-def ask_gigachat(prompt, count, budget):
+def ask_gigachat(prompt, count, budget, parser=None):
     auth = os.environ.get('GIGACHAT_AUTH_KEY', '')
     if not auth:
         return None
@@ -245,10 +246,10 @@ def ask_gigachat(prompt, count, budget):
         verify=False,
     )
     r.raise_for_status()
-    return parse_ai(r.json()['choices'][0]['message']['content'], count)
+    return (parser or parse_ai)(r.json()['choices'][0]['message']['content'], count)
 
 
-def ask_gemini(prompt, count, budget):
+def ask_gemini(prompt, count, budget, parser=None):
     key = os.environ.get('GEMINI_API_KEY', '')
     if not key:
         return None
@@ -264,10 +265,10 @@ def ask_gemini(prompt, count, budget):
     )
     r.raise_for_status()
     text = r.json()['candidates'][0]['content']['parts'][0]['text']
-    return parse_ai(text, count)
+    return (parser or parse_ai)(text, count)
 
 
-def ask_mistral(prompt, count, budget):
+def ask_mistral(prompt, count, budget, parser=None):
     key = os.environ.get('MISTRAL_API_KEY', '')
     if not key:
         return None
@@ -283,10 +284,10 @@ def ask_mistral(prompt, count, budget):
         timeout=budget,
     )
     r.raise_for_status()
-    return parse_ai(r.json()['choices'][0]['message']['content'], count)
+    return (parser or parse_ai)(r.json()['choices'][0]['message']['content'], count)
 
 
-def ask_deepseek(prompt, count, budget):
+def ask_deepseek(prompt, count, budget, parser=None):
     key = os.environ.get('DEEPSEEK_API_KEY', '')
     if not key:
         return None
@@ -302,7 +303,7 @@ def ask_deepseek(prompt, count, budget):
         timeout=budget,
     )
     r.raise_for_status()
-    return parse_ai(r.json()['choices'][0]['message']['content'], count)
+    return (parser or parse_ai)(r.json()['choices'][0]['message']['content'], count)
 
 
 def ask_ai(items, budget):
@@ -321,6 +322,62 @@ def ask_ai(items, budget):
             errors.append(f'{fn.__name__}: нет ключа или пустой ответ')
         except Exception as e:
             errors.append(f'{fn.__name__}: {type(e).__name__} {e}')
+    return None, errors
+
+
+ARCH_HEAD = (
+    'Ты инженер строительного контроля. Для каждого нового замечания дан список '
+    'похожих замечаний из архива организации с уже проверенными ссылками на НтД.\n\n'
+    'Задача: выбрать из архива ту запись, нарушение в которой по сути совпадает '
+    'с новым замечанием, и вернуть её ссылку.\n\n'
+    'Правила:\n'
+    '1. Совпадение по СУТИ нарушения, а не по отдельным словам. Разные объекты, '
+    'фамилии, номера осей и позиций значения не имеют.\n'
+    '2. Если ни один вариант из архива не описывает то же нарушение — верни '
+    '"pick": 0. Не подгоняй ответ.\n'
+    '3. Поле name — краткая суть требования, 3-6 слов.\n'
+    '4. Отвечай строго JSON-массивом без markdown, по объекту на каждое '
+    'замечание в исходном порядке.\n\n'
+    'Формат: [{"pick":<номер варианта или 0>,"name":"<суть требования>"}]\n\n'
+)
+
+
+def parse_arch(text, count):
+    m = re.search(r'\[.*\]', text, re.S)
+    if not m:
+        return None
+    parsed = json.loads(m.group(0))
+    if len(parsed) != count:
+        return None
+    return [
+        {'pick': int(p.get('pick') or 0), 'name': str(p.get('name', ''))} for p in parsed
+    ]
+
+
+def ask_archive(tasks, budget):
+    """Проверяем через ИИ, подходит ли ссылка из собственного архива."""
+    blocks = []
+    for n, (text, cands) in enumerate(tasks, 1):
+        lines = [f'ЗАМЕЧАНИЕ {n}: {text[:600]}', 'Варианты из архива:']
+        for k, c in enumerate(cands, 1):
+            lines.append(f'  {k}) [{c["ref"]}] {c["text"][:300]}')
+        blocks.append('\n'.join(lines))
+    prompt = ARCH_HEAD + '\n\n'.join(blocks)
+
+    deadline = time.time() + budget
+    errors = []
+    for fn in (ask_deepseek, ask_gemini, ask_mistral, ask_gigachat):
+        left = deadline - time.time()
+        if left < 1.5:
+            errors.append('архив: время ожидания ИИ исчерпано')
+            break
+        try:
+            res = fn(prompt, len(tasks), left, parse_arch)
+            if res:
+                return res, errors
+            errors.append(f'архив/{fn.__name__}: пустой ответ')
+        except Exception as e:
+            errors.append(f'архив/{fn.__name__}: {type(e).__name__} {e}')
     return None, errors
 
 
@@ -394,6 +451,18 @@ def handler(event: dict, context) -> dict:
         )
         return resp(200, {'ok': True, 'phrase': norm_phrase(text)})
 
+    if body.get('action') == 'archive':
+        text = str(body.get('text') or '').strip()
+        if not text:
+            return resp(400, {'error': 'text_required'})
+        return resp(
+            200,
+            {
+                'total': archive.total(),
+                'items': archive.search(text, limit=int(body.get('limit') or 8)),
+            },
+        )
+
     if body.get('action') == 'stats':
         try:
             with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
@@ -410,6 +479,7 @@ def handler(event: dict, context) -> dict:
                     'reuses': int(hits),
                     'manual': int(manual),
                     'builtin': len(RULES),
+                    'archive': archive.total(),
                 },
             )
         except Exception as e:
@@ -429,9 +499,60 @@ def handler(event: dict, context) -> dict:
         if t in cached:
             results[i] = {**cached[t], 'alts': local[i].get('alts', [])}
 
+    deadline = time.time() + budget
+
+    arch_cands = {}
+    for i, r in enumerate(results):
+        if r is not None:
+            continue
+        cands = archive.search(items[i], limit=5)
+        if not archive.worth_ai(cands):
+            continue
+        arch_cands[i] = cands
+        if archive.strong(cands):
+            top = cands[0]
+            results[i] = {
+                'ref': top['ref'],
+                'name': top['kind'] or 'Из архива предписаний',
+                'source': 'archive',
+                'score': 10,
+                'archive': {'text': top['text'], 'object': top['object'], 'date': top['date']},
+                'alts': [{'ref': c['ref'], 'name': c['kind']} for c in cands[1:4]],
+            }
+
+    ask_arch = [i for i in arch_cands if results[i] is None]
+    if ask_arch:
+        left = deadline - time.time()
+        tasks = [(items[i], arch_cands[i]) for i in ask_arch]
+        picks, arch_dbg = ask_archive(tasks, min(left, budget * 0.5))
+        debug += arch_dbg
+        if picks:
+            for k, i in enumerate(ask_arch):
+                p = picks[k] if k < len(picks) else None
+                if not p or not p.get('pick'):
+                    continue
+                cands = arch_cands[i]
+                n = p['pick']
+                if 1 <= n <= len(cands):
+                    c = cands[n - 1]
+                    results[i] = {
+                        'ref': c['ref'],
+                        'name': p.get('name') or c['kind'] or 'Из архива предписаний',
+                        'source': 'archive-ai',
+                        'score': 9.5,
+                        'archive': {
+                            'text': c['text'],
+                            'object': c['object'],
+                            'date': c['date'],
+                        },
+                        'alts': [{'ref': x['ref'], 'name': x['kind']} for x in cands[:3]
+                                 if x['ref'] != c['ref']],
+                    }
+
     todo = [i for i, r in enumerate(results) if r is None]
     if todo:
-        ai, debug = ask_ai([items[i] for i in todo], budget)
+        ai, ai_dbg = ask_ai([items[i] for i in todo], max(deadline - time.time(), 2))
+        debug += ai_dbg
         if ai:
             fresh = []
             for k, i in enumerate(todo):

@@ -8,6 +8,16 @@
       "expectedStatus": 200
     },
     {
+      "name": "Поиск по собственному архиву",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "archive",
+        "text": "Не выполнена процедура входного контроля с оформлением акта"
+      },
+      "expectedStatus": 200
+    },
+    {
       "name": "Проверка ключа ИИ",
       "method": "POST",
       "path": "/",

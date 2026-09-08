@@ -93,10 +93,11 @@ const NORMS_API = 'https://functions.poehali.dev/b9b1a996-8cf5-4866-aae2-e158955
 export interface NormMatch {
   ref: string;
   name: string;
-  source: 'ai' | 'base' | 'manual';
+  source: 'ai' | 'base' | 'manual' | 'archive' | 'archive-ai';
   author?: string;
   score: number;
   alts?: { ref: string; name: string }[];
+  archive?: { text: string; object?: string; date?: string };
 }
 
 export interface WorkSummary {

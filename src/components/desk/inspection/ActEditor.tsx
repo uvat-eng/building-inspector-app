@@ -78,9 +78,13 @@ const ActEditor = ({
           description:
             m.source === 'manual'
               ? `Ссылку ранее задал инженер${m.author ? `: ${m.author}` : ''}`
-              : m.source === 'ai'
-                ? 'Подобрано ИИ-агентом'
-                : 'Подобрано по базе норм',
+              : m.source === 'archive'
+                ? `Из архива предписаний${m.archive?.date ? ` от ${m.archive.date}` : ''}`
+                : m.source === 'archive-ai'
+                  ? 'Из архива предписаний, сверено ИИ'
+                  : m.source === 'ai'
+                    ? 'Подобрано ИИ-агентом'
+                    : 'Подобрано по базе норм',
         });
       }
     } catch {
