@@ -124,3 +124,65 @@ def worth_ai(cand):
 def total():
     rows, _ = load()
     return len(rows)
+
+
+_BOOK = {'rows': None, 'kinds': None}
+
+
+def build_book():
+    """Обезличенный справочник: только нарушение, раздел и пункт НтД."""
+    if _BOOK['rows'] is not None:
+        return _BOOK['rows'], _BOOK['kinds']
+    rows, _ = load()
+    seen = set()
+    book = []
+    for r in rows:
+        text = r['text'].strip()
+        ref = r['ref'].strip()
+        if not text or not ref:
+            continue
+        key = (re.sub(r'[^а-яёa-z0-9]+', '', text.lower())[:220], ref.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        book.append({
+            'text': text,
+            'ref': ref,
+            'kind': r['kind'] or 'Прочее',
+        })
+
+    counts = {}
+    for b in book:
+        counts[b['kind']] = counts.get(b['kind'], 0) + 1
+    kinds = [{'kind': k, 'count': v} for k, v in sorted(counts.items(), key=lambda x: -x[1])]
+
+    book.sort(key=lambda b: (b['kind'], b['ref']))
+    _BOOK['rows'] = book
+    _BOOK['kinds'] = kinds
+    return book, kinds
+
+
+def handbook(kind='', query='', page=1, size=50):
+    book, kinds = build_book()
+    rows = book
+    if kind:
+        rows = [b for b in rows if b['kind'] == kind]
+    q = (query or '').strip().lower()
+    if q:
+        parts = [p for p in re.split(r'\s+', q) if len(p) > 1]
+        rows = [
+            b
+            for b in rows
+            if all(p in b['text'].lower() or p in b['ref'].lower() for p in parts)
+        ]
+    size = max(10, min(int(size), 200))
+    page = max(1, int(page))
+    start = (page - 1) * size
+    return {
+        'total': len(book),
+        'found': len(rows),
+        'page': page,
+        'size': size,
+        'kinds': kinds,
+        'items': rows[start : start + size],
+    }

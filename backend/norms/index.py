@@ -451,6 +451,14 @@ def handler(event: dict, context) -> dict:
         )
         return resp(200, {'ok': True, 'phrase': norm_phrase(text)})
 
+    if body.get('action') == 'handbook':
+        return resp(200, archive.handbook(
+            kind=str(body.get('kind') or ''),
+            query=str(body.get('q') or ''),
+            page=int(body.get('page') or 1),
+            size=int(body.get('size') or 50),
+        ))
+
     if body.get('action') == 'archive':
         text = str(body.get('text') or '').strip()
         if not text:

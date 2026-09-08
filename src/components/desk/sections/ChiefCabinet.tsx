@@ -25,6 +25,7 @@ import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
 import DocControlCabinet from '@/components/desk/docs/DocControlCabinet';
 import PhotosSection from '@/components/desk/sections/PhotosSection';
 import ObjectDocsCabinet from '@/components/desk/objectdocs/ObjectDocsCabinet';
+import HandbookCabinet from '@/components/desk/handbook/HandbookCabinet';
 
 type View =
   | 'home'
@@ -32,6 +33,7 @@ type View =
   | 'journal'
   | 'rollup'
   | 'doccontrol'
+  | 'handbook'
   | 'photos'
   | 'tables'
   | 'geodesy'
@@ -51,6 +53,7 @@ const VIEW_TITLE: Record<View, string> = {
   journal: 'Индивидуальные журналы ИСК',
   rollup: 'Свод замечаний и предписаний',
   doccontrol: 'Отчёт по документации',
+  handbook: 'Справочник типовых нарушений',
   photos: 'Фотоотчёты',
   tables: 'Отчёты таблицы',
   geodesy: 'Акты дубля геодезии',
@@ -101,6 +104,12 @@ const TILES: Tile[][] = [
       icon: 'FolderCheck',
       title: 'Отчёт по документации',
       note: 'Проверка ИТД и ПСД · учёт файлов подрядчиков',
+    },
+    {
+      id: 'handbook',
+      icon: 'BookMarked',
+      title: 'Справочник типовых нарушений',
+      note: '2085 нарушений по 14 разделам работ · пункты НтД и поиск',
     },
     {
       id: 'photos',
@@ -250,6 +259,8 @@ const ChiefCabinet = ({ onExit }: ChiefCabinetProps) => {
         return <RollupCabinet />;
       case 'doccontrol':
         return <DocControlCabinet />;
+      case 'handbook':
+        return <HandbookCabinet />;
       case 'photos':
         return <PhotosSection />;
       case 'tables':

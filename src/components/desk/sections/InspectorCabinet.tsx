@@ -38,6 +38,7 @@ import JournalCabinet from '@/components/desk/journal/JournalCabinet';
 import PhotosSection from '@/components/desk/sections/PhotosSection';
 import DocControlCabinet from '@/components/desk/docs/DocControlCabinet';
 import ObjectDocsCabinet from '@/components/desk/objectdocs/ObjectDocsCabinet';
+import HandbookCabinet from '@/components/desk/handbook/HandbookCabinet';
 
 type View =
   | 'home'
@@ -50,6 +51,7 @@ type View =
   | 'journal'
   | 'photos'
   | 'doccontrol'
+  | 'handbook'
   | 'tables'
   | 'geodesy'
   | 'card'
@@ -80,6 +82,7 @@ const VIEW_TITLE: Record<View, string> = {
   journal: 'Индивидуальный журнал ИСК',
   photos: 'Фотоотчёты',
   doccontrol: 'Отчёт по документации',
+  handbook: 'Справочник типовых нарушений',
   tables: 'Отчёты таблицы',
   geodesy: 'Акты дубля геодезии',
   card: 'Контрольная карточка объекта',
@@ -430,6 +433,25 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
 
           <button
             type="button"
+            onClick={() => setView('handbook')}
+            className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+              <Icon name="BookMarked" size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                Справочник типовых нарушений
+              </span>
+              <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                2085 нарушений по 14 разделам работ · пункты НтД и поиск
+              </span>
+            </span>
+            <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+          </button>
+
+          <button
+            type="button"
             onClick={() => setView('indreports')}
             className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
           >
@@ -623,6 +645,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       {view === 'photos' && <PhotosSection onBack={() => setView('home')} />}
 
       {view === 'doccontrol' && <DocControlCabinet onBack={() => setView('home')} />}
+
+      {view === 'handbook' && <HandbookCabinet onBack={() => setView('home')} />}
 
       {view === 'tables' && (
         <ObjectDocsCabinet section="tables" onBack={() => setView('home')} />
