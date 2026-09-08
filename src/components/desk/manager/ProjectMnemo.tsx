@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import Empty from '@/components/desk/Empty';
 import { cn } from '@/lib/utils';
@@ -57,9 +57,32 @@ const TEXT: Record<string, string> = {
   dim: 'text-muted-foreground',
 };
 
+const STORE_KEY = 'mnemo-collapsed';
+
+const readCollapsed = (): string[] => {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+};
+
 const ProjectMnemo = ({ projects, onOpen }: ProjectMnemoProps) => {
   const { list: locations } = useLocations();
   const { items: cabins } = useVehicles('cabin');
+  const [collapsed, setCollapsed] = useState<string[]>(readCollapsed);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(collapsed));
+    } catch {
+      /* хранилище недоступно */
+    }
+  }, [collapsed]);
+
+  const toggle = (id: string) =>
+    setCollapsed((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const cabinsByObject = useMemo(() => {
     const map = new Map<string, number>();
@@ -126,8 +149,31 @@ const ProjectMnemo = ({ projects, onOpen }: ProjectMnemoProps) => {
     </span>
   );
 
+  const allIds = groups.map((g) => g.id);
+  const allClosed = allIds.every((id) => collapsed.includes(id));
+
   return (
     <div className="flex flex-col gap-3">
+      {groups.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCollapsed(allClosed ? [] : allIds)}
+            className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.76em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
+          >
+            <Icon
+              name={allClosed ? 'ChevronsDown' : 'ChevronsUp'}
+              size={14}
+              className="text-accent"
+            />
+            {allClosed ? 'Развернуть все' : 'Свернуть все'}
+          </button>
+          <span className="text-[0.74em] text-muted-foreground">
+            {groups.length - collapsed.length} из {groups.length} локаций раскрыто
+          </span>
+        </div>
+      )}
+
       {groups.map((g) => {
         const total = g.list.reduce<Load>((a, p) => {
           const l = loadOf(p);
@@ -140,13 +186,29 @@ const ProjectMnemo = ({ projects, onOpen }: ProjectMnemoProps) => {
           };
         }, ZERO);
         const rootTone = toneOf(total.staffPlan, total.staffFact);
+        const isClosed = collapsed.includes(g.id);
+        const riskAll = g.list.reduce(
+          (s, p) => s + p.objects.filter((o) => o.status === 'risk').length,
+          0,
+        );
 
         return (
           <section
             key={g.id}
-            className="rounded-sm border border-border bg-card p-3 sm:flex sm:gap-0 sm:p-4"
+            className={cn(
+              'rounded-sm border border-border bg-card p-3 sm:p-4',
+              !isClosed && 'sm:flex sm:gap-0',
+            )}
           >
-            <div className="flex flex-none items-start gap-2.5 sm:w-52 sm:flex-col sm:justify-center sm:pr-3">
+            <button
+              type="button"
+              onClick={() => toggle(g.id)}
+              title={isClosed ? 'Развернуть локацию' : 'Свернуть локацию'}
+              className={cn(
+                'flex w-full flex-none items-start gap-2.5 text-left',
+                !isClosed && 'sm:w-52 sm:flex-col sm:justify-center sm:pr-3',
+              )}
+            >
               <span
                 className={cn(
                   'flex h-11 w-11 flex-none items-center justify-center rounded-sm border-2 bg-secondary text-accent',
@@ -155,23 +217,58 @@ const ProjectMnemo = ({ projects, onOpen }: ProjectMnemoProps) => {
               >
                 <Icon name={g.icon} fallback="MapPin" size={19} />
               </span>
-              <span className="min-w-0 sm:mt-2">
-                <span className="block truncate font-head text-[0.95em] uppercase leading-tight tracking-[0.05em]">
-                  {g.title}
+              <span className={cn('min-w-0 flex-1', !isClosed && 'sm:mt-2')}>
+                <span className="flex items-center gap-2">
+                  <span className="truncate font-head text-[0.95em] uppercase leading-tight tracking-[0.05em]">
+                    {g.title}
+                  </span>
+                  <Icon
+                    name={isClosed ? 'ChevronDown' : 'ChevronUp'}
+                    size={15}
+                    className={cn('flex-none text-accent', !isClosed && 'sm:hidden')}
+                  />
                 </span>
                 <span className="mt-0.5 block text-[0.72em] text-muted-foreground">
                   {g.list.length} проектов · {g.list.reduce((s, p) => s + p.objects.length, 0)}{' '}
                   объектов
+                  {isClosed && riskAll > 0 ? ` · риск ${riskAll}` : ''}
                 </span>
                 <span className="mt-1 flex items-center gap-1 text-[0.72em] text-muted-foreground">
                   <span className={cn('h-1.5 w-1.5 flex-none rounded-full', DOT[rootTone])} />
                   {total.staffFact}/{total.staffPlan} чел · {total.techFact}/{total.techPlan} тех ·{' '}
                   {total.cabins} ваг
                 </span>
+                {isClosed && (
+                  <span className="mt-1.5 flex flex-wrap gap-1">
+                    {g.list.slice(0, 6).map((p) => {
+                      const l = loadOf(p);
+                      return (
+                        <span
+                          key={p.key}
+                          title={p.title}
+                          className={cn(
+                            'h-1.5 w-6 rounded-sm',
+                            DOT[toneOf(l.staffPlan, l.staffFact)],
+                          )}
+                        />
+                      );
+                    })}
+                    {g.list.length > 6 && (
+                      <span className="text-[0.68em] text-muted-foreground">
+                        +{g.list.length - 6}
+                      </span>
+                    )}
+                  </span>
+                )}
               </span>
-            </div>
+            </button>
 
-            <div className="relative mt-3 flex-1 pl-7 sm:mt-0 sm:pl-8">
+            <div
+              className={cn(
+                'relative mt-3 flex-1 pl-7 sm:mt-0 sm:pl-8',
+                isClosed && 'hidden',
+              )}
+            >
               <span
                 aria-hidden
                 className="absolute bottom-5 left-0 top-5 w-px bg-border sm:left-1"
