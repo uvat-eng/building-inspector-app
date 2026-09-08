@@ -188,6 +188,24 @@ export const CAN_MANAGE_ASSETS: Role[] = [
 
 export const CREATABLE_ROLES: Role[] = ['inspector', 'driver', 'mechanic'];
 
+/** Какие должности вправе заводить каждая роль. Свою и вышестоящие — нельзя. */
+export const CAN_CREATE_ROLES: Record<Role, Role[]> = {
+  admin: ROLE_ORDER,
+  director: ['manager', 'pm', 'coordinator', 'engineer', 'inspector', 'mechanic', 'driver'],
+  coordinator: ['engineer', 'inspector', 'mechanic', 'driver'],
+  pm: ['engineer', 'inspector', 'mechanic', 'driver'],
+  manager: ['engineer', 'inspector', 'mechanic', 'driver'],
+  engineer: ['inspector', 'driver', 'mechanic'],
+  inspector: [],
+  mechanic: [],
+  driver: [],
+};
+
+export const creatableBy = (p: Profile): Role[] =>
+  isAdminProfile(p) ? ROLE_ORDER : (CAN_CREATE_ROLES[p.role] ?? []);
+
+export const canCreateRole = (p: Profile, r: Role) => creatableBy(p).includes(r);
+
 export const isAdminProfile = (p: Profile) => (p.baseRole ?? p.role) === 'admin';
 
 export const canSeeLocation = (p: Profile, id: string) =>

@@ -13,6 +13,21 @@ CORS = {
 }
 
 
+ALL_ROLES = (
+    'admin', 'director', 'manager', 'pm', 'coordinator',
+    'engineer', 'inspector', 'mechanic', 'driver',
+)
+
+CAN_CREATE = {
+    'admin': ALL_ROLES,
+    'director': ('manager', 'pm', 'coordinator', 'engineer', 'inspector', 'mechanic', 'driver'),
+    'coordinator': ('engineer', 'inspector', 'mechanic', 'driver'),
+    'pm': ('engineer', 'inspector', 'mechanic', 'driver'),
+    'manager': ('engineer', 'inspector', 'mechanic', 'driver'),
+    'engineer': ('inspector', 'driver', 'mechanic'),
+}
+
+
 def esc(v):
     return str(v).replace("'", "''")
 
@@ -104,20 +119,29 @@ def handler(event: dict, context) -> dict:
             cur.execute("SELECT COUNT(*) AS n FROM users")
             total = int(cur.fetchone()['n'])
 
+            role = body.get('role', 'inspector')
+
             by_id = esc(body.get('byUserId', ''))
             allowed = False
+            author_role = ''
             if total == 0:
                 allowed = True
             elif by_id:
                 cur.execute(f"SELECT role FROM users WHERE id = '{by_id}'")
                 r = cur.fetchone()
-                allowed = bool(
-                    r
-                    and r['role']
-                    in ('admin', 'pm', 'coordinator', 'director', 'manager', 'engineer')
-                )
+                author_role = (r or {}).get('role', '')
+                allowed = author_role in CAN_CREATE
             if not allowed:
                 return resp(403, {'error': 'not_allowed'})
+
+            if total > 0 and role not in CAN_CREATE.get(author_role, ()):
+                return resp(
+                    403,
+                    {
+                        'error': 'role_not_allowed',
+                        'message': 'Эту должность может завести только вышестоящий руководитель.',
+                    },
+                )
 
             fio = ' '.join(str(body.get('fio', '')).split())
             key = norm(fio)
@@ -125,7 +149,6 @@ def handler(event: dict, context) -> dict:
             if cur.fetchone():
                 return resp(409, {'error': 'exists'})
 
-            role = body.get('role', 'inspector')
             if total == 0:
                 role = 'pm'
 
@@ -149,6 +172,24 @@ def handler(event: dict, context) -> dict:
         if method == 'PUT':
             uid = body.get('id', '')
             patch = body.get('patch', {})
+
+            if 'role' in patch:
+                by_id = esc(body.get('byUserId', ''))
+                author_role = ''
+                if by_id:
+                    cur.execute(f"SELECT role FROM users WHERE id = '{by_id}'")
+                    r = cur.fetchone()
+                    author_role = (r or {}).get('role', '')
+                if patch['role'] not in CAN_CREATE.get(author_role, ()):
+                    return resp(
+                        403,
+                        {
+                            'error': 'role_not_allowed',
+                            'message': 'Назначить эту должность может только '
+                                       'вышестоящий руководитель.',
+                        },
+                    )
+
             sets = []
             if 'fio' in patch:
                 fio = ' '.join(str(patch['fio']).split())

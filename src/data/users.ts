@@ -89,7 +89,10 @@ export const registerUser = async (
     body: JSON.stringify({ action: 'register', byUserId: byUserId ?? '', ...u }),
   });
   if (res.status === 409) throw new Error('exists');
-  if (res.status === 403) throw new Error('not_allowed');
+  if (res.status === 403) {
+    const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(error === 'role_not_allowed' ? 'role_not_allowed' : 'not_allowed');
+  }
   if (!res.ok) throw new Error('register_failed');
   const { item } = (await res.json()) as { item: User };
   publish([...cache, item]);
@@ -117,12 +120,12 @@ export const changePassword = async (
   return item;
 };
 
-export const updateUser = async (id: string, patch: Partial<User>) => {
+export const updateUser = async (id: string, patch: Partial<User>, byUserId?: string) => {
   publish(cache.map((u) => (u.id === id ? { ...u, ...patch } : u)));
   const res = await fetch(API, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, patch }),
+    body: JSON.stringify({ id, patch, byUserId: byUserId ?? readSession() ?? '' }),
   });
   if (!res.ok) throw new Error('update_failed');
 };

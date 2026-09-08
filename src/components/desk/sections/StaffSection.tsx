@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
@@ -19,9 +19,8 @@ import {
   ROLE_LABEL,
   ROLE_ICON,
   ROLE_NOTE,
-  ROLE_ORDER,
-  CREATABLE_ROLES,
-  isAdminProfile,
+  creatableBy,
+  canCreateRole,
   Role,
   SPECIALTIES,
 } from '@/data/profile';
@@ -54,11 +53,11 @@ const StaffSection = () => {
   const canManage = canManageUsers;
   const canAssign = ['manager', 'director', 'admin', 'pm'].includes(profile.role);
   const chiefs = users.filter((u: User) => u.role === 'engineer');
-  const roleChoices = isAdminProfile(profile)
-    ? ROLE_ORDER
-    : ['manager', 'director', 'pm'].includes(profile.role)
-      ? (['engineer', ...CREATABLE_ROLES] as typeof CREATABLE_ROLES)
-      : CREATABLE_ROLES;
+  const roleChoices = creatableBy(profile);
+
+  useEffect(() => {
+    if (roleChoices.length && !roleChoices.includes(nRole)) setNRole(roleChoices[0]);
+  }, [roleChoices, nRole]);
 
   const toggle = (arr: string[], v: string) =>
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -70,6 +69,14 @@ const StaffSection = () => {
     }
     if ((nRole === 'driver' || nRole === 'mechanic') && !nProject.trim()) {
       toast({ title: 'Выберите проект', description: 'Путевые листы заполняются по проекту.', variant: 'destructive' });
+      return;
+    }
+    if (!canCreateRole(profile, nRole)) {
+      toast({
+        title: 'Недостаточно прав',
+        description: `Заводить должность «${ROLE_LABEL[nRole]}» может только вышестоящий руководитель.`,
+        variant: 'destructive',
+      });
       return;
     }
     if (nRole === 'inspector' && nLocs.length === 0) {
@@ -110,9 +117,11 @@ const StaffSection = () => {
         title:
           c === 'exists'
             ? 'Такой сотрудник уже есть'
-            : c === 'not_allowed'
-              ? 'Недостаточно прав'
-              : 'Не удалось создать',
+            : c === 'role_not_allowed'
+              ? 'Эту должность заводит вышестоящий руководитель'
+              : c === 'not_allowed'
+                ? 'Недостаточно прав'
+                : 'Не удалось создать',
         variant: 'destructive',
       });
     } finally {
