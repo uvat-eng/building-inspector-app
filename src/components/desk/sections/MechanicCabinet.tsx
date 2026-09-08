@@ -21,9 +21,15 @@ import useBackGuard from '@/hooks/use-back-guard';
 import VehicleForm from '@/components/desk/mechanic/VehicleForm';
 import { downloadWaybills } from '@/lib/waybillXls';
 import LogDialog from '@/components/desk/mechanic/LogDialog';
-import VehicleCard, { STATUS_TONE } from '@/components/desk/mechanic/VehicleCard';
+import VehicleCard from '@/components/desk/mechanic/VehicleCard';
+import FleetMap from '@/components/desk/mechanic/FleetMap';
+import FleetTiles from '@/components/desk/mechanic/FleetTiles';
+import DriverForm from '@/components/desk/mechanic/DriverForm';
+import RepairsCabinet from '@/components/desk/mechanic/RepairsCabinet';
+import VehicleDossier from '@/components/desk/mechanic/VehicleDossier';
+import DriverActivity from '@/components/desk/mechanic/DriverActivity';
+import { useFleet } from '@/data/fleet';
 import {
-  KIND_LABEL,
   LogKind,
   Vehicle,
   VehicleDraft,
@@ -40,13 +46,17 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
   const { profile } = useProfile();
   const { current } = useUsers();
   const { toast } = useToast();
-  const { items, logs, loading, create, update, remove, addLog, removeLog } = useVehicles();
+  const { items, logs, create, update, remove, addLog, removeLog } = useVehicles();
 
   const [openVehicle, setOpenVehicle] = useState<string | null>(null);
   const [passOpen, setPassOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [logKind, setLogKind] = useState<LogKind | null>(null);
+  const [driverOpen, setDriverOpen] = useState(false);
+  const [pane, setPane] = useState<'repairs' | 'dossier' | 'drivers' | null>(null);
+  const [pickedLoc, setPickedLoc] = useState<string | null>(null);
+  const { shifts, reload: reloadFleet } = useFleet();
 
   useBackGuard(!!openVehicle, () => setOpenVehicle(null));
 
@@ -74,6 +84,21 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
         .filter((a) => a.reasons.length),
     [items],
   );
+
+  const shown = useMemo(
+    () => (pickedLoc === null ? items : items.filter((v) => (v.locationId || '') === pickedLoc)),
+    [items, pickedLoc],
+  );
+
+  const soonService = useMemo(() => {
+    const now = new Date();
+    const limit = new Date(now.getFullYear(), now.getMonth() + 2, 0)
+      .toISOString()
+      .slice(0, 10);
+    return items
+      .filter((v) => v.serviceAt && v.serviceAt <= limit)
+      .sort((a, b) => a.serviceAt.localeCompare(b.serviceAt));
+  }, [items]);
 
   const onLine = items.filter((v) => v.status === 'На линии').length;
   const inService = items.filter((v) => v.status === 'ТО' || v.status === 'Ремонт').length;
@@ -141,6 +166,32 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
     toast({ title: `Техника ${plate} удалена` });
   };
 
+  if (pane) {
+    const meta = {
+      repairs: { t: 'ТО и ремонты', i: 'Wrench' },
+      dossier: { t: 'Досье техники', i: 'FolderOpen' },
+      drivers: { t: 'Кабинеты водителей', i: 'Users' },
+    }[pane];
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: 'Механик', icon: 'Wrench', onClick: () => setPane(null) },
+            { label: meta.t, icon: meta.i },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setPane(null)}
+          onExit={onExit}
+        />
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+          {pane === 'repairs' && <RepairsCabinet vehicles={items} />}
+          {pane === 'dossier' && <VehicleDossier vehicles={items} />}
+          {pane === 'drivers' && <DriverActivity vehicles={items} />}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
       <CabinetBar
@@ -185,6 +236,14 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
             </button>
             <button
               type="button"
+              onClick={() => setDriverOpen(true)}
+              className="flex items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors hover:border-accent hover:bg-secondary"
+            >
+              <Icon name="UserPlus" size={14} className="text-accent" />
+              Водитель
+            </button>
+            <button
+              type="button"
               onClick={() => openForm(null)}
               className="flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] text-accent-foreground transition-colors hover:bg-accent/90"
             >
@@ -223,49 +282,107 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
               </div>
             </section>
 
-            <Panel title="Требуют внимания" note={alerts.length ? `${alerts.length}` : undefined}>
-              {alerts.length === 0 ? (
-                <Empty
-                  icon="ShieldCheck"
-                  title="Всё в порядке"
-                  hint="Сроки ТО и ОСАГО без просрочек."
-                />
+            <Panel title="Карта локаций · где стоит техника" className="flex-none">
+              <FleetMap items={items} activeLoc={pickedLoc} onPick={setPickedLoc} />
+            </Panel>
+
+            <Panel
+              title={pickedLoc === null ? 'Техника и водители' : 'Техника выбранной локации'}
+              note={`${shown.length}`}
+              className="flex-none"
+            >
+              <FleetTiles items={shown} shifts={shifts} onOpen={setOpenVehicle} />
+            </Panel>
+
+            <Panel
+              title="Подходящие ТО · текущий и следующий месяц"
+              note={soonService.length ? `${soonService.length}` : undefined}
+              className="flex-none"
+            >
+              {!soonService.length ? (
+                <Empty icon="ShieldCheck" title="Всё в порядке" hint="Ближайших ТО нет." />
               ) : (
-                alerts.map((a) => (
+                soonService.map((v) => {
+                  const d = daysLeft(v.serviceAt);
+                  return (
+                    <Row
+                      key={v.id}
+                      title={`${v.plate || 'б/н'} · ${v.model}`}
+                      sub={`ТО ${v.serviceAt} · ${v.driver || 'водитель не закреплён'}`}
+                      unread={(d ?? 1) < 0}
+                      right={
+                        <Tag tone={(d ?? 1) < 0 ? 'hot' : 'wait'}>
+                          {d === null ? '—' : d < 0 ? `просрочено ${-d} дн.` : `через ${d} дн.`}
+                        </Tag>
+                      }
+                      onClick={() => setOpenVehicle(v.id)}
+                    />
+                  );
+                })
+              )}
+            </Panel>
+
+            {alerts.length > 0 && (
+              <Panel title="Требуют внимания" note={`${alerts.length}`} className="flex-none">
+                {alerts.map((a) => (
                   <Row
                     key={a.vehicle.id}
                     title={`${a.vehicle.plate} · ${a.vehicle.model}`}
                     sub={a.reasons.join(' · ')}
                     unread={a.overdue}
-                    right={<Tag tone={a.overdue ? 'hot' : 'wait'}>{a.overdue ? 'Просрочено' : 'Скоро'}</Tag>}
+                    right={
+                      <Tag tone={a.overdue ? 'hot' : 'wait'}>
+                        {a.overdue ? 'Просрочено' : 'Скоро'}
+                      </Tag>
+                    }
                     onClick={() => setOpenVehicle(a.vehicle.id)}
                   />
-                ))
-              )}
-            </Panel>
+                ))}
+              </Panel>
+            )}
 
-            <Panel
-              title="Автопарк"
-              note={loading ? 'загрузка…' : `${items.length}`}
-            >
-              {items.length === 0 ? (
-                <Empty
-                  icon="Truck"
-                  title="Автопарк пуст"
-                  hint="Добавьте первую единицу техники"
-                />
-              ) : (
-                items.map((v) => (
-                  <Row
-                    key={v.id}
-                    title={`${v.plate} · ${v.model}`}
-                    sub={`${KIND_LABEL[v.kind]} · ${v.driver || 'водитель не закреплён'} · ${v.odometer || 0} км`}
-                    right={<Tag tone={STATUS_TONE(v.status)}>{v.status}</Tag>}
-                    onClick={() => setOpenVehicle(v.id)}
-                  />
-                ))
-              )}
-            </Panel>
+            {(
+              [
+                {
+                  k: 'repairs' as const,
+                  i: 'Wrench',
+                  t: 'ТО и ремонты',
+                  s: 'Статистика затрат по месяцам и по технике',
+                },
+                {
+                  k: 'dossier' as const,
+                  i: 'FolderOpen',
+                  t: 'Досье техники',
+                  s: 'Ремонты, авансовые отчёты, акты и ведомости по каждой машине',
+                },
+                {
+                  k: 'drivers' as const,
+                  i: 'Users',
+                  t: 'Кабинеты водителей',
+                  s: 'Кто на какой технике и что внёс в систему',
+                },
+              ]
+            ).map((b) => (
+              <button
+                key={b.k}
+                type="button"
+                onClick={() => setPane(b.k)}
+                className="group flex flex-none items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+              >
+                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                  <Icon name={b.i} size={21} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                    {b.t}
+                  </span>
+                  <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                    {b.s}
+                  </span>
+                </span>
+                <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+              </button>
+            ))}
           </>
         ) : (
           <VehicleCard
@@ -294,6 +411,13 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
           {current && <ChangePassword user={current} onDone={() => setPassOpen(false)} />}
         </DialogContent>
       </Dialog>
+
+      <DriverForm
+        open={driverOpen}
+        onOpenChange={setDriverOpen}
+        vehicles={items}
+        onDone={reloadFleet}
+      />
 
       <VehicleForm
         open={formOpen}

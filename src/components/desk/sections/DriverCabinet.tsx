@@ -20,6 +20,8 @@ import ChangePassword from '@/components/desk/ChangePassword';
 import WaybillForm, { WaybillPayload } from '@/components/desk/driver/WaybillForm';
 import { downloadWaybills } from '@/lib/waybillXls';
 import { fmtDate, useVehicles } from '@/data/vehicles';
+import DriverActions, { DriverAction } from '@/components/desk/driver/DriverActions';
+import RequestsCabinet from '@/components/desk/chief/RequestsCabinet';
 
 interface DriverCabinetProps {
   onExit?: () => void;
@@ -37,6 +39,8 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
   const [month, setMonth] = useState(currentMonth);
   const [passOpen, setPassOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [action, setAction] = useState<DriverAction>(null);
+  const [reqOpen, setReqOpen] = useState(false);
 
   const project = current?.group || scope.project || '';
 
@@ -96,6 +100,23 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
     { icon: 'Archive', label: 'Всего листов', value: waybills.length },
   ];
 
+  if (reqOpen) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: 'Водитель', icon: 'Truck', onClick: () => setReqOpen(false) },
+            { label: 'Заявки', icon: 'PackagePlus' },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setReqOpen(false)}
+          onExit={onExit}
+        />
+        <RequestsCabinet kind="material" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
       <CabinetBar
@@ -150,6 +171,63 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
             ))}
           </div>
         </section>
+
+        <div className="grid flex-none gap-2 sm:grid-cols-2">
+          {(
+            [
+              {
+                k: 'request' as const,
+                i: 'PackagePlus',
+                t: 'Заявки',
+                s: 'Материалы, обеспечение и билеты',
+              },
+              {
+                k: 'repair' as const,
+                i: 'Wrench',
+                t: 'Сделал ремонт',
+                s: 'Опишите работу и приложите фото',
+              },
+              {
+                k: 'expense' as const,
+                i: 'ReceiptText',
+                t: 'Авансовый отчёт',
+                s: 'Подотчёт или покупка за свои · чек фото',
+              },
+              {
+                k: 'writeoff' as const,
+                i: 'ClipboardList',
+                t: 'Ведомость на списание',
+                s: 'Переданные и использованные запчасти',
+              },
+              {
+                k: 'handover' as const,
+                i: 'FileText',
+                t: 'Акт передачи вахты',
+                s: 'Опись, состояние техники и фото',
+              },
+            ]
+          ).map((b) => (
+            <button
+              key={b.k}
+              type="button"
+              onClick={() => (b.k === 'request' ? setReqOpen(true) : setAction(b.k as DriverAction))}
+              className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-3.5 text-left transition-colors hover:bg-foreground hover:text-background"
+            >
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                <Icon name={b.i} size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[0.95em] uppercase tracking-[0.04em]">
+                  {b.t}
+                </span>
+                <span className="block truncate text-[0.78em] text-muted-foreground group-hover:text-background/70">
+                  {b.s}
+                </span>
+              </span>
+              <Icon name="ArrowRight" size={16} className="flex-none text-accent" />
+            </button>
+          ))}
+        </div>
 
         <Panel
           title="Путевые листы"
@@ -229,6 +307,12 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
           {current && <ChangePassword user={current} onDone={() => setPassOpen(false)} />}
         </DialogContent>
       </Dialog>
+
+      <DriverActions
+        action={action}
+        onClose={() => setAction(null)}
+        vehicles={myVehicles}
+      />
 
       <WaybillForm
         open={formOpen}

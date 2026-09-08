@@ -1,0 +1,7 @@
+{
+  "tests": [
+    { "name": "Сводка автопарка", "method": "GET", "path": "/", "expectedStatus": 200 },
+    { "name": "Неизвестный раздел", "method": "POST", "path": "/?kind=nope", "body": {}, "expectedStatus": 400 },
+    { "name": "Удаление без id", "method": "DELETE", "path": "/?kind=repair", "expectedStatus": 400 }
+  ]
+}
