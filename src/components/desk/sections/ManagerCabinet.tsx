@@ -33,6 +33,7 @@ import JournalCabinet from '@/components/desk/journal/JournalCabinet';
 import DocControlCabinet from '@/components/desk/docs/DocControlCabinet';
 import ContractsCabinet from '@/components/desk/director/ContractsCabinet';
 import ProjectManagers from '@/components/desk/director/ProjectManagers';
+import LettersCabinet from '@/components/desk/letters/LettersCabinet';
 
 interface ManagerCabinetProps {
   onExit?: () => void;
@@ -56,6 +57,7 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
   const [docsOpen, setDocsOpen] = useState(false);
   const [contractsOpen, setContractsOpen] = useState(false);
   const [pmOpen, setPmOpen] = useState(false);
+  const [lettersOpen, setLettersOpen] = useState(false);
 
   const isDirector = ['director', 'admin'].includes(profile.role);
   const cabinetTitle = isDirector ? 'Директор' : 'Руководитель проекта';
@@ -221,6 +223,25 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
     { icon: 'HardHat', label: 'Инспекторов на вахте', value: onShift },
     { icon: 'FileWarning', label: 'Открытых предписаний', value: ordersOpen },
   ];
+
+  if (lettersOpen) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: cabinetTitle, icon: 'SquarePen', onClick: () => setLettersOpen(false) },
+            { label: isDirector ? 'Переписка' : 'Письма Заказчика' },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setLettersOpen(false)}
+          onExit={onExit}
+          actions={passButton}
+        />
+        <LettersCabinet />
+        {passDialog}
+      </div>
+    );
+  }
 
   if (contractsOpen) {
     return (
@@ -401,6 +422,25 @@ const ManagerCabinet = ({ onExit }: ManagerCabinetProps) => {
             }}
           />
         </section>
+
+        <button
+          type="button"
+          onClick={() => setLettersOpen(true)}
+          className="group flex flex-none items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+        >
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+            <Icon name="Mails" size={21} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+              {isDirector ? 'Переписка' : 'Письма Заказчика'}
+            </span>
+            <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+              Письма и протоколы по месяцам · ответы, пункты и статусы выполнения
+            </span>
+          </span>
+          <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+        </button>
 
         {isDirector && (
           <>

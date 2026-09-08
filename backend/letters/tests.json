@@ -1,0 +1,13 @@
+{
+  "tests": [
+    { "name": "Список переписки", "method": "GET", "path": "/", "expectedStatus": 200 },
+    {
+      "name": "Ответ без письма запрещён",
+      "method": "POST",
+      "path": "/?kind=reply",
+      "body": { "number": "1" },
+      "expectedStatus": 400
+    },
+    { "name": "Удаление без id", "method": "DELETE", "path": "/", "expectedStatus": 400 }
+  ]
+}
