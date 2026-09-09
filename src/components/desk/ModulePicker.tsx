@@ -1,8 +1,19 @@
+import { useState } from 'react';
 import Topbar from '@/components/desk/Topbar';
 import Icon from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { MODULES, ModuleId } from '@/data/modules';
 import { useToast } from '@/hooks/use-toast';
+
+// Внутри установленного приложения кнопку скачивания не показываем.
+const isInsideApp = () =>
+  typeof navigator !== 'undefined' && / wv\)|; wv/.test(navigator.userAgent);
+
+// На Android-смартфоне кнопку делаем крупной и заметной.
+const isAndroidPhone = () =>
+  typeof navigator !== 'undefined' &&
+  /Android/i.test(navigator.userAgent) &&
+  !isInsideApp();
 
 interface Props {
   onPick: (id: ModuleId) => void;
@@ -10,6 +21,8 @@ interface Props {
 }
 
 const ModulePicker = ({ onPick, onAdmin }: Props) => {
+  const [insideApp] = useState(isInsideApp);
+  const [phone] = useState(isAndroidPhone);
   const { toast } = useToast();
 
   const choose = (id: ModuleId, ready: boolean) => {
@@ -118,6 +131,42 @@ const ModulePicker = ({ onPick, onAdmin }: Props) => {
                 className="mt-1 flex-none text-muted-foreground transition-colors group-hover:text-accent"
               />
             </button>
+          )}
+
+          {!insideApp && (
+            <a
+              href="/app"
+              className={cn(
+                'mt-6 flex items-center gap-3 rounded-sm border px-4 text-left transition-colors',
+                phone
+                  ? 'border-accent bg-accent py-3.5 text-accent-foreground active:opacity-90'
+                  : 'border-border py-3 hover:border-accent hover:bg-accent/5',
+              )}
+            >
+              <Icon
+                name="Smartphone"
+                size={phone ? 26 : 20}
+                className={cn('flex-none', !phone && 'text-accent')}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block font-head text-[0.9em] uppercase tracking-[0.05em]">
+                  Скачать приложение
+                </span>
+                <span
+                  className={cn(
+                    'mt-0.5 block text-[0.76em] leading-snug',
+                    phone ? 'opacity-90' : 'text-muted-foreground',
+                  )}
+                >
+                  Вход в одно касание и отметки прямо с объекта
+                </span>
+              </span>
+              <Icon
+                name="ChevronRight"
+                size={18}
+                className={cn('flex-none', phone ? 'opacity-80' : 'text-muted-foreground')}
+              />
+            </a>
           )}
 
           <p className="mt-6 text-center text-[0.76em] text-muted-foreground">
