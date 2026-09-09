@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { compressPhoto } from '@/data/photoQueue';
 
 const API = 'https://functions.poehali.dev/9022e72d-518c-4632-8607-444c1079934b';
 const EVENT = 'gsi-fleet-changed';
@@ -241,16 +242,18 @@ export const removeFleet = async (kind: FleetKind, id: string) => {
 
 export const readPhotos = (files: FileList | File[]) =>
   Promise.all(
-    [...files].slice(0, 12).map(
-      (file) =>
-        new Promise<PhotoInput>((resolve, reject) => {
-          const fr = new FileReader();
-          fr.onload = () =>
-            resolve({ name: file.name, mime: file.type, content: String(fr.result) });
-          fr.onerror = () => reject(new Error('read_failed'));
-          fr.readAsDataURL(file);
-        }),
-    ),
+    [...files].slice(0, 12).map(async (file) => {
+      if (file.type.startsWith('image/')) {
+        const content = await compressPhoto(file);
+        return { name: file.name, mime: 'image/jpeg', content } as PhotoInput;
+      }
+      return new Promise<PhotoInput>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve({ name: file.name, mime: file.type, content: String(fr.result) });
+        fr.onerror = () => reject(new Error('read_failed'));
+        fr.readAsDataURL(file);
+      });
+    }),
   );
 
 /** Активная вахта на дату: началась и ещё не закончилась. */

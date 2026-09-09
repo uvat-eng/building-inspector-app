@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { compressPhoto } from '@/data/photoQueue';
 
 const API = 'https://functions.poehali.dev/62fd56b2-9c88-45e6-b008-cffa2d289935';
 
@@ -145,7 +146,7 @@ export const importReportFile = async (objectId: string, file: File) => {
 };
 
 export const uploadReportPhoto = async (objectId: string, file: File) => {
-  const content = await toBase64(file);
+  const content = await compressPhoto(file);
   const res = await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

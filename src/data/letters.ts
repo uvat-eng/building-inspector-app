@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { compressPhoto } from '@/data/photoQueue';
 
 const API = 'https://functions.poehali.dev/7afd97ca-a9ce-4882-9fe7-5804e9a3e717';
 const EVENT = 'gsi-letters-changed';
@@ -181,10 +182,12 @@ export const removeItem = async (kind: 'letter' | 'reply' | 'point', id: string)
   ping();
 };
 
-export const readFile = (file: File) =>
-  new Promise<string>((resolve, reject) => {
+export const readFile = (file: File) => {
+  if (file.type.startsWith('image/')) return compressPhoto(file);
+  return new Promise<string>((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(String(fr.result));
     fr.onerror = () => reject(new Error('read_failed'));
     fr.readAsDataURL(file);
   });
+};

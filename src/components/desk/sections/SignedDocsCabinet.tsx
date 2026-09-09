@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
+import { compressPhoto } from '@/data/photoQueue';
 import {
   SECTION_META,
   SignedSection,
@@ -20,13 +21,15 @@ interface Props {
   onBack: () => void;
 }
 
-const fileToBase64 = (file: File) =>
-  new Promise<string>((resolve, reject) => {
+const fileToBase64 = (file: File) => {
+  if (file.type.startsWith('image/')) return compressPhoto(file);
+  return new Promise<string>((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));
     r.onerror = reject;
     r.readAsDataURL(file);
   });
+};
 
 const SignedDocsCabinet = ({ object, section, onBack }: Props) => {
   const { toast } = useToast();

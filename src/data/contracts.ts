@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { compressPhoto } from '@/data/photoQueue';
 
 const API = 'https://functions.poehali.dev/de0177b7-7cda-4ff9-9883-31b804dc3283';
 const EVENT = 'gsi-contracts-changed';
@@ -140,10 +141,12 @@ export const removeAct = async (id: string) => {
   ping();
 };
 
-export const readFile = (file: File) =>
-  new Promise<string>((resolve, reject) => {
+export const readFile = (file: File) => {
+  if (file.type.startsWith('image/')) return compressPhoto(file);
+  return new Promise<string>((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(String(fr.result));
     fr.onerror = () => reject(new Error('read_failed'));
     fr.readAsDataURL(file);
   });
+};
