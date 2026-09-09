@@ -11,6 +11,10 @@ const CONSENT_KEY = 'gsi-privacy-consent-v1';
 export const hasPrivacyConsent = () =>
   localStorage.getItem(CONSENT_KEY) === '1';
 
+// Внутри самого приложения кнопку скачивания не показываем.
+const isInsideApp = () =>
+  typeof navigator !== 'undefined' && / wv\)|; wv/.test(navigator.userAgent);
+
 // Направления, из которых «собирается» земной шар.
 const GLOBE_PARTS = [
   { clip: 'inset(0 50% 50% 0)', from: 'translate(-60px,-60px)' },
@@ -213,6 +217,22 @@ const Splash = ({ onDone }: SplashProps) => {
               <Icon name="ArrowRight" size={16} />
               Принять и войти
             </Button>
+
+            {!isInsideApp() && (
+              <div className="mt-4 border-t border-border pt-4">
+                <p className="text-[0.78em] leading-snug text-muted-foreground">
+                  Работаете со смартфона? Установите приложение — вход
+                  в одно касание и отметки прямо с объекта.
+                </p>
+                <a
+                  href="/app"
+                  className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-sm border border-accent px-3 py-2 font-head text-[0.82em] uppercase tracking-[0.06em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Icon name="Smartphone" size={15} />
+                  Скачать приложение
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>
