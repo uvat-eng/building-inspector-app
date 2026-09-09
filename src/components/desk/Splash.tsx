@@ -21,6 +21,7 @@ const GLOBE_PARTS = [
 
 const Splash = ({ onDone }: SplashProps) => {
   const [phase, setPhase] = useState<'anim' | 'consent'>('anim');
+  const [leaving, setLeaving] = useState(false);
   const [checked, setChecked] = useState(false);
 
   // Падающие листья со случайными параметрами.
@@ -47,14 +48,35 @@ const Splash = ({ onDone }: SplashProps) => {
     return () => window.clearTimeout(t);
   }, [onDone]);
 
+  const leave = () => {
+    if (leaving) return;
+    setLeaving(true);
+    try {
+      const a = new Audio('/whoosh.mp3');
+      a.volume = 0.5;
+      a.play().catch(() => undefined);
+    } catch {
+      /* автовоспроизведение может быть недоступно — не критично */
+    }
+    window.setTimeout(onDone, 650);
+  };
+
   const accept = () => {
     localStorage.setItem(CONSENT_KEY, '1');
-    onDone();
+    leave();
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-white">
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-white"
+      style={leaving ? { animation: 'gsi-leave 0.65s ease-in forwards' } : undefined}
+    >
       <style>{`
+        @keyframes gsi-leave {
+          from { opacity: 1; transform: scale(1); filter: brightness(1); }
+          40% { filter: brightness(0.6); }
+          to { opacity: 0; transform: scale(1.06); filter: brightness(0.2); }
+        }
         @keyframes gsi-assemble {
           from { opacity: 0; }
           60% { opacity: 1; }
