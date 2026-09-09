@@ -32,8 +32,8 @@ public class MainActivity extends Activity {
 
     private static final String HOST = "https://xn--e1afhkhdkdm.su";
     private static final String SITE = HOST + "/";
-    private static final String APK_URL = HOST + "/app/stroykontrol.apk";
-    private static final String VERSION_URL = HOST + "/app/version.json";
+    private static final String APK_URL = "https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a";
+    private static final String VERSION_URL = "https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a?info=1";
 
     private WebView web;
     private ValueCallback<Uri[]> filePath;
@@ -197,7 +197,7 @@ public class MainActivity extends Activity {
             public void run() {
                 try {
                     java.net.HttpURLConnection c = (java.net.HttpURLConnection)
-                            new java.net.URL(VERSION_URL + "?t="
+                            new java.net.URL(VERSION_URL + "&t="
                                     + System.currentTimeMillis()).openConnection();
                     c.setConnectTimeout(7000);
                     c.setReadTimeout(7000);

@@ -3,8 +3,8 @@
 set -e
 cd "$(dirname "$0")"
 
-LD=/tmp/glibc/root/usr/lib64/ld-linux-x86-64.so.2
-LP=/tmp/glibc/root/usr/lib/x86_64-linux-gnu
+LD=/tmp/glibc/root/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+LP=/tmp/glibc/root/lib/x86_64-linux-gnu:/tmp/glibc/root/usr/lib/x86_64-linux-gnu
 BT=/tmp/asdk/sdk/build-tools/34.0.0
 AJ=/tmp/asdk/sdk/platforms/android-34/android.jar
 OUT=/tmp/apkout

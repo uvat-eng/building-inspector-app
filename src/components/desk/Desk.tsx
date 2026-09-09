@@ -263,8 +263,8 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <a
-              href="/app/stroykontrol.apk"
-              download
+              href="https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a"
+              download="stroykontrol.apk"
               className="flex items-center gap-1.5 rounded-sm bg-accent px-3.5 py-2 text-[0.8em] font-head uppercase tracking-[0.05em] text-accent-foreground transition-colors hover:bg-accent/90"
             >
               <Icon name="Download" size={14} />

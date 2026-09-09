@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
-const APK = '/app/stroykontrol.apk';
+const APK = 'https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a';
 
 const STEPS = [
   {
@@ -26,7 +26,7 @@ const AppDownload = () => {
   const [ver, setVer] = useState('1.2');
 
   useEffect(() => {
-    fetch(`/app/version.json?t=${Date.now()}`, { cache: 'no-store' })
+    fetch(`${APK}?info=1&t=${Date.now()}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d?.versionName && setVer(String(d.versionName)))
       .catch(() => undefined);
