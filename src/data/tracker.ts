@@ -121,9 +121,13 @@ interface TrackerParams {
  * Фоновый геотрекер. Пишет координаты, пока приложение открыто, и шлёт их
  * на сервер пачками. Запускается только если роль отслеживается и есть согласие.
  */
+export type GeoStatus = 'checking' | 'granted' | 'denied' | 'prompt' | 'unavailable';
+
 export const useGeoTracker = ({ userId, fio, role, enabled }: TrackerParams) => {
   const watchRef = useRef<number | null>(null);
   const lastRef = useRef<TrackPoint | null>(null);
+  const [status, setStatus] = useState<GeoStatus>('checking');
+  const [hasFix, setHasFix] = useState(false);
 
   const flush = useCallback(async () => {
     const q = readQueue();
@@ -141,10 +145,40 @@ export const useGeoTracker = ({ userId, fio, role, enabled }: TrackerParams) => 
   }, [userId, fio, role]);
 
   useEffect(() => {
+    if (!('geolocation' in navigator)) {
+      setStatus('unavailable');
+      return;
+    }
+    let permObj: PermissionStatus | null = null;
+    const sync = (state: PermissionState) =>
+      setStatus(state === 'granted' ? 'granted' : state === 'denied' ? 'denied' : 'prompt');
+    if (navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((p) => {
+          permObj = p;
+          sync(p.state);
+          p.onchange = () => {
+            sync(p.state);
+            if (p.state !== 'granted') setHasFix(false);
+          };
+        })
+        .catch(() => setStatus('prompt'));
+    } else {
+      setStatus('prompt');
+    }
+    return () => {
+      if (permObj) permObj.onchange = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!enabled || !userId || !('geolocation' in navigator)) return;
 
     watchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        setStatus('granted');
+        setHasFix(true);
         const p: TrackPoint = {
           lat: +pos.coords.latitude.toFixed(6),
           lng: +pos.coords.longitude.toFixed(6),
@@ -163,7 +197,12 @@ export const useGeoTracker = ({ userId, fio, role, enabled }: TrackerParams) => 
         lastRef.current = p;
         writeQueue([...readQueue(), p]);
       },
-      () => undefined,
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setStatus('denied');
+          setHasFix(false);
+        }
+      },
       { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 },
     );
 
@@ -176,6 +215,32 @@ export const useGeoTracker = ({ userId, fio, role, enabled }: TrackerParams) => 
       flush();
     };
   }, [enabled, userId, fio, role, flush]);
+
+  const requestGeo = useCallback(
+    () =>
+      new Promise<boolean>((resolve) => {
+        if (!('geolocation' in navigator)) {
+          setStatus('unavailable');
+          resolve(false);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            setStatus('granted');
+            setHasFix(true);
+            resolve(true);
+          },
+          (err) => {
+            setStatus(err.code === err.PERMISSION_DENIED ? 'denied' : 'prompt');
+            resolve(false);
+          },
+          { enableHighAccuracy: true, timeout: 20000 },
+        );
+      }),
+    [],
+  );
+
+  return { status, hasFix, requestGeo };
 };
 
 export const useOnline = (active: boolean, intervalMs = 20000) => {
