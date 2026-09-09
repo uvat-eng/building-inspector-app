@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import Desk from '@/components/desk/Desk';
-import Splash, { hasPrivacyConsent } from '@/components/desk/Splash';
+import Splash from '@/components/desk/Splash';
 
 const Index = () => {
-  const [ready, setReady] = useState(() => hasPrivacyConsent());
-  const skipped = hasPrivacyConsent();
+  const [ready, setReady] = useState(false);
 
   return (
     <>
       {ready && (
-        <div className={skipped ? undefined : 'animate-fade-in'}>
+        <div className="animate-fade-in">
           <Desk />
         </div>
       )}

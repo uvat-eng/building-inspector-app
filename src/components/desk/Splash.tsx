@@ -8,6 +8,9 @@ interface SplashProps {
 
 const CONSENT_KEY = 'gsi-privacy-consent-v1';
 
+/** Минимальное время показа заставки, мс. */
+const MIN_MS = 5000;
+
 export const hasPrivacyConsent = () =>
   localStorage.getItem(CONSENT_KEY) === '1';
 
@@ -30,8 +33,8 @@ const Splash = ({ onDone }: SplashProps) => {
       Array.from({ length: 14 }).map((_, i) => ({
         id: i,
         left: Math.random() * 100,
-        delay: 0.4 + Math.random() * 1.1,
-        dur: 1.6 + Math.random() * 1.2,
+        delay: 0.5 + Math.random() * 2.4,
+        dur: 1.8 + Math.random() * 1.4,
         size: 20 + Math.random() * 26,
         rot: Math.random() * 360,
         drift: (Math.random() - 0.5) * 80,
@@ -39,14 +42,16 @@ const Splash = ({ onDone }: SplashProps) => {
     [],
   );
 
+  // Заставка держится на экране не меньше MIN_MS — иначе она «пролетает».
   useEffect(() => {
     if (hasPrivacyConsent()) {
-      onDone();
-      return;
+      const t = window.setTimeout(leave, MIN_MS);
+      return () => window.clearTimeout(t);
     }
-    const t = window.setTimeout(() => setPhase('consent'), 3600);
+    const t = window.setTimeout(() => setPhase('consent'), MIN_MS);
     return () => window.clearTimeout(t);
-  }, [onDone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const leave = () => {
     if (leaving) return;
@@ -115,7 +120,7 @@ const Splash = ({ onDone }: SplashProps) => {
               className="absolute inset-0 h-full w-full object-contain"
               style={{
                 clipPath: p.clip,
-                animation: `gsi-assemble 0.9s ${0.15 + i * 0.18}s ease-out both`,
+                animation: `gsi-assemble 1.1s ${0.2 + i * 0.26}s ease-out both`,
                 transform: p.from,
               }}
             />
@@ -127,7 +132,7 @@ const Splash = ({ onDone }: SplashProps) => {
             alt=""
             aria-hidden
             className="absolute inset-0 h-full w-full object-contain"
-            style={{ animation: 'gsi-leaf-stick 1.1s 1.9s ease-out both' }}
+            style={{ animation: 'gsi-leaf-stick 1.3s 2.4s ease-out both' }}
           />
 
           {/* Дождь листьев поверх шара */}
@@ -153,17 +158,17 @@ const Splash = ({ onDone }: SplashProps) => {
 
         <h1
           className="mt-7 text-center font-head text-[26px] uppercase leading-tight text-foreground sm:text-[34px]"
-          style={{ animation: 'gsi-title 1s 2.5s ease-out both' }}
+          style={{ animation: 'gsi-title 1.1s 3.2s ease-out both' }}
         >
           Глобал-Стройинжиниринг
         </h1>
         <span
           className="mt-2 block h-[3px] rounded-full bg-accent"
-          style={{ animation: 'gsi-line 0.8s 3s ease-out both' }}
+          style={{ animation: 'gsi-line 0.9s 3.9s ease-out both' }}
         />
         <p
           className="mt-3 text-center text-[0.8em] uppercase tracking-[0.22em] text-muted-foreground"
-          style={{ animation: 'gsi-title 1s 3.2s ease-out both' }}
+          style={{ animation: 'gsi-title 1.1s 4.1s ease-out both' }}
         >
           Строительный контроль
         </p>
