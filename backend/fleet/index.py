@@ -16,12 +16,14 @@ CORS = {
     'Content-Type': 'application/json',
 }
 
-KINDS = ('shift', 'repair', 'expense', 'act')
+KINDS = ('shift', 'repair', 'expense', 'act', 'maint', 'day')
 TABLE = {
     'shift': 'fleet_shifts',
     'repair': 'fleet_repairs',
     'expense': 'fleet_expenses',
     'act': 'fleet_acts',
+    'maint': 'fleet_maint',
+    'day': 'fleet_days',
 }
 
 
@@ -141,6 +143,35 @@ def row_expense(r):
     }
 
 
+def row_maint(r):
+    return {
+        'id': r['id'],
+        'vehicleId': r['vehicle_id'],
+        'itemKey': r['item_key'],
+        'lastAt': str(r['last_at'] or ''),
+        'nextAt': str(r['next_at'] or ''),
+        'odometer': int(r['odometer'] or 0),
+        'note': r['note'],
+        'author': r['author'],
+        'updatedAt': r['updated_at'].isoformat() if r['updated_at'] else '',
+    }
+
+
+def row_day(r):
+    return {
+        'id': r['id'],
+        'vehicleId': r['vehicle_id'],
+        'driverFio': r['driver_fio'],
+        'day': str(r['day'] or ''),
+        'ym': r['ym'],
+        'state': r['state'],
+        'share': float(r['share'] or 0),
+        'note': r['note'],
+        'author': r['author'],
+        'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
+    }
+
+
 def row_act(r):
     return {
         'id': r['id'],
@@ -152,6 +183,11 @@ def row_act(r):
         'acceptFio': r['accept_fio'],
         'odometer': int(r['odometer'] or 0),
         'condition': r['condition'],
+        'acceptDate': str(r.get('accept_date') or ''),
+        'exterior': r.get('exterior') or '',
+        'defects': r.get('defects') or '',
+        'breakdowns': r.get('breakdowns') or '',
+        'advice': r.get('advice') or '',
         'items': r['items'] or [],
         'photos': r['photos'] or [],
         'note': r['note'],
@@ -161,7 +197,10 @@ def row_act(r):
     }
 
 
-ROW = {'shift': row_shift, 'repair': row_repair, 'expense': row_expense, 'act': row_act}
+ROW = {
+    'shift': row_shift, 'repair': row_repair, 'expense': row_expense,
+    'act': row_act, 'maint': row_maint, 'day': row_day,
+}
 
 
 def handler(event: dict, context) -> dict:
@@ -187,9 +226,13 @@ def handler(event: dict, context) -> dict:
             expenses = [row_expense(r) for r in cur.fetchall()]
             cur.execute('SELECT * FROM fleet_acts ORDER BY act_date DESC NULLS LAST')
             acts = [row_act(r) for r in cur.fetchall()]
+            cur.execute('SELECT * FROM fleet_maint ORDER BY next_at NULLS LAST')
+            maint = [row_maint(r) for r in cur.fetchall()]
+            cur.execute('SELECT * FROM fleet_days ORDER BY day DESC')
+            days = [row_day(r) for r in cur.fetchall()]
             return resp(200, {
-                'shifts': shifts, 'repairs': repairs,
-                'expenses': expenses, 'acts': acts,
+                'shifts': shifts, 'repairs': repairs, 'expenses': expenses,
+                'acts': acts, 'maint': maint, 'days': days,
             })
 
         if kind not in KINDS:
@@ -236,11 +279,40 @@ def handler(event: dict, context) -> dict:
                     f"'{esc(body.get('note', ''))}', '{esc(body.get('status') or 'new')}', "
                     f"'{esc(body.get('author', ''))}') RETURNING *"
                 )
+            elif kind == 'maint':
+                cur.execute(
+                    'INSERT INTO fleet_maint (id, vehicle_id, item_key, last_at, next_at, '
+                    'odometer, note, author) VALUES ('
+                    f"'{esc(new_id)}', '{esc(vehicle)}', '{esc(body.get('itemKey', ''))}', "
+                    f"{dt(body.get('lastAt'))}, {dt(body.get('nextAt'))}, "
+                    f"{int(num(body.get('odometer')))}, '{esc(body.get('note', ''))}', "
+                    f"'{esc(body.get('author', ''))}') "
+                    'ON CONFLICT (vehicle_id, item_key) DO UPDATE SET '
+                    'last_at = EXCLUDED.last_at, next_at = EXCLUDED.next_at, '
+                    'odometer = EXCLUDED.odometer, note = EXCLUDED.note, '
+                    'author = EXCLUDED.author, updated_at = now() RETURNING *'
+                )
+            elif kind == 'day':
+                state = body.get('state') or 'line'
+                share = num(body.get('share') or (0.67 if state == 'repair' else 1))
+                if state == 'repair':
+                    share = min(share, 0.67)
+                cur.execute(
+                    'INSERT INTO fleet_days (id, vehicle_id, driver_fio, day, ym, state, '
+                    'share, note, author) VALUES ('
+                    f"'{esc(new_id)}', '{esc(vehicle)}', '{esc(body.get('driverFio', ''))}', "
+                    f"{dt(body.get('day'))}, '{esc(ym_of(body.get('day')))}', '{esc(state)}', "
+                    f"{share}, '{esc(body.get('note', ''))}', '{esc(body.get('author', ''))}') "
+                    'ON CONFLICT (vehicle_id, driver_fio, day) DO UPDATE SET '
+                    'state = EXCLUDED.state, share = EXCLUDED.share, '
+                    'note = EXCLUDED.note RETURNING *'
+                )
             else:
                 photos = upload_photos(body.get('photos') or [], new_id)
                 cur.execute(
                     'INSERT INTO fleet_acts (id, vehicle_id, kind, act_no, act_date, driver_fio, '
-                    'accept_fio, odometer, condition, items, photos, note, status, author) VALUES ('
+                    'accept_fio, odometer, condition, items, photos, note, status, author, '
+                    'accept_date, exterior, defects, breakdowns, advice) VALUES ('
                     f"'{esc(new_id)}', '{esc(vehicle)}', '{esc(body.get('actKind') or 'handover')}', "
                     f"'{esc(body.get('actNo', ''))}', {dt(body.get('actDate'))}, "
                     f"'{esc(body.get('driverFio', ''))}', '{esc(body.get('acceptFio', ''))}', "
@@ -248,7 +320,10 @@ def handler(event: dict, context) -> dict:
                     f"'{esc(json.dumps(body.get('items') or [], ensure_ascii=False))}'::jsonb, "
                     f"'{esc(json.dumps(photos, ensure_ascii=False))}'::jsonb, "
                     f"'{esc(body.get('note', ''))}', '{esc(body.get('status') or 'new')}', "
-                    f"'{esc(body.get('author', ''))}') RETURNING *"
+                    f"'{esc(body.get('author', ''))}', {dt(body.get('acceptDate'))}, "
+                    f"'{esc(body.get('exterior', ''))}', '{esc(body.get('defects', ''))}', "
+                    f"'{esc(body.get('breakdowns', ''))}', '{esc(body.get('advice', ''))}') "
+                    'RETURNING *'
                 )
             row = cur.fetchone()
             conn.commit()
@@ -267,13 +342,18 @@ def handler(event: dict, context) -> dict:
                 'expense': {'title': 'title', 'unit': 'unit', 'source': 'source',
                             'status': 'status', 'note': 'note'},
                 'act': {'actNo': 'act_no', 'acceptFio': 'accept_fio', 'condition': 'condition',
-                        'status': 'status', 'note': 'note'},
+                        'status': 'status', 'note': 'note', 'exterior': 'exterior',
+                        'defects': 'defects', 'breakdowns': 'breakdowns', 'advice': 'advice'},
+                'maint': {'note': 'note', 'author': 'author'},
+                'day': {'state': 'state', 'note': 'note'},
             }[kind]
             dates = {
                 'shift': {'startAt': 'start_at', 'endAt': 'end_at'},
                 'repair': {'repairDate': 'repair_date'},
                 'expense': {'expDate': 'exp_date'},
-                'act': {'actDate': 'act_date'},
+                'act': {'actDate': 'act_date', 'acceptDate': 'accept_date'},
+                'maint': {'lastAt': 'last_at', 'nextAt': 'next_at'},
+                'day': {'day': 'day'},
             }[kind]
 
             sets = []
@@ -287,6 +367,8 @@ def handler(event: dict, context) -> dict:
                         sets.append(f"ym = '{esc(ym_of(patch[k]))}'")
             if 'amount' in patch:
                 sets.append(f"amount = {num(patch['amount'])}")
+            if 'share' in patch:
+                sets.append(f"share = {num(patch['share'])}")
             if 'qty' in patch:
                 sets.append(f"qty = {num(patch['qty'])}")
             if 'odometer' in patch:

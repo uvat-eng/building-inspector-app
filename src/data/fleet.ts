@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 const API = 'https://functions.poehali.dev/9022e72d-518c-4632-8607-444c1079934b';
 const EVENT = 'gsi-fleet-changed';
 
-export type FleetKind = 'shift' | 'repair' | 'expense' | 'act';
+export type FleetKind = 'shift' | 'repair' | 'expense' | 'act' | 'maint' | 'day';
+export type DayState = 'line' | 'repair';
 export type RepairKind = 'repair' | 'service';
 export type ExpenseSource = 'podotchet' | 'own';
 
@@ -63,6 +64,11 @@ export interface ActItem {
 }
 
 export interface FleetAct {
+  acceptDate: string;
+  exterior: string;
+  defects: string;
+  breakdowns: string;
+  advice: string;
   id: string;
   vehicleId: string;
   kind: string;
@@ -79,6 +85,45 @@ export interface FleetAct {
   author: string;
   createdAt: string;
 }
+
+export interface FleetMaint {
+  id: string;
+  vehicleId: string;
+  itemKey: string;
+  lastAt: string;
+  nextAt: string;
+  odometer: number;
+  note: string;
+  author: string;
+  updatedAt: string;
+}
+
+export interface FleetDay {
+  id: string;
+  vehicleId: string;
+  driverFio: string;
+  day: string;
+  ym: string;
+  state: DayState;
+  share: number;
+  note: string;
+  author: string;
+  createdAt: string;
+}
+
+export const MAINT_ITEMS: { key: string; label: string; icon: string }[] = [
+  { key: 'engine_oil', label: 'Масло двигателя', icon: 'Droplet' },
+  { key: 'gear_oil', label: 'Масло коробки передач', icon: 'Cog' },
+  { key: 'chassis', label: 'Ходовая часть', icon: 'CircleDot' },
+  { key: 'brakes', label: 'Тормоза', icon: 'Disc' },
+  { key: 'lights', label: 'Световые приборы', icon: 'Lightbulb' },
+  { key: 'wash', label: 'Мойка машины', icon: 'SprayCan' },
+];
+
+export const DAY_LABEL: Record<DayState, string> = {
+  line: 'На линии',
+  repair: 'На ремонте',
+};
 
 export interface PhotoInput {
   name: string;
@@ -119,6 +164,8 @@ export const useFleet = () => {
   const [repairs, setRepairs] = useState<FleetRepair[]>([]);
   const [expenses, setExpenses] = useState<FleetExpense[]>([]);
   const [acts, setActs] = useState<FleetAct[]>([]);
+  const [maint, setMaint] = useState<FleetMaint[]>([]);
+  const [days, setDays] = useState<FleetDay[]>([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
@@ -131,11 +178,15 @@ export const useFleet = () => {
         repairs: FleetRepair[];
         expenses: FleetExpense[];
         acts: FleetAct[];
+        maint: FleetMaint[];
+        days: FleetDay[];
       };
       setShifts(d.shifts ?? []);
       setRepairs(d.repairs ?? []);
       setExpenses(d.expenses ?? []);
       setActs(d.acts ?? []);
+      setMaint(d.maint ?? []);
+      setDays(d.days ?? []);
     } catch {
       /* оффлайн — оставляем прежние данные */
     } finally {
@@ -150,7 +201,7 @@ export const useFleet = () => {
     return () => window.removeEventListener(EVENT, h);
   }, [reload]);
 
-  return { shifts, repairs, expenses, acts, loading, reload };
+  return { shifts, repairs, expenses, acts, maint, days, loading, reload };
 };
 
 const ping = () => window.dispatchEvent(new Event(EVENT));
@@ -210,4 +261,14 @@ export const activeShift = (shifts: FleetShift[], vehicleId: string, today = new
       (s) => s.vehicleId === vehicleId && (!s.startAt || s.startAt <= t) && (!s.endAt || s.endAt >= t),
     ) ?? null
   );
+};
+
+/** Сколько дней осталось до даты: отрицательное — просрочено. */
+export const daysTo = (date?: string) => {
+  if (!date) return null;
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - t.getTime()) / 86400000);
 };

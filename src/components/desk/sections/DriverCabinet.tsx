@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import Panel from '@/components/desk/Panel';
-import Row from '@/components/desk/Row';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import {
@@ -11,94 +10,58 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 import { useProfile } from '@/data/profile';
-import { useUsers } from '@/data/users';
-import { useScope } from '@/data/scope';
+import { useUsers, User } from '@/data/users';
+import { useInspectorsRollup } from '@/data/rollup';
 import CabinetBar from '@/components/desk/CabinetBar';
 import ChangePassword from '@/components/desk/ChangePassword';
 import WaybillForm, { WaybillPayload } from '@/components/desk/driver/WaybillForm';
-import { downloadWaybills } from '@/lib/waybillXls';
-import { fmtDate, useVehicles } from '@/data/vehicles';
 import DriverActions, { DriverAction } from '@/components/desk/driver/DriverActions';
+import DriverContacts from '@/components/desk/driver/DriverContacts';
+import CarDialog from '@/components/desk/driver/CarDialog';
+import CarSheet from '@/components/desk/driver/CarSheet';
+import HandoverForm from '@/components/desk/driver/HandoverForm';
 import RequestsCabinet from '@/components/desk/chief/RequestsCabinet';
+import { KIND_LABEL, useVehicles } from '@/data/vehicles';
+import { activeShift, ruDate, useFleet } from '@/data/fleet';
 
 interface DriverCabinetProps {
   onExit?: () => void;
 }
 
-const currentMonth = () => new Date().toISOString().slice(0, 7);
-
 const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
-  const { items: vehicles, logs, addLog, removeLog, loading } = useVehicles('vehicle');
-  const { current } = useUsers();
+  const { items: vehicles, addLog } = useVehicles('vehicle');
+  const { users, current } = useUsers();
   const { profile } = useProfile();
-  const { scope } = useScope();
-  const { toast } = useToast();
+  const { shifts } = useFleet();
+  const { items: rollup } = useInspectorsRollup();
 
-  const [month, setMonth] = useState(currentMonth);
   const [passOpen, setPassOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
+  const [waybill, setWaybill] = useState(false);
   const [action, setAction] = useState<DriverAction>(null);
   const [reqOpen, setReqOpen] = useState(false);
+  const [carOpen, setCarOpen] = useState(false);
+  const [handover, setHandover] = useState(false);
 
-  const project = current?.group || scope.project || '';
-
-  const myVehicles = useMemo(() => {
-    const first = profile.fio.split(' ')[0].toLowerCase();
-    const mine = vehicles.filter(
-      (v) => v.driver && first && v.driver.toLowerCase().includes(first),
-    );
-    return mine.length ? mine : vehicles;
-  }, [vehicles, profile.fio]);
-
-  const waybills = useMemo(() => {
-    const all = logs.filter((l) => l.kind === 'waybill');
-    const sorted = all.slice().sort((a, b) => b.date.localeCompare(a.date));
-    if (!profile.fio) return sorted;
-    return [
-      ...sorted.filter((l) => l.author === profile.fio),
-      ...sorted.filter((l) => l.author !== profile.fio),
-    ];
-  }, [logs, profile.fio]);
-
-  const monthly = useMemo(
-    () => waybills.filter((l) => l.date.slice(0, 7) === month),
-    [waybills, month],
+  const myShift = useMemo(
+    () => shifts.find((s) => s.driverFio === profile.fio) ?? null,
+    [shifts, profile.fio],
   );
 
-  const monthKm = monthly.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  const myCar = useMemo(() => {
+    if (myShift) return vehicles.find((v) => v.id === myShift.vehicleId) ?? null;
+    const first = profile.fio.split(' ')[0].toLowerCase();
+    return (
+      vehicles.find((v) => first && v.driver?.toLowerCase().includes(first)) ?? null
+    );
+  }, [vehicles, myShift, profile.fio]);
 
-  const save = async (p: WaybillPayload) => {
-    try {
-      await addLog('waybill', {
-        vehicleId: p.vehicleId,
-        date: p.date,
-        odometer: Number(p.odometer),
-        amount: Number(p.amount),
-        content: `${p.content}${project ? ` · ${project}` : ''}`,
-        author: profile.fio,
-      });
-      toast({ title: 'Путевой лист оформлен' });
-    } catch {
-      toast({ title: 'Не удалось сохранить путевой лист', variant: 'destructive' });
-    }
-  };
+  const onShiftNow = useMemo(() => {
+    const live = rollup.filter((r) => r.onShift).map((r) => r.id);
+    return users.filter((u: User) => u.role === 'inspector' && live.includes(u.id));
+  }, [rollup, users]);
 
-  const exportXls = () => {
-    if (!monthly.length) {
-      toast({ title: 'За выбранный месяц листов нет', variant: 'destructive' });
-      return;
-    }
-    downloadWaybills(monthly, vehicles, project || profile.org, month);
-  };
-
-  const stats = [
-    { icon: 'FileText', label: 'Путевых листов за месяц', value: monthly.length },
-    { icon: 'Navigation', label: 'Пробег за месяц, км', value: monthKm },
-    { icon: 'Truck', label: 'Закреплено машин', value: myVehicles.length },
-    { icon: 'Archive', label: 'Всего листов', value: waybills.length },
-  ];
+  const running = myCar ? activeShift(shifts, myCar.id) : null;
 
   if (reqOpen) {
     return (
@@ -120,78 +83,128 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
       <CabinetBar
-        crumbs={[{ label: 'Кабинет водителя', icon: 'Truck' }]}
+        crumbs={[{ label: 'Кабинет · водитель', icon: 'Truck' }]}
         onExit={onExit}
         actions={
-          <>
-            {current && (
-              <button
-                type="button"
-                onClick={() => setPassOpen(true)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] transition-colors',
-                  current.mustChangePassword
-                    ? 'border-accent bg-accent text-accent-foreground'
-                    : 'border-border bg-card hover:border-accent hover:bg-secondary',
-                )}
-              >
-                <Icon name="KeyRound" size={14} />
-                Пароль
-              </button>
-            )}
+          current?.mustChangePassword ? (
             <button
               type="button"
-              onClick={exportXls}
-              className="flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] text-accent-foreground transition-colors hover:bg-accent/90"
+              onClick={() => setPassOpen(true)}
+              className="flex items-center gap-1.5 rounded-sm border border-accent bg-accent px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] text-accent-foreground"
             >
-              <Icon name="Download" size={14} />
-              Выгрузить в Excel
+              <Icon name="KeyRound" size={14} />
+              Пароль
             </button>
-          </>
+          ) : undefined
         }
       />
 
       <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <section className="flex-none rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 sm:px-6 sm:py-5">
-          <h1 className="font-head text-[19px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[28px]">
-            Кабинет <span className="text-accent">водителя</span>
-          </h1>
-          <p className="mt-2 text-[0.88em] text-muted-foreground">
-            {profile.fio || 'ФИО не указано'} · {project || 'проект не назначен'}
+          <p className="text-[0.7em] uppercase tracking-[0.12em] text-muted-foreground">
+            Водитель
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-px border-t border-border bg-border pt-px sm:grid-cols-4">
-            {stats.map((s) => (
-              <div key={s.label} className="bg-card px-3 py-3">
-                <Icon name={s.icon} fallback="File" size={16} className="text-accent" />
-                <p className="mt-1.5 font-head text-[1.4em] leading-none">{s.value}</p>
-                <p className="mt-1 text-[0.72em] uppercase tracking-[0.1em] text-muted-foreground">
-                  {s.label}
-                </p>
-              </div>
-            ))}
+          <h1 className="mt-1 font-head text-[20px] uppercase leading-[1.15] tracking-[0.02em] sm:text-[28px]">
+            {profile.fio || 'ФИО не указано'}
+          </h1>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="flex items-center gap-2 rounded-sm border border-border bg-secondary/40 px-3 py-1.5 text-[0.82em]">
+              <Icon name="LogIn" size={14} className="text-accent" />
+              Заезд: {ruDate(myShift?.startAt) || 'не указан'}
+            </span>
+            <span className="flex items-center gap-2 rounded-sm border border-border bg-secondary/40 px-3 py-1.5 text-[0.82em]">
+              <Icon name="LogOut" size={14} className="text-accent" />
+              Выезд: {ruDate(myShift?.endAt) || 'не указан'}
+            </span>
+            {running && (
+              <span className="flex items-center gap-2 rounded-sm border border-emerald-600 px-3 py-1.5 text-[0.82em] text-emerald-700">
+                <Icon name="CircleCheck" size={14} />
+                Вы на вахте
+              </span>
+            )}
           </div>
         </section>
+
+        <Panel title="Моя машина" className="flex-none">
+          {!myCar ? (
+            <Empty
+              icon="Truck"
+              title="Машина не закреплена"
+              hint="Обратитесь к механику — он закрепит технику за вами."
+            />
+          ) : (
+            <div className="p-3">
+              <button
+                type="button"
+                onClick={() => setCarOpen(true)}
+                className="flex w-full items-center gap-3 rounded-sm border border-border border-l-[3px] border-l-accent bg-card px-4 py-4 text-left transition-colors hover:bg-secondary"
+              >
+                <span className="flex h-12 w-12 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+                  <Icon name="Truck" size={22} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-head text-[1.05em] uppercase tracking-[0.03em]">
+                    {myCar.model || 'Без модели'}
+                  </span>
+                  <span className="block truncate text-[0.84em] text-muted-foreground">
+                    {myCar.plate || 'без номера'} · {KIND_LABEL[myCar.kind] ?? myCar.kind} ·{' '}
+                    {myCar.odometer || 0} км
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    'flex-none rounded-sm border px-2 py-1 text-[0.72em] uppercase tracking-[0.06em]',
+                    myCar.status === 'На линии'
+                      ? 'border-emerald-600 text-emerald-600'
+                      : myCar.status === 'Ремонт'
+                        ? 'border-destructive text-destructive'
+                        : 'border-border text-muted-foreground',
+                  )}
+                >
+                  {myCar.status}
+                </span>
+                <Icon name="ChevronRight" size={17} className="flex-none text-accent" />
+              </button>
+            </div>
+          )}
+        </Panel>
+
+        <DriverContacts onShift={onShiftNow} />
+
+        <CarSheet vehicle={myCar} />
 
         <div className="grid flex-none gap-2 sm:grid-cols-2">
           {(
             [
               {
+                k: 'handover' as const,
+                i: 'ArrowLeftRight',
+                t: 'Передача вахты',
+                s: 'Акт передачи автомобиля с фото',
+              },
+              {
+                k: 'waybill' as const,
+                i: 'FileText',
+                t: 'Путевой лист',
+                s: 'Маршрут и пробег за смену',
+              },
+              {
                 k: 'request' as const,
                 i: 'PackagePlus',
                 t: 'Заявки',
-                s: 'Материалы, обеспечение и билеты',
+                s: 'Материалы и обеспечение',
               },
               {
                 k: 'repair' as const,
                 i: 'Wrench',
                 t: 'Сделал ремонт',
-                s: 'Опишите работу и приложите фото',
+                s: 'Работа и фото механику',
               },
               {
                 k: 'expense' as const,
                 i: 'ReceiptText',
                 t: 'Авансовый отчёт',
-                s: 'Подотчёт или покупка за свои · чек фото',
+                s: 'Подотчёт или покупка за свои',
               },
               {
                 k: 'writeoff' as const,
@@ -199,25 +212,24 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
                 t: 'Ведомость на списание',
                 s: 'Переданные и использованные запчасти',
               },
-              {
-                k: 'handover' as const,
-                i: 'FileText',
-                t: 'Акт передачи вахты',
-                s: 'Опись, состояние техники и фото',
-              },
             ]
           ).map((b) => (
             <button
               key={b.k}
               type="button"
-              onClick={() => (b.k === 'request' ? setReqOpen(true) : setAction(b.k as DriverAction))}
+              onClick={() => {
+                if (b.k === 'request') setReqOpen(true);
+                else if (b.k === 'waybill') setWaybill(true);
+                else if (b.k === 'handover') setHandover(true);
+                else setAction(b.k as DriverAction);
+              }}
               className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-3.5 text-left transition-colors hover:bg-foreground hover:text-background"
             >
               <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
                 <Icon name={b.i} size={20} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-head text-[0.95em] uppercase tracking-[0.04em]">
+                <span className="block truncate font-head text-[0.95em] uppercase tracking-[0.04em]">
                   {b.t}
                 </span>
                 <span className="block truncate text-[0.78em] text-muted-foreground group-hover:text-background/70">
@@ -228,73 +240,29 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
             </button>
           ))}
         </div>
-
-        <Panel
-          title="Путевые листы"
-          note={loading ? 'загрузка…' : `${monthly.length}`}
-          action={
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value || currentMonth())}
-              className="rounded-sm border border-input bg-background px-2 py-1 font-body text-[0.86em] normal-case tracking-normal outline-none focus:border-accent"
-            />
-          }
-        >
-          <button
-            type="button"
-            onClick={() => setFormOpen(true)}
-            className="flex w-full items-center gap-3 border-b border-border/60 bg-accent/[0.06] px-4 py-3 text-left transition-colors hover:bg-accent/15"
-          >
-            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
-              <Icon name="Plus" size={18} />
-            </span>
-            <span className="font-head text-[0.9em] uppercase tracking-[0.1em]">
-              Новый путевой лист
-            </span>
-          </button>
-
-          {monthly.length === 0 ? (
-            <Empty
-              icon="FileText"
-              title="Путевых листов нет"
-              hint="Нажмите плюс — часть данных подставится автоматически."
-            />
-          ) : (
-            monthly.map((l) => {
-              const v = vehicles.find((x) => x.id === l.vehicleId);
-              return (
-                <Row
-                  key={l.id}
-                  title={`${fmtDate(l.date)} · ${v?.plate ?? '—'}`}
-                  sub={`${l.amount} км · ${l.content || 'без маршрута'}`}
-                  right={
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      title="Удалить"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeLog(l.id);
-                        toast({ title: 'Путевой лист удалён' });
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key !== 'Enter' && e.key !== ' ') return;
-                        e.stopPropagation();
-                        removeLog(l.id);
-                        toast({ title: 'Путевой лист удалён' });
-                      }}
-                      className="flex h-8 w-8 flex-none items-center justify-center rounded-sm bg-secondary transition-colors hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <Icon name="Trash2" size={15} />
-                    </span>
-                  }
-                />
-              );
-            })
-          )}
-        </Panel>
       </div>
+
+      <CarDialog vehicle={carOpen ? myCar : null} onClose={() => setCarOpen(false)} />
+
+      <HandoverForm open={handover} onOpenChange={setHandover} vehicle={myCar} />
+
+      <DriverActions
+        action={action}
+        onClose={() => setAction(null)}
+        vehicles={myCar ? [myCar] : vehicles}
+        defaultVehicle={myCar?.id}
+      />
+
+      <WaybillForm
+        open={waybill}
+        onOpenChange={setWaybill}
+        vehicles={myCar ? [myCar] : vehicles}
+        author={profile.fio}
+        project={current?.group || ''}
+        onSubmit={async (p: WaybillPayload) => {
+          await addLog('waybill', { ...p, author: profile.fio });
+        }}
+      />
 
       <Dialog open={passOpen} onOpenChange={setPassOpen}>
         <DialogContent className="max-w-lg rounded-sm">
@@ -307,21 +275,6 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
           {current && <ChangePassword user={current} onDone={() => setPassOpen(false)} />}
         </DialogContent>
       </Dialog>
-
-      <DriverActions
-        action={action}
-        onClose={() => setAction(null)}
-        vehicles={myVehicles}
-      />
-
-      <WaybillForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        vehicles={myVehicles}
-        project={project}
-        author={profile.fio}
-        onSubmit={save}
-      />
     </div>
   );
 };

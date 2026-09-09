@@ -51,6 +51,8 @@ const StaffSection = () => {
   const [busy, setBusy] = useState(false);
 
   const canManage = canManageUsers;
+  const [phoneFor, setPhoneFor] = useState<User | null>(null);
+  const [phoneVal, setPhoneVal] = useState('');
   const canAssign = ['manager', 'director', 'admin', 'pm'].includes(profile.role);
   const chiefs = users.filter((u: User) => u.role === 'engineer');
   const roleChoices = creatableBy(profile);
@@ -163,6 +165,21 @@ const StaffSection = () => {
     }
   };
 
+  const canEditPhone = (u: User) =>
+    canManage || ['engineer', 'manager'].includes(profile.role) || current?.id === u.id;
+
+  const savePhone = async () => {
+    if (!phoneFor) return;
+    try {
+      await updateUser(phoneFor.id, { phone: phoneVal.trim() });
+      toast({ title: 'Телефон обновлён' });
+      setPhoneFor(null);
+      reload();
+    } catch {
+      toast({ title: 'Не удалось сохранить', variant: 'destructive' });
+    }
+  };
+
   const inspectors = users.filter((u) => u.role === 'inspector');
   const others = users.filter((u) => u.role !== 'inspector');
 
@@ -193,6 +210,35 @@ const StaffSection = () => {
 
       {open === u.id && (
         <div className="space-y-3 border-t border-border/60 bg-secondary/30 px-4 py-3 text-[0.85em]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[0.8em] uppercase tracking-[0.1em] text-muted-foreground">
+              Телефон
+            </span>
+            {u.phone ? (
+              <a
+                href={`tel:${u.phone.replace(/[^\d+]/g, '')}`}
+                className="rounded-sm border border-border bg-card px-2 py-0.5 text-[0.95em] transition-colors hover:border-accent hover:text-accent"
+              >
+                {u.phone}
+              </a>
+            ) : (
+              <span className="text-muted-foreground">не указан</span>
+            )}
+            {canEditPhone(u) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPhoneFor(u);
+                  setPhoneVal(u.phone || '');
+                }}
+                className="flex items-center gap-1 rounded-sm border border-border px-2 py-0.5 text-[0.85em] transition-colors hover:border-accent hover:text-accent"
+              >
+                <Icon name="Pencil" size={12} />
+                изменить
+              </button>
+            )}
+          </div>
+
           {!!u.specialties?.length && (
             <div>
               <span className="text-[0.8em] uppercase tracking-[0.1em] text-muted-foreground">
@@ -596,6 +642,33 @@ const StaffSection = () => {
                 className={busy ? 'animate-spin' : ''}
               />
               {busy ? 'Создаём…' : 'Создать учётную запись'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!phoneFor} onOpenChange={(v) => !v && setPhoneFor(null)}>
+        <DialogContent className="max-w-sm rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.15em] uppercase tracking-[0.03em]">
+              Телефон сотрудника
+            </DialogTitle>
+            <DialogDescription>{phoneFor?.fio}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3.5">
+            <Input
+              value={phoneVal}
+              onChange={(e) => setPhoneVal(e.target.value)}
+              placeholder="+7 900 000-00-00"
+              inputMode="tel"
+              className="rounded-sm"
+            />
+            <Button
+              onClick={savePhone}
+              className="w-full gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+            >
+              <Icon name="Check" size={16} />
+              Сохранить
             </Button>
           </div>
         </DialogContent>
