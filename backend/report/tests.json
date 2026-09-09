@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "Проверка CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
