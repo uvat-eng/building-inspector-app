@@ -56,7 +56,7 @@ const AppDownload = () => {
               </span>
               <span className="flex items-center gap-1.5">
                 <Icon name="HardDrive" size={13} />
-                менее 1 МБ
+                версия 1.2
               </span>
             </div>
           </div>

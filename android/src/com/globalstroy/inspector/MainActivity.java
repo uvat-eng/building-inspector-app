@@ -191,9 +191,70 @@ public class MainActivity extends Activity {
         return b;
     }
 
+    /** Фоновая проверка: не вышла ли новая версия приложения. */
+    private void checkUpdateSilently() {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    java.net.HttpURLConnection c = (java.net.HttpURLConnection)
+                            new java.net.URL(VERSION_URL + "?t="
+                                    + System.currentTimeMillis()).openConnection();
+                    c.setConnectTimeout(7000);
+                    c.setReadTimeout(7000);
+                    c.setRequestProperty("Cache-Control", "no-cache");
+                    java.io.BufferedReader r = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(c.getInputStream(), "UTF-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String ln;
+                    while ((ln = r.readLine()) != null) sb.append(ln);
+                    r.close();
+                    c.disconnect();
+
+                    org.json.JSONObject j = new org.json.JSONObject(sb.toString());
+                    final int remote = j.optInt("versionCode", 0);
+                    final String name = j.optString("versionName", "");
+                    final String notes = j.optString("notes", "");
+                    int local = getPackageManager()
+                            .getPackageInfo(getPackageName(), 0).versionCode;
+
+                    if (remote > local) {
+                        runOnUiThread(new Runnable() {
+                            public void run() { showUpdateDialog(name, notes); }
+                        });
+                    }
+                } catch (Exception e) {
+                    /* нет связи или файла версии - молча пропускаем */
+                }
+            }
+        }).start();
+    }
+
+    private void showUpdateDialog(String name, String notes) {
+        if (isFinishing()) return;
+        String msg = "Доступна версия " + name + ".";
+        if (notes != null && notes.length() > 0) msg += "\n\n" + notes;
+        msg += "\n\nДанные и вход сохранятся.";
+        new AlertDialog.Builder(this)
+                .setTitle("Доступно обновление")
+                .setMessage(msg)
+                .setPositiveButton("Обновить",
+                        new android.content.DialogInterface.OnClickListener() {
+                            public void onClick(android.content.DialogInterface d, int w) {
+                                openExternally(APK_URL);
+                            }
+                        })
+                .setNegativeButton("Позже", null)
+                .show();
+    }
+
     /** Долгое нажатие — скачать свежую версию приложения. */
     private void askUpdateApp() {
-        String ver = "1.1";
+        String ver;
+        try {
+            ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            ver = "—";
+        }
         new AlertDialog.Builder(this)
                 .setTitle("Обновление приложения")
                 .setMessage("Установленная версия: " + ver

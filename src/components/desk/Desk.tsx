@@ -257,7 +257,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
                 Мобильное приложение
               </p>
               <p className="text-[0.76em] text-muted-foreground">
-                Android 7 и новее · 100 КБ
+                Android 7 и новее · версия 1.2
               </p>
             </div>
           </div>
