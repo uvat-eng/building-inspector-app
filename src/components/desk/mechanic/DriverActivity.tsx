@@ -1,9 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useUsers, User } from '@/data/users';
+import { useUsers, updateUser, User } from '@/data/users';
+import { useLocations } from '@/data/locations';
 import { Vehicle } from '@/data/vehicles';
 import { money, ruDate, useFleet, activeShift } from '@/data/fleet';
 
@@ -19,10 +29,39 @@ interface Entry {
 }
 
 const DriverActivity = ({ vehicles }: DriverActivityProps) => {
-  const { users } = useUsers();
+  const { toast } = useToast();
+  const { users, reload } = useUsers();
+  const { list: locations } = useLocations();
   const { shifts, repairs, expenses, acts, loading } = useFleet();
 
+  const [locFor, setLocFor] = useState<User | null>(null);
+  const [locSel, setLocSel] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
   const drivers = useMemo(() => users.filter((u: User) => u.role === 'driver'), [users]);
+
+  const openLocs = (d: User) => {
+    setLocSel(d.locations ?? []);
+    setLocFor(d);
+  };
+
+  const toggle = (id: string) =>
+    setLocSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const saveLocs = async () => {
+    if (!locFor) return;
+    setSaving(true);
+    try {
+      await updateUser(locFor.id, { locations: locSel });
+      toast({ title: 'Локации водителя обновлены' });
+      setLocFor(null);
+      reload();
+    } catch {
+      toast({ title: 'Не удалось сохранить', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const vTitle = (id: string) => {
     const v = vehicles.find((x) => x.id === id);
@@ -150,10 +189,27 @@ const DriverActivity = ({ vehicles }: DriverActivityProps) => {
                         : 'техника не закреплена'}
                     </span>
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => openLocs(r.driver)}
+                    className="flex flex-none items-center gap-1 rounded-sm border border-border px-2 py-1 text-[0.72em] uppercase tracking-[0.06em] text-muted-foreground transition-colors hover:border-accent hover:text-accent"
+                  >
+                    <Icon name="MapPin" size={12} />
+                    локации
+                  </button>
                   <span className="flex-none rounded-sm border border-border px-2 py-1 text-[0.72em] uppercase tracking-[0.06em] text-muted-foreground">
                     записей {r.total}
                   </span>
                 </div>
+
+                <p className="pl-11 text-[0.74em] text-muted-foreground">
+                  доступ:{' '}
+                  {r.driver.locations?.length
+                    ? r.driver.locations
+                        .map((id) => locations.find((l) => l.id === id)?.title || id)
+                        .join(', ')
+                    : 'локации не закреплены'}
+                </p>
 
                 {!r.feed.length ? (
                   <p className="pl-11 text-[0.8em] text-muted-foreground">
@@ -184,6 +240,59 @@ const DriverActivity = ({ vehicles }: DriverActivityProps) => {
           </div>
         </div>
       </Panel>
+
+      <Dialog open={!!locFor} onOpenChange={(v) => !v && setLocFor(null)}>
+        <DialogContent className="max-w-md rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.15em] uppercase tracking-[0.03em]">
+              Локации водителя
+            </DialogTitle>
+            <DialogDescription>
+              {locFor?.fio} · доступ откроется только к отмеченным локациям.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3.5">
+            <div className="flex flex-wrap gap-1.5">
+              {locations.map((l) => {
+                const on = locSel.includes(l.id);
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => toggle(l.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.8em] transition-colors',
+                      on
+                        ? 'border-accent bg-accent text-accent-foreground'
+                        : 'border-input hover:bg-secondary',
+                    )}
+                  >
+                    <Icon name={l.icon} fallback="MapPin" size={13} />
+                    {l.title}
+                  </button>
+                );
+              })}
+            </div>
+            {!locSel.length && (
+              <p className="text-[0.78em] text-destructive">
+                Без локаций водитель не сможет войти ни в один проект.
+              </p>
+            )}
+            <Button
+              onClick={saveLocs}
+              disabled={saving}
+              className="w-full gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
+            >
+              <Icon
+                name={saving ? 'Loader2' : 'Check'}
+                size={16}
+                className={saving ? 'animate-spin' : ''}
+              />
+              {saving ? 'Сохраняем…' : 'Сохранить'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

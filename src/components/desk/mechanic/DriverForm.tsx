@@ -39,6 +39,7 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
   const [vehicleId, setVehicleId] = useState('');
   const [startAt, setStartAt] = useState('');
   const [endAt, setEndAt] = useState('');
+  const [locIds, setLocIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   const car = vehicles.find((v) => v.id === vehicleId) ?? null;
@@ -49,6 +50,16 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
   const carLocTitle =
     locations.find((l) => l.id === carLocationId)?.title || carLocationId;
 
+  // Итоговый набор локаций доступа: локация машины + выбранные механиком.
+  const grantedLocs = Array.from(
+    new Set([...(carLocationId ? [carLocationId] : []), ...locIds]),
+  );
+
+  const toggleLoc = (id: string) =>
+    setLocIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
   const reset = () => {
     setFio('');
     setPass('');
@@ -56,6 +67,7 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
     setVehicleId('');
     setStartAt('');
     setEndAt('');
+    setLocIds([]);
   };
 
   const save = async () => {
@@ -65,6 +77,14 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
     }
     if (pass && pass.length < 4) {
       toast({ title: 'Пароль минимум 4 символа', variant: 'destructive' });
+      return;
+    }
+    if (!grantedLocs.length) {
+      toast({
+        title: 'Закрепите за водителем локацию',
+        description: 'Выберите машину с локацией или отметьте локацию вручную.',
+        variant: 'destructive',
+      });
       return;
     }
     setBusy(true);
@@ -78,7 +98,7 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
           group: carProject,
           org: profile.org,
           phone: phone.trim(),
-          locations: carLocationId ? [carLocationId] : [],
+          locations: grantedLocs,
           specialties: [],
           certificates: [],
           educations: [],
@@ -219,6 +239,47 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
                   )}
                 </span>
               </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
+              Доступные локации
+            </Label>
+            <p className="text-[0.76em] text-muted-foreground">
+              Локация машины закрепляется автоматически. Отметьте дополнительные,
+              если водитель работает на нескольких.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {locations.map((l) => {
+                const fromCar = l.id === carLocationId;
+                const on = grantedLocs.includes(l.id);
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    disabled={fromCar}
+                    onClick={() => toggleLoc(l.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[0.8em] transition-colors',
+                      on
+                        ? 'border-accent bg-accent text-accent-foreground'
+                        : 'border-input hover:bg-secondary',
+                      fromCar && 'cursor-default opacity-90',
+                    )}
+                    title={fromCar ? 'Локация машины — закреплена автоматически' : undefined}
+                  >
+                    <Icon name={l.icon} fallback="MapPin" size={13} />
+                    {l.title}
+                    {fromCar && <Icon name="Lock" size={11} className="opacity-70" />}
+                  </button>
+                );
+              })}
+            </div>
+            {!grantedLocs.length && (
+              <p className="text-[0.78em] text-destructive">
+                Выберите хотя бы одну локацию — без неё водитель не получит доступ.
+              </p>
             )}
           </div>
 
