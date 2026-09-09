@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
@@ -7,7 +8,7 @@ const STEPS = [
   {
     icon: 'Download',
     title: 'Скачайте файл',
-    text: 'Нажмите кнопку выше или наведите камеру на QR-код. Файл весит меньше мегабайта.',
+    text: 'Нажмите кнопку выше или наведите камеру на QR-код. Скачается один файл stroykontrol.apk — это и есть установщик, распаковывать его не нужно.',
   },
   {
     icon: 'ShieldQuestion',
@@ -22,6 +23,15 @@ const STEPS = [
 ];
 
 const AppDownload = () => {
+  const [ver, setVer] = useState('1.2');
+
+  useEffect(() => {
+    fetch(`/app/version.json?t=${Date.now()}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => d?.versionName && setVer(String(d.versionName)))
+      .catch(() => undefined);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background px-5 py-10">
       <div className="mx-auto max-w-3xl">
@@ -44,9 +54,13 @@ const AppDownload = () => {
               asChild
               className="w-full gap-2 rounded-sm bg-accent py-6 font-head text-[1em] uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
             >
-              <a href={APK} download>
+              <a
+                href={`${APK}?v=${ver}`}
+                download="stroykontrol.apk"
+                type="application/vnd.android.package-archive"
+              >
                 <Icon name="Download" size={18} />
-                Скачать для Android
+                Скачать APK для Android
               </a>
             </Button>
             <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[0.78em] uppercase tracking-[0.05em] text-muted-foreground sm:justify-start">
@@ -56,7 +70,7 @@ const AppDownload = () => {
               </span>
               <span className="flex items-center gap-1.5">
                 <Icon name="HardDrive" size={13} />
-                версия 1.2
+                версия {ver}
               </span>
             </div>
           </div>
