@@ -16,6 +16,8 @@ import { useProfile } from '@/data/profile';
 import { registerUser, useUsers } from '@/data/users';
 import { Vehicle } from '@/data/vehicles';
 import { createFleet } from '@/data/fleet';
+import { useObjects } from '@/data/store';
+import { useLocations } from '@/data/locations';
 
 interface DriverFormProps {
   open: boolean;
@@ -28,6 +30,8 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
   const { toast } = useToast();
   const { profile } = useProfile();
   const { current } = useUsers();
+  const { list: objects } = useObjects();
+  const { list: locations } = useLocations();
 
   const [fio, setFio] = useState('');
   const [pass, setPass] = useState('');
@@ -36,6 +40,14 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
   const [startAt, setStartAt] = useState('');
   const [endAt, setEndAt] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const car = vehicles.find((v) => v.id === vehicleId) ?? null;
+  // Проект и локация водителя вычисляются из закреплённой машины.
+  const carObject = car?.objectId ? objects.find((o) => o.id === car.objectId) : null;
+  const carLocationId = carObject?.location || car?.locationId || '';
+  const carProject = carObject?.field?.trim() || '';
+  const carLocTitle =
+    locations.find((l) => l.id === carLocationId)?.title || carLocationId;
 
   const reset = () => {
     setFio('');
@@ -63,10 +75,10 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
           fio: clean,
           password: pass,
           role: 'driver',
-          group: '',
+          group: carProject,
           org: profile.org,
           phone: phone.trim(),
-          locations: [],
+          locations: carLocationId ? [carLocationId] : [],
           specialties: [],
           certificates: [],
           educations: [],
@@ -181,6 +193,33 @@ const DriverForm = ({ open, onOpenChange, vehicles, onDone }: DriverFormProps) =
                 </button>
               ))}
             </div>
+            {car && (
+              <div className="mt-1 flex items-start gap-2 rounded-sm border border-border bg-secondary/40 px-3 py-2 text-[0.8em]">
+                <Icon name="MapPin" size={14} className="mt-0.5 flex-none text-accent" />
+                <span>
+                  {carLocationId ? (
+                    <>
+                      Водителю откроется только проект{' '}
+                      <b>{carLocTitle}</b>
+                      {carProject ? (
+                        <>
+                          {' · '}
+                          <b>{carProject}</b>
+                        </>
+                      ) : (
+                        ''
+                      )}
+                      . Другие локации будут недоступны.
+                    </>
+                  ) : (
+                    <span className="text-destructive">
+                      У этой машины не указана локация — задайте её в карточке
+                      техники, иначе водитель не будет закреплён за проектом.
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">

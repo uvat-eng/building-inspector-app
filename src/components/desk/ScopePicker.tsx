@@ -27,6 +27,9 @@ import { useToast } from '@/hooks/use-toast';
 import useBackGuard from '@/hooks/use-back-guard';
 import { useFields } from '@/data/fields';
 import ObjectForm from '@/components/desk/ObjectForm';
+import { useUsers } from '@/data/users';
+import { useVehicles } from '@/data/vehicles';
+import { useFleet } from '@/data/fleet';
 
 interface Props {
   onReady: (locationId: string, project: string) => void;
@@ -56,8 +59,38 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
     fioRef.current = profile.fio;
   }, [profile.fio]);
 
-  const canAdd = canAddLocation;
-  const locations = allLocations.filter((l) => canSeeLocation(profile, l.id));
+  const { current } = useUsers();
+  const { items: vehicles } = useVehicles('vehicle');
+  const { shifts } = useFleet();
+  const isDriver = profile.role === 'driver';
+
+  // Проект водителя определяется машиной, которую закрепил механик.
+  const driverScope = useMemo(() => {
+    if (!isDriver) return null;
+    const mine = shifts.filter(
+      (s) => (current?.id && s.driverId === current.id) || s.driverFio === profile.fio,
+    );
+    const carIds = new Set(mine.map((s) => s.vehicleId));
+    const cars = vehicles.filter((v) => carIds.has(v.id));
+    const locs = new Set<string>();
+    const projects = new Set<string>();
+    cars.forEach((v) => {
+      const obj = v.objectId ? objects.find((o) => o.id === v.objectId) : null;
+      const locId = obj?.location || v.locationId || '';
+      if (locId) locs.add(locId);
+      const field = obj?.field?.trim();
+      if (field) projects.add(field);
+    });
+    // Запасной вариант — локации из профиля, записанные при закреплении.
+    (profile.locations ?? []).forEach((l) => locs.add(l));
+    return { locs, projects, hasCar: cars.length > 0 };
+  }, [isDriver, shifts, vehicles, objects, current?.id, profile.fio, profile.locations]);
+
+  const canAdd = canAddLocation && !isDriver;
+  const locations = allLocations.filter((l) => {
+    if (isDriver) return driverScope?.locs.has(l.id) ?? false;
+    return canSeeLocation(profile, l.id);
+  });
   const isInspector = profile.role === 'inspector';
 
   useBackGuard(roleSeen && !loc, () => setRoleSeen(false));
@@ -79,8 +112,13 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
         const key = o.field?.trim() || NO_FIELD;
         m.set(key, (m.get(key) ?? 0) + 1);
       });
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ru'));
-  }, [objects, loc, fields]);
+    let list = [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+    // Водителю показываем только проекты его закреплённых машин.
+    if (isDriver && driverScope?.projects.size) {
+      list = list.filter(([p]) => driverScope.projects.has(p));
+    }
+    return list;
+  }, [objects, loc, fields, isDriver, driverScope]);
 
   const createField = async () => {
     const title = fieldName.trim();
@@ -269,11 +307,12 @@ const ScopePicker = ({ onReady, onBackToModules, onLogin }: Props) => {
                 <div className="mt-4 rounded-sm border border-dashed border-border p-6 text-center">
                   <Icon name="MapPinOff" size={26} className="mx-auto text-muted-foreground/50" />
                   <p className="mt-2 font-head text-[0.95em] uppercase tracking-[0.03em]">
-                    Локации не назначены
+                    {isDriver ? 'Проект не закреплён' : 'Локации не назначены'}
                   </p>
                   <p className="mt-1 text-[0.8em] text-muted-foreground">
-                    Обратитесь к менеджеру или координатору проекта — он откроет доступ к нужной
-                    локации.
+                    {isDriver
+                      ? 'Механик ещё не закрепил за вами автомобиль и проект. Обратитесь к механику — после закрепления откроется доступ.'
+                      : 'Обратитесь к менеджеру или координатору проекта — он откроет доступ к нужной локации.'}
                   </p>
                 </div>
               )}
