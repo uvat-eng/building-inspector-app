@@ -248,6 +248,39 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
         </div>
       </main>
 
+      <footer className="flex-none border-t border-border bg-card px-4 py-4 sm:px-[22px]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <img src="/icon-192.png" alt="" className="h-9 w-9 flex-none rounded-sm" />
+            <div className="leading-tight">
+              <p className="font-head text-[0.86em] uppercase tracking-[0.03em] text-foreground">
+                Мобильное приложение
+              </p>
+              <p className="text-[0.76em] text-muted-foreground">
+                Android 7 и новее · 100 КБ
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/app/stroykontrol.apk"
+              download
+              className="flex items-center gap-1.5 rounded-sm bg-accent px-3.5 py-2 text-[0.8em] font-head uppercase tracking-[0.05em] text-accent-foreground transition-colors hover:bg-accent/90"
+            >
+              <Icon name="Download" size={14} />
+              Скачать приложение
+            </a>
+            <a
+              href="/app"
+              className="flex items-center gap-1.5 rounded-sm border border-border px-3.5 py-2 text-[0.8em] uppercase tracking-[0.05em] transition-colors hover:border-accent hover:text-accent"
+            >
+              <Icon name="QrCode" size={14} />
+              QR-код
+            </a>
+          </div>
+        </div>
+      </footer>
+
       <Dialog open={!!current && !current.password} onOpenChange={() => undefined}>
         <DialogContent
           className="max-w-md rounded-sm [&>button]:hidden"
