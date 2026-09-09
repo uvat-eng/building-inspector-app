@@ -15,6 +15,12 @@ export const hasPrivacyConsent = () =>
 const isInsideApp = () =>
   typeof navigator !== 'undefined' && / wv\)|; wv/.test(navigator.userAgent);
 
+// Android-смартфон — там установка приложения нужнее всего.
+const isAndroidPhone = () =>
+  typeof navigator !== 'undefined' &&
+  /Android/i.test(navigator.userAgent) &&
+  !isInsideApp();
+
 // Направления, из которых «собирается» земной шар.
 const GLOBE_PARTS = [
   { clip: 'inset(0 50% 50% 0)', from: 'translate(-60px,-60px)' },
@@ -27,6 +33,8 @@ const Splash = ({ onDone }: SplashProps) => {
   const [phase, setPhase] = useState<'anim' | 'consent'>('anim');
   const [leaving, setLeaving] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [phone] = useState(isAndroidPhone);
+  const [inApp] = useState(isInsideApp);
 
   // Падающие листья со случайными параметрами.
   const leaves = useMemo(
@@ -174,6 +182,24 @@ const Splash = ({ onDone }: SplashProps) => {
 
         {phase === 'consent' && (
           <div className="mt-8 w-full max-w-md animate-fade-in rounded-sm border border-border border-t-2 border-t-accent bg-card p-5 text-left">
+            {phone && (
+              <a
+                href="/app"
+                className="mb-5 flex items-center gap-3 rounded-sm bg-accent px-4 py-3.5 text-accent-foreground transition-opacity active:opacity-90"
+              >
+                <Icon name="Smartphone" size={26} className="flex-none" />
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block font-head text-[0.95em] uppercase tracking-[0.05em]">
+                    Скачать приложение
+                  </span>
+                  <span className="mt-0.5 block text-[0.76em] leading-snug opacity-90">
+                    Вход в одно касание и отметки прямо с объекта
+                  </span>
+                </span>
+                <Icon name="ChevronRight" size={20} className="flex-none opacity-80" />
+              </a>
+            )}
+
             <h2 className="flex items-center gap-2 font-head text-[1.05em] uppercase tracking-[0.03em]">
               <Icon name="ShieldCheck" size={18} className="text-accent" />
               Конфиденциальность
@@ -218,7 +244,7 @@ const Splash = ({ onDone }: SplashProps) => {
               Принять и войти
             </Button>
 
-            {!isInsideApp() && (
+            {!inApp && !phone && (
               <div className="mt-4 border-t border-border pt-4">
                 <p className="text-[0.78em] leading-snug text-muted-foreground">
                   Работаете со смартфона? Установите приложение — вход
