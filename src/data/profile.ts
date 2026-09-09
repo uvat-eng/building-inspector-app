@@ -211,9 +211,16 @@ export const canCreateRole = (p: Profile, r: Role) => creatableBy(p).includes(r)
 
 export const isAdminProfile = (p: Profile) => (p.baseRole ?? p.role) === 'admin';
 
+// Роли, которым доступны все локации без отметок:
+// механик один на компанию и обслуживает технику везде.
+export const ALL_LOCATIONS_ROLES: Role[] = ['mechanic'];
+
+export const hasAllLocations = (r: Role) =>
+  CAN_MANAGE_USERS.includes(r) || ALL_LOCATIONS_ROLES.includes(r);
+
 export const canSeeLocation = (p: Profile, id: string) =>
   isAdminProfile(p) ||
-  CAN_MANAGE_USERS.includes(p.role) ||
+  hasAllLocations(p.role) ||
   !p.locations?.length ||
   p.locations.includes(id);
 

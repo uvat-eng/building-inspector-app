@@ -21,6 +21,7 @@ import {
   ROLE_NOTE,
   creatableBy,
   canCreateRole,
+  hasAllLocations,
   Role,
   SPECIALTIES,
 } from '@/data/profile';
@@ -534,6 +535,16 @@ const StaffSection = () => {
               </div>
             </div>
 
+            {hasAllLocations(nRole) ? (
+              <div className="flex items-start gap-2.5 rounded-sm border border-border border-l-2 border-l-accent bg-secondary/40 p-3">
+                <Icon name="Globe" size={16} className="mt-0.5 flex-none text-accent" />
+                <p className="text-[0.82em] leading-relaxed text-muted-foreground">
+                  <span className="text-foreground">Доступ ко всем локациям.</span>{' '}
+                  Для этой должности локации не отмечаются — сотрудник видит
+                  объекты и технику на всех проектах компании.
+                </p>
+              </div>
+            ) : (
             <div className="space-y-1.5">
               <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
                 Доступ к локациям
@@ -564,6 +575,7 @@ const StaffSection = () => {
                 у них доступ ко всем.
               </p>
             </div>
+            )}
 
             {(nRole === 'driver' || nRole === 'mechanic') && (
               <div className="space-y-1.5">
