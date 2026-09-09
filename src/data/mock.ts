@@ -8,7 +8,8 @@ export type SectionId =
   | 'defects'
   | 'photos'
   | 'documents'
-  | 'reports';
+  | 'reports'
+  | 'tracker';
 
 export interface MenuItem {
   id: SectionId;
@@ -28,6 +29,7 @@ export const MENU: MenuItem[] = [
   { id: 'photos', label: 'Фотоотчёты', short: 'Фотоотчёты', icon: 'Camera' },
   { id: 'documents', label: 'Акты и документы', short: 'Акты и документы', icon: 'FileSignature' },
   { id: 'reports', label: 'Отчёты', short: 'Отчёты и статистика', icon: 'ChartColumn' },
+  { id: 'tracker', label: 'Трекеры', short: 'Трекеры и контроль перемещений', icon: 'Satellite' },
 ];
 
 export type TagTone = 'hot' | 'ok' | 'wait' | 'dim';

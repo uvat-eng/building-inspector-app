@@ -1,0 +1,8 @@
+{
+  "tests": [
+    { "name": "Онлайн-список", "method": "GET", "path": "/?action=online", "expectedStatus": 200 },
+    { "name": "Дневной архив", "method": "GET", "path": "/?action=days", "expectedStatus": 200 },
+    { "name": "Пинг без данных", "method": "POST", "path": "/?action=ping", "body": {}, "expectedStatus": 400 },
+    { "name": "Неизвестное действие", "method": "GET", "path": "/?action=nope", "expectedStatus": 400 }
+  ]
+}

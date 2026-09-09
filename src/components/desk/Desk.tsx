@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import Topbar from '@/components/desk/Topbar';
 import DeskHeader from '@/components/desk/DeskHeader';
 import SideMenu from '@/components/desk/SideMenu';
+import TrackerCabinet from '@/components/desk/tracker/TrackerCabinet';
+import TrackerProvider from '@/components/desk/tracker/TrackerProvider';
+import { autoCloseMonth } from '@/data/tracker';
 import ObjectsSection from '@/components/desk/sections/ObjectsSection';
 import SitesSection from '@/components/desk/sections/SitesSection';
 import ObjectPage from '@/components/desk/ObjectPage';
@@ -64,6 +67,10 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   useEffect(() => {
     localStorage.setItem(SECTION_KEY, section);
   }, [section]);
+
+  useEffect(() => {
+    autoCloseMonth();
+  }, []);
 
   const [history, setHistory] = useState<SectionId[]>([]);
   const [leaveTo, setLeaveTo] = useState<SectionId | null>(null);
@@ -169,6 +176,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
       />
     ),
     staff: <StaffSection />,
+    tracker: <TrackerCabinet />,
     assets: <AssetsSection />,
     objects: <ObjectsSection onOpenObject={openObject} />,
     sites: objectId ? (
@@ -185,6 +193,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background">
+      <TrackerProvider />
       <div className="animate-rise">
         <Topbar />
       </div>

@@ -85,6 +85,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'photos',
     'documents',
     'reports',
+    'tracker',
   ],
   coordinator: [
     'cabinet',
@@ -121,6 +122,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'photos',
     'documents',
     'reports',
+    'tracker',
   ],
   engineer: [
     'cabinet',
@@ -132,9 +134,10 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'photos',
     'documents',
     'reports',
+    'tracker',
   ],
   inspector: ['cabinet', 'objects', 'sites', 'defects', 'documents'],
-  mechanic: ['cabinet', 'objects', 'assets', 'inspections'],
+  mechanic: ['cabinet', 'objects', 'assets', 'inspections', 'tracker'],
   driver: ['cabinet'],
 };
 
