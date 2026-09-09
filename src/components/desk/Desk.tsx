@@ -42,6 +42,8 @@ import ScopeCrumbs from '@/components/desk/ScopeCrumbs';
 import { useUsers } from '@/data/users';
 import { useToast } from '@/hooks/use-toast';
 import useBackGuard from '@/hooks/use-back-guard';
+import { useImpersonation } from '@/data/impersonate';
+import CabinetPicker from '@/components/desk/director/CabinetPicker';
 
 const SECTION_KEY = 'gsi-section-v1';
 const SCOPE_ENTERED = 'gsi-scope-entered-v1';
@@ -59,7 +61,9 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const [objectId, setObjectId] = useState<string | null>(null);
   const [objectEdit, setObjectEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [cabinetRole, setCabinetRole] = useState<Role | null>(null);
   const { profile, save, isAdmin, viewingAs } = useProfile();
+  const { impersonation, stop: stopImpersonate } = useImpersonation();
   const { current, reload: reloadUsers } = useUsers();
   const { toast } = useToast();
   const { scope } = useScope();
@@ -209,7 +213,31 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
         />
       </div>
 
-      {viewingAs && (
+      {impersonation && (
+        <div className="flex flex-none flex-wrap items-center gap-2 border-b border-accent bg-accent/10 px-4 py-2 text-[0.78em] uppercase tracking-[0.06em] sm:px-[22px]">
+          <Icon name="UserCheck" fallback="User" size={14} className="flex-none text-accent" />
+          <span className="min-w-0 flex-1 truncate normal-case tracking-normal">
+            Вы в кабинете · <b>{impersonation.asFio}</b> ·{' '}
+            {ROLE_LABEL[impersonation.asRole]}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              stopImpersonate();
+              leaveOk.current = true;
+              setSection('cabinet');
+              setObjectId(null);
+              toast({ title: 'Вы вернулись в свой кабинет' });
+            }}
+            className="flex flex-none items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-accent-foreground transition-colors hover:bg-accent/90"
+          >
+            <Icon name="RotateCcw" size={13} />
+            В свой кабинет
+          </button>
+        </div>
+      )}
+
+      {viewingAs && !impersonation && (
         <div className="flex flex-none items-center gap-2 border-b border-accent bg-accent/10 px-4 py-2 text-[0.78em] uppercase tracking-[0.06em] sm:px-[22px]">
           <Icon name="ShieldUser" fallback="Shield" size={14} className="flex-none text-accent" />
           <span className="min-w-0 truncate">
@@ -227,7 +255,15 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
       )}
 
       <main className="grid flex-1 animate-rise items-start gap-3.5 px-4 pb-4 pt-3.5 [animation-delay:0.1s] sm:px-[22px] lg:grid-cols-[236px_1fr]">
-        <SideMenu active={section} onSelect={select} className="hidden lg:sticky lg:top-3.5 lg:flex" />
+        <SideMenu
+          active={section}
+          onSelect={select}
+          onOpenCabinetOf={(r) => {
+            setMenuOpen(false);
+            setCabinetRole(r);
+          }}
+          className="hidden lg:sticky lg:top-3.5 lg:flex"
+        />
         <div key={`${section}-${objectId ?? ''}`} className="flex animate-fade-in flex-col">
           {canGoBack && (
             <div className="mb-2.5 flex flex-none items-center gap-2">
@@ -304,7 +340,15 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="w-[260px] border-0 bg-card p-0">
           <SheetTitle className="sr-only">Разделы</SheetTitle>
-          <SideMenu active={section} onSelect={select} className="h-full rounded-none" />
+          <SideMenu
+            active={section}
+            onSelect={select}
+            onOpenCabinetOf={(r) => {
+              setMenuOpen(false);
+              setCabinetRole(r);
+            }}
+            className="h-full rounded-none"
+          />
         </SheetContent>
       </Sheet>
 
@@ -332,6 +376,17 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CabinetPicker
+        role={cabinetRole}
+        onOpenChange={(v) => !v && setCabinetRole(null)}
+        onEntered={() => {
+          leaveOk.current = true;
+          setSection('cabinet');
+          setObjectId(null);
+          setObjectEdit(false);
+        }}
+      />
 
       <LoginDialog
         open={loginOpen}

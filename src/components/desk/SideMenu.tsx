@@ -2,18 +2,25 @@ import { cn } from '@/lib/utils';
 import Icon from '@/components/ui/icon';
 import ProfileCard from '@/components/desk/ProfileCard';
 import { MENU, SectionId } from '@/data/mock';
-import { useProfile, ROLE_SECTIONS, ROLE_LABEL } from '@/data/profile';
+import { useProfile, ROLE_SECTIONS, ROLE_LABEL, ROLE_ICON, Role } from '@/data/profile';
 import { useUsers } from '@/data/users';
+import { useImpersonation } from '@/data/impersonate';
+
+/** Кабинеты, куда директор может провалиться из своего меню. */
+const DIRECTOR_CABINETS: Role[] = ['manager', 'engineer', 'inspector'];
 
 interface SideMenuProps {
   active: SectionId;
   onSelect: (id: SectionId) => void;
+  onOpenCabinetOf?: (role: Role) => void;
   className?: string;
 }
 
-const SideMenu = ({ active, onSelect, className }: SideMenuProps) => {
+const SideMenu = ({ active, onSelect, onOpenCabinetOf, className }: SideMenuProps) => {
   const { profile } = useProfile();
   const { current } = useUsers();
+  const { impersonation } = useImpersonation();
+  const isDirector = profile.role === 'director' && !impersonation;
   const allowed = profile.role === 'admin' ? null : ROLE_SECTIONS[profile.role];
   const isManager = ['pm', 'coordinator', 'manager', 'director'].includes(profile.role);
   const isMechanic = profile.role === 'mechanic';
@@ -52,6 +59,32 @@ const SideMenu = ({ active, onSelect, className }: SideMenuProps) => {
               <Icon name={item.icon} size={16} className="flex-none text-accent" />
               <span className="truncate">{item.label}</span>
             </button>
+            {item.id === 'cabinet' && isDirector && (
+              <ul className="border-t border-foreground/85 bg-secondary/40">
+                {DIRECTOR_CABINETS.map((r) => (
+                  <li key={r} className="border-b border-foreground/20 last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => onOpenCabinetOf?.(r)}
+                      className="group flex w-full items-center gap-2.5 border-l-[3px] border-l-transparent py-[10px] pl-[30px] pr-[18px] text-left text-[0.86em] text-foreground transition-colors duration-200 hover:bg-foreground hover:text-background"
+                    >
+                      <Icon
+                        name={ROLE_ICON[r]}
+                        fallback="User"
+                        size={14}
+                        className="flex-none text-accent"
+                      />
+                      <span className="truncate">Кабинет · {ROLE_LABEL[r]}</span>
+                      <Icon
+                        name="ChevronRight"
+                        size={13}
+                        className="ml-auto flex-none text-muted-foreground group-hover:text-background"
+                      />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         );
       })}
