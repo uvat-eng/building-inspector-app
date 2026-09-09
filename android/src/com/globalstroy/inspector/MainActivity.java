@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
     private static final String HOST = "https://xn--e1afhkhdkdm.su";
     private static final String SITE = HOST + "/";
     private static final String APK_URL = HOST + "/app/stroykontrol.apk";
+    private static final String VERSION_URL = HOST + "/app/version.json";
 
     private WebView web;
     private ValueCallback<Uri[]> filePath;
@@ -144,6 +145,12 @@ public class MainActivity extends Activity {
             web.restoreState(saved);
         } else {
             web.loadUrl(SITE);
+        }
+
+        if (saved == null) {
+            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                public void run() { checkUpdateSilently(); }
+            }, 4000);
         }
     }
 
