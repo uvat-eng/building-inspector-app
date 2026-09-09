@@ -22,6 +22,9 @@ import CarDialog from '@/components/desk/driver/CarDialog';
 import CarSheet from '@/components/desk/driver/CarSheet';
 import HandoverForm from '@/components/desk/driver/HandoverForm';
 import RequestsCabinet from '@/components/desk/chief/RequestsCabinet';
+import PartsRequestForm from '@/components/desk/driver/PartsRequestForm';
+import AdviceForm from '@/components/desk/driver/AdviceForm';
+import WaybillsCabinet from '@/components/desk/waybill/WaybillsCabinet';
 import { KIND_LABEL, useVehicles } from '@/data/vehicles';
 import { activeShift, ruDate, useFleet } from '@/data/fleet';
 
@@ -42,6 +45,9 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
   const [reqOpen, setReqOpen] = useState(false);
   const [carOpen, setCarOpen] = useState(false);
   const [handover, setHandover] = useState(false);
+  const [partsOpen, setPartsOpen] = useState(false);
+  const [adviceOpen, setAdviceOpen] = useState(false);
+  const [wbOpen, setWbOpen] = useState(false);
 
   const myShift = useMemo(
     () => shifts.find((s) => s.driverFio === profile.fio) ?? null,
@@ -76,6 +82,26 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
           onExit={onExit}
         />
         <RequestsCabinet kind="material" />
+      </div>
+    );
+  }
+
+  if (wbOpen) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: 'Водитель', icon: 'Truck', onClick: () => setWbOpen(false) },
+            { label: 'Путевые листы', icon: 'FileText' },
+          ]}
+          backLabel="К обзору"
+          onBack={() => setWbOpen(false)}
+          onExit={onExit}
+        />
+        <WaybillsCabinet
+          vehicles={myCar ? [myCar] : vehicles}
+          defaultVehicle={myCar?.id}
+        />
       </div>
     );
   }
@@ -185,8 +211,20 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
               {
                 k: 'waybill' as const,
                 i: 'FileText',
-                t: 'Путевой лист',
-                s: 'Маршрут и пробег за смену',
+                t: 'Путевые листы',
+                s: 'Создать по бланку и посмотреть свод',
+              },
+              {
+                k: 'parts' as const,
+                i: 'PackageSearch',
+                t: 'Заявка на запчасти',
+                s: 'Уйдёт механику и руководителю проекта',
+              },
+              {
+                k: 'advice' as const,
+                i: 'MessageSquareWarning',
+                t: 'Рекомендации механику',
+                s: 'Что заметили в работе машины',
               },
               {
                 k: 'request' as const,
@@ -219,7 +257,9 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
               type="button"
               onClick={() => {
                 if (b.k === 'request') setReqOpen(true);
-                else if (b.k === 'waybill') setWaybill(true);
+                else if (b.k === 'waybill') setWbOpen(true);
+                else if (b.k === 'parts') setPartsOpen(true);
+                else if (b.k === 'advice') setAdviceOpen(true);
                 else if (b.k === 'handover') setHandover(true);
                 else setAction(b.k as DriverAction);
               }}
@@ -245,6 +285,15 @@ const DriverCabinet = ({ onExit }: DriverCabinetProps) => {
       <CarDialog vehicle={carOpen ? myCar : null} onClose={() => setCarOpen(false)} />
 
       <HandoverForm open={handover} onOpenChange={setHandover} vehicle={myCar} />
+
+      <PartsRequestForm
+        open={partsOpen}
+        onOpenChange={setPartsOpen}
+        vehicle={myCar}
+        vehicles={vehicles}
+      />
+
+      <AdviceForm open={adviceOpen} onOpenChange={setAdviceOpen} vehicle={myCar} />
 
       <DriverActions
         action={action}

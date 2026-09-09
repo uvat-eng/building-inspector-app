@@ -47,6 +47,17 @@ def to_vehicle(r):
         'osagoTo': r['osago_to'] or '',
         'status': r['status'],
         'note': r['note'] or '',
+        'vin': r.get('vin') or '',
+        'yearMade': r.get('year_made') or '',
+        'engine': r.get('engine') or '',
+        'transmission': r.get('transmission') or '',
+        'tyres': r.get('tyres') or '',
+        'fuelKind': r.get('fuel_kind') or '',
+        'tank': int(r.get('tank') or 0),
+        'condition': r.get('condition') or '',
+        'pastRepairs': r.get('past_repairs') or '',
+        'nextService': r.get('next_service') or '',
+        'techTo': r.get('tech_to') or '',
         'createdBy': r['created_by'] or '',
         'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
     }
@@ -122,7 +133,8 @@ def handler(event: dict, context) -> dict:
             cur.execute(
                 'INSERT INTO vehicles (id, asset_type, plate, model, kind, driver, location_id, '
                 'odometer, fuel_norm, service_at, osago_to, status, note, created_by, inv_no, '
-                'object_id, verified_to, holder) VALUES ('
+                'object_id, verified_to, holder, vin, year_made, engine, transmission, '
+                'tyres, fuel_kind, tank, condition, past_repairs, next_service, tech_to) VALUES ('
                 f"'{esc(vid)}', '{esc(asset_type)}', '{esc(plate)}', '{esc(model)}', "
                 f"'{esc(body.get('vehicleKind') or 'car')}', '{esc(body.get('driver', ''))}', "
                 f"'{esc(body.get('locationId', ''))}', {int(num(body.get('odometer')))}, "
@@ -130,7 +142,13 @@ def handler(event: dict, context) -> dict:
                 f"'{esc(body.get('osagoTo', ''))}', '{esc(body.get('status') or 'На линии')}', "
                 f"'{esc(body.get('note', ''))}', '{esc(body.get('createdBy', ''))}', "
                 f"'{esc(body.get('invNo', ''))}', '{esc(body.get('objectId', ''))}', "
-                f"'{esc(body.get('verifiedTo', ''))}', '{esc(body.get('holder', ''))}') RETURNING *"
+                f"'{esc(body.get('verifiedTo', ''))}', '{esc(body.get('holder', ''))}', "
+                f"'{esc(body.get('vin', ''))}', '{esc(body.get('yearMade', ''))}', "
+                f"'{esc(body.get('engine', ''))}', '{esc(body.get('transmission', ''))}', "
+                f"'{esc(body.get('tyres', ''))}', '{esc(body.get('fuelKind', ''))}', "
+                f"{int(num(body.get('tank')))}, '{esc(body.get('condition', ''))}', "
+                f"'{esc(body.get('pastRepairs', ''))}', '{esc(body.get('nextService', ''))}', "
+                f"'{esc(body.get('techTo', ''))}') RETURNING *"
             )
             row = cur.fetchone()
             conn.commit()
@@ -154,8 +172,18 @@ def handler(event: dict, context) -> dict:
                 'verifiedTo': 'verified_to',
                 'holder': 'holder',
                 'assetType': 'asset_type',
+                'vin': 'vin',
+                'yearMade': 'year_made',
+                'engine': 'engine',
+                'transmission': 'transmission',
+                'tyres': 'tyres',
+                'fuelKind': 'fuel_kind',
+                'condition': 'condition',
+                'pastRepairs': 'past_repairs',
+                'nextService': 'next_service',
+                'techTo': 'tech_to',
             }
-            num_cols = {'odometer': 'odometer', 'fuelNorm': 'fuel_norm'}
+            num_cols = {'odometer': 'odometer', 'fuelNorm': 'fuel_norm', 'tank': 'tank'}
             sets = [f"{text_cols[k]} = '{esc(v)}'" for k, v in patch.items() if k in text_cols]
             sets += [f'{num_cols[k]} = {num(v)}' for k, v in patch.items() if k in num_cols]
             if not vid or not sets:

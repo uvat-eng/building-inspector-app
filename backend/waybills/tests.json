@@ -1,0 +1,7 @@
+{
+  "tests": [
+    { "name": "Список путевых", "method": "GET", "path": "/", "expectedStatus": 200 },
+    { "name": "Правка без id", "method": "PUT", "path": "/?kind=waybill", "body": {}, "expectedStatus": 400 },
+    { "name": "Удаление без id", "method": "DELETE", "path": "/?kind=part", "expectedStatus": 400 }
+  ]
+}

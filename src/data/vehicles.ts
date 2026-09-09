@@ -78,6 +78,17 @@ export interface Vehicle {
   osagoTo: string;
   status: VehicleStatus;
   note: string;
+  vin?: string;
+  yearMade?: string;
+  engine?: string;
+  transmission?: string;
+  tyres?: string;
+  fuelKind?: string;
+  tank?: number;
+  condition?: string;
+  pastRepairs?: string;
+  nextService?: string;
+  techTo?: string;
   createdBy: string;
   createdAt: string;
 }

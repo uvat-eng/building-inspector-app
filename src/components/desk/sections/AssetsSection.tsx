@@ -7,6 +7,8 @@ import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import AssetForm from '@/components/desk/assets/AssetForm';
+import PartsCabinet from '@/components/desk/mechanic/PartsCabinet';
+import { useWaybills } from '@/data/waybills';
 import { useProfile } from '@/data/profile';
 import {
   AssetType,
@@ -43,6 +45,9 @@ const AssetsSection = () => {
 
   const [form, setForm] = useState(false);
   const [edit, setEdit] = useState<Vehicle | null>(null);
+  const [partsOpen, setPartsOpen] = useState(false);
+  const { parts } = useWaybills();
+  const newParts = parts.filter((p) => p.status === 'new').length;
 
   const openNew = () => {
     setEdit(null);
@@ -120,6 +125,36 @@ const AssetsSection = () => {
           </Button>
         )}
       </div>
+
+      {tab === 'vehicle' && (
+        <button
+          type="button"
+          onClick={() => setPartsOpen((v) => !v)}
+          className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-3.5 text-left transition-colors hover:bg-secondary"
+        >
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+            <Icon name="PackageSearch" size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-head text-[0.95em] uppercase tracking-[0.04em]">
+              Заявки на запчасти
+            </span>
+            <span className="block truncate text-[0.78em] text-muted-foreground">
+              От водителей · всего {parts.length}
+              {newParts ? ` · новых ${newParts}` : ''}
+            </span>
+          </span>
+          <Icon
+            name={partsOpen ? 'ChevronUp' : 'ChevronDown'}
+            size={17}
+            className="flex-none text-accent"
+          />
+        </button>
+      )}
+
+      {partsOpen && tab === 'vehicle' && (
+        <PartsCabinet vehicles={items} canEdit={canManageAssets} />
+      )}
 
       {expiring.length > 0 && (
         <Panel title="Требуют поверки" note={`${expiring.length}`}>

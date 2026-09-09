@@ -18,7 +18,6 @@ import { useUsers } from '@/data/users';
 import CabinetBar from '@/components/desk/CabinetBar';
 import ChangePassword from '@/components/desk/ChangePassword';
 import useBackGuard from '@/hooks/use-back-guard';
-import VehicleForm from '@/components/desk/mechanic/VehicleForm';
 import { downloadWaybills } from '@/lib/waybillXls';
 import LogDialog from '@/components/desk/mechanic/LogDialog';
 import VehicleCard from '@/components/desk/mechanic/VehicleCard';
@@ -28,6 +27,9 @@ import DriverForm from '@/components/desk/mechanic/DriverForm';
 import RepairsCabinet from '@/components/desk/mechanic/RepairsCabinet';
 import VehicleDossier from '@/components/desk/mechanic/VehicleDossier';
 import DriverActivity from '@/components/desk/mechanic/DriverActivity';
+import PartsCabinet from '@/components/desk/mechanic/PartsCabinet';
+import CarCreateForm from '@/components/desk/mechanic/CarCreateForm';
+import WaybillsCabinet from '@/components/desk/waybill/WaybillsCabinet';
 import { useFleet } from '@/data/fleet';
 import {
   LogKind,
@@ -54,7 +56,7 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [logKind, setLogKind] = useState<LogKind | null>(null);
   const [driverOpen, setDriverOpen] = useState(false);
-  const [pane, setPane] = useState<'repairs' | 'dossier' | 'drivers' | null>(null);
+  const [pane, setPane] = useState<'repairs' | 'dossier' | 'drivers' | 'parts' | 'waybills' | null>(null);
   const [pickedLoc, setPickedLoc] = useState<string | null>(null);
   const { shifts, reload: reloadFleet } = useFleet();
 
@@ -109,24 +111,15 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
     setFormOpen(true);
   };
 
-  const submitForm = async (draft: VehicleDraft) => {
+  const submitForm = async (draft: VehicleDraft & Record<string, unknown>) => {
     try {
       if (editing) {
-        await update(editing.id, {
-          plate: draft.plate,
-          model: draft.model,
-          kind: draft.vehicleKind ?? editing.kind,
-          driver: draft.driver ?? '',
-          odometer: draft.odometer ?? 0,
-          fuelNorm: draft.fuelNorm ?? 0,
-          serviceAt: draft.serviceAt ?? '',
-          osagoTo: draft.osagoTo ?? '',
-          note: draft.note ?? '',
-        });
+        const { ...rest } = draft;
+        await update(editing.id, rest as Partial<Vehicle>);
         toast({ title: 'Данные техники обновлены' });
       } else {
         const item = await create({ ...draft, createdBy: profile.fio });
-        toast({ title: 'Техника добавлена', description: `${item.plate} · ${item.model}` });
+        toast({ title: 'Автомобиль создан', description: `${item.plate} · ${item.model}` });
       }
     } catch {
       toast({ title: 'Не удалось сохранить', variant: 'destructive' });
@@ -170,6 +163,8 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
     const meta = {
       repairs: { t: 'ТО и ремонты', i: 'Wrench' },
       dossier: { t: 'Досье техники', i: 'FolderOpen' },
+      parts: { t: 'Заявки на запчасти', i: 'PackageSearch' },
+      waybills: { t: 'Путевые листы', i: 'FileText' },
       drivers: { t: 'Кабинеты водителей', i: 'Users' },
     }[pane];
     return (
@@ -187,6 +182,8 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
           {pane === 'repairs' && <RepairsCabinet vehicles={items} />}
           {pane === 'dossier' && <VehicleDossier vehicles={items} />}
           {pane === 'drivers' && <DriverActivity vehicles={items} />}
+          {pane === 'parts' && <PartsCabinet vehicles={items} />}
+          {pane === 'waybills' && <WaybillsCabinet vehicles={items} />}
         </div>
       </div>
     );
@@ -248,7 +245,7 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
               className="flex items-center gap-1.5 rounded-sm bg-accent px-2.5 py-1 text-[0.78em] uppercase tracking-[0.08em] text-accent-foreground transition-colors hover:bg-accent/90"
             >
               <Icon name="Plus" size={14} />
-              Добавить технику
+              Создать автомобиль
             </button>
           </>
         }
@@ -356,6 +353,18 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
                   s: 'Ремонты, авансовые отчёты, акты и ведомости по каждой машине',
                 },
                 {
+                  k: 'waybills' as const,
+                  i: 'FileText',
+                  t: 'Путевые листы',
+                  s: 'Создание по бланку, свод и выгрузка в Excel',
+                },
+                {
+                  k: 'parts' as const,
+                  i: 'PackageSearch',
+                  t: 'Заявки на запчасти',
+                  s: 'Что просят водители — статусы и ответы',
+                },
+                {
                   k: 'drivers' as const,
                   i: 'Users',
                   t: 'Кабинеты водителей',
@@ -419,7 +428,7 @@ const MechanicCabinet = ({ onExit }: MechanicCabinetProps) => {
         onDone={reloadFleet}
       />
 
-      <VehicleForm
+      <CarCreateForm
         open={formOpen}
         onOpenChange={setFormOpen}
         initial={editing}
