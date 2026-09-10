@@ -8,17 +8,11 @@ import Index from "./pages/Index";
 import Privacy from "./pages/Privacy";
 import AppDownload from "./pages/AppDownload";
 import NotFound from "./pages/NotFound";
+import RustoreAssets from "./pages/RustoreAssets";
 import { useEffect } from "react";
 import { startAutoFlush } from "@/data/photoQueue";
 
 const queryClient = new QueryClient();
-
-const Redirect = ({ to }: { to: string }) => {
-  useEffect(() => {
-    window.location.replace(to);
-  }, [to]);
-  return null;
-};
 
 const App = () => {
   useEffect(() => startAutoFlush(), []);
@@ -33,10 +27,7 @@ const App = () => {
           <Route path="/" element={<Index />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/app" element={<AppDownload />} />
-          <Route
-            path="/rustore"
-            element={<Redirect to="/rustore/index.html" />}
-          />
+          <Route path="/rustore" element={<RustoreAssets />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
