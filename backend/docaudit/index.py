@@ -318,6 +318,34 @@ def handler(event: dict, context) -> dict:
             body = {}
     action = body.get('action') or params.get('action') or ''
 
+    if action == 'ping':
+        key = os.environ.get('CLOUDRU_API_KEY', '')
+        if not key:
+            return resp(200, {'ok': False, 'message': 'Ключ Cloud.ru не задан'})
+        started = time.time()
+        try:
+            r = requests.post(
+                'https://foundation-models.api.cloud.ru/v1/chat/completions',
+                json={
+                    'model': 'ai-sage/GigaChat3.5-432B-A28B',
+                    'max_tokens': 5,
+                    'messages': [{'role': 'user', 'content': 'привет'}],
+                },
+                headers={'Authorization': f'Bearer {key}'},
+                timeout=3.5,
+            )
+            return resp(
+                200,
+                {
+                    'ok': r.status_code == 200,
+                    'http': r.status_code,
+                    'sec': round(time.time() - started, 1),
+                    'body': r.text[:400],
+                },
+            )
+        except Exception as e:
+            return resp(200, {'ok': False, 'message': f'{type(e).__name__}: {str(e)[:250]}'})
+
     if action == 'providers':
         out = {'ocr': 'ключ Cloud.ru задан' if os.environ.get('CLOUDRU_API_KEY') else 'ключ Cloud.ru НЕ задан'}
         for name, fn in PROVIDERS:
