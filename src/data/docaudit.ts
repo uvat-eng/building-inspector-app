@@ -41,12 +41,13 @@ export interface DocReview {
   completeNote: string;
   engine: string;
   error: string;
+  ocrPages?: number;
   createdAt: string;
   checkedAt: string | null;
 }
 
 export const ENGINE_LABEL: Record<string, string> = {
-  gemini: 'Google Gemini',
+  cloudru: 'GigaChat 3.5 (Cloud.ru)',
   deepseek: 'DeepSeek',
   gigachat: 'GigaChat (Сбер)',
 };
@@ -115,6 +116,43 @@ export const uploadAuditFile = async (reviewId: string, file: File) => {
   });
   if (!res.ok) throw new Error(`Не удалось загрузить «${file.name}»`);
   return (await res.json()) as AuditFile & { chars: number };
+};
+
+export interface PageStep {
+  done: boolean;
+  page?: number;
+  file?: string;
+  method?: 'text' | 'ocr';
+  chars?: number;
+  donePages?: number;
+  totalPages?: number;
+}
+
+/** Читает одну страницу за вызов — так укладываемся в лимит времени функции. */
+export const readNextPage = async (reviewId: string) => {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'page', reviewId }),
+  });
+  if (!res.ok) throw new Error('Не удалось прочитать страницу');
+  return (await res.json()) as PageStep;
+};
+
+/** Прогоняет все страницы по очереди, сообщая о прогрессе. */
+export const readAllPages = async (
+  reviewId: string,
+  onStep: (s: PageStep) => void,
+  maxSteps = 400,
+) => {
+  let chars = 0;
+  for (let i = 0; i < maxSteps; i += 1) {
+    const step = await readNextPage(reviewId);
+    if (step.done) return { chars: step.chars ?? chars };
+    chars += step.chars ?? 0;
+    onStep(step);
+  }
+  throw new Error('Слишком много страниц — разбейте документацию на части');
 };
 
 export const analyzeReview = async (reviewId: string) => {

@@ -16,6 +16,7 @@ import {
   fmtDate,
   groupByObject,
   loadReview,
+  readAllPages,
   removeReview,
   uploadAuditFile,
   useReviews,
@@ -38,7 +39,8 @@ const TEXT = {
   executive: {
     bucketHint:
       'Загрузите исполнительную документацию — акты освидетельствования скрытых работ, ' +
-      'исполнительные схемы, паспорта и сертификаты, журналы работ.',
+      'исполнительные схемы, паспорта и сертификаты, журналы работ. ' +
+      'Можно сканы и фото с телефона: текст, подписи и печати распознаёт ИИ.',
     working: 'ИИ проверяет исполнительную документацию: соответствие проекту, нормам и комплектность',
   },
 };
@@ -91,18 +93,26 @@ const DocAuditCabinet = ({ kind, onBack }: Props) => {
         inspector: profile.fio || '',
       });
 
-      let chars = 0;
       for (let i = 0; i < files.length; i += 1) {
         setStage(`Загружаем файл ${i + 1} из ${files.length}: ${files[i].name}`);
-        const up = await uploadAuditFile(id, files[i]);
-        chars += up.chars ?? 0;
+        await uploadAuditFile(id, files[i]);
       }
+
+      setStage('Читаем документацию…');
+      const { chars } = await readAllPages(id, (s) => {
+        const total = s.totalPages || 0;
+        const done = s.donePages || 0;
+        setStage(
+          `${s.method === 'ocr' ? 'Распознаём скан' : 'Читаем'}: лист ${done} из ${total} · ${s.file ?? ''}`,
+        );
+      });
 
       if (chars < 200) {
         toast({
-          title: 'В файлах нет текста',
+          title: 'Не удалось прочитать документацию',
           description:
-            'Похоже, загружены сканы без текстового слоя. Нужен PDF с текстом или DOCX.',
+            'Проверьте качество сканов: текст должен быть различим. ' +
+            'Если фото сняты под сильным углом или размыты — переснимите.',
           variant: 'destructive',
         });
         reload();
@@ -150,7 +160,8 @@ const DocAuditCabinet = ({ kind, onBack }: Props) => {
             К загрузке
           </Button>
           <span className="text-[0.82em] text-muted-foreground">
-            {item.filesCount} файл(ов) · {item.pagesCount} стр. ·{' '}
+            {item.filesCount} файл(ов) · {item.pagesCount} стр.
+            {(item.ocrPages ?? 0) > 0 ? ` · распознано со сканов: ${item.ocrPages}` : ''} ·{' '}
             {ENGINE_LABEL[item.engine] || 'ИИ'}
           </span>
         </div>

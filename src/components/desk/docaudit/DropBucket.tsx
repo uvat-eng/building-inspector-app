@@ -90,7 +90,7 @@ const DropBucket = ({ hint, busy, onFiles }: Props) => {
       </button>
 
       <p className="mt-3 text-[0.78em] text-muted-foreground">
-        Или перетащите файлы сюда · PDF, DOCX, TXT
+        Или перетащите файлы сюда · PDF, DOCX, сканы и фото (JPG, PNG)
       </p>
 
       <input
@@ -98,7 +98,7 @@ const DropBucket = ({ hint, busy, onFiles }: Props) => {
         type="file"
         multiple
         hidden
-        accept=".pdf,.docx,.txt,.csv"
+        accept=".pdf,.docx,.txt,.csv,image/*"
         onChange={(e) => {
           take(e.target.files);
           e.target.value = '';

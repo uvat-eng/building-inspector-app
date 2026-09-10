@@ -13,6 +13,8 @@ import psycopg2.extras
 import requests
 import urllib3
 
+import ocr
+
 urllib3.disable_warnings()
 
 CORS = {
@@ -125,8 +127,12 @@ PROMPT_ID = """Ты — эксперт строительного контрол
 Объект: {obj}
 Документы: {files}
 
-ТЕКСТ ДОКУМЕНТАЦИИ:
+ТЕКСТ ДОКУМЕНТАЦИИ (распознан со сканов и фото, пометки: [от руки: ...], [печать: ...], [подпись]):
 {text}
+
+Учти: текст получен распознаванием сканов, поэтому отдельные символы могут быть искажены.
+Не считай замечанием опечатку распознавания — оценивай смысл и содержание документа.
+Отсутствие подписей, печатей и дат считай замечанием только если их явно нет в тексте.
 
 Проверь по трём направлениям и верни СТРОГО JSON без пояснений:
 1) соответствие требованиям проекта;
@@ -173,22 +179,23 @@ def giga_token(auth):
     return r.json()['access_token']
 
 
-def ask_gemini(prompt, budget):
-    key = os.environ.get('GEMINI_API_KEY', '')
+def ask_cloudru(prompt, budget):
+    key = os.environ.get('CLOUDRU_API_KEY', '')
     if not key:
         return None
     r = requests.post(
-        'https://generativelanguage.googleapis.com/v1beta/models/'
-        'gemini-2.0-flash:generateContent',
-        params={'key': key},
+        'https://foundation-models.api.cloud.ru/v1/chat/completions',
         json={
-            'contents': [{'parts': [{'text': prompt}]}],
-            'generationConfig': {'temperature': 0.1, 'maxOutputTokens': 8192},
+            'model': 'ai-sage/GigaChat3.5-432B-A28B',
+            'temperature': 0.1,
+            'max_tokens': 6000,
+            'messages': [{'role': 'user', 'content': prompt}],
         },
+        headers={'Authorization': f'Bearer {key}'},
         timeout=budget,
     )
     r.raise_for_status()
-    return parse_json(r.json()['candidates'][0]['content']['parts'][0]['text'])
+    return parse_json(r.json()['choices'][0]['message']['content'])
 
 
 def ask_deepseek(prompt, budget):
@@ -235,7 +242,7 @@ def ask_gigachat(prompt, budget):
     return parse_json(r.json()['choices'][0]['message']['content'])
 
 
-PROVIDERS = (('gemini', ask_gemini), ('deepseek', ask_deepseek), ('gigachat', ask_gigachat))
+PROVIDERS = (('cloudru', ask_cloudru), ('deepseek', ask_deepseek), ('gigachat', ask_gigachat))
 
 
 def run_ai(prompt, budget):
@@ -283,6 +290,7 @@ def to_review(r):
         'ctrlVerdict': r['ctrl_verdict'],
         'ctrlScore': r['ctrl_score'],
         'completeNote': r['complete_note'],
+        'ocrPages': r.get('ocr_pages', 0),
         'engine': r['engine'],
         'error': r['error'],
         'createdAt': r['created_at'],
@@ -311,7 +319,7 @@ def handler(event: dict, context) -> dict:
     action = body.get('action') or params.get('action') or ''
 
     if action == 'providers':
-        out = {}
+        out = {'ocr': 'ключ Cloud.ru задан' if os.environ.get('CLOUDRU_API_KEY') else 'ключ Cloud.ru НЕ задан'}
         for name, fn in PROVIDERS:
             started = time.time()
             try:
@@ -401,7 +409,7 @@ def handler(event: dict, context) -> dict:
                 ContentType=body.get('mime') or 'application/octet-stream',
             )
             url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
-            text, pages = extract_text(name, raw)
+            pages = ocr.page_count(raw, name)
             cur.execute(
                 'INSERT INTO doc_review_files (id, review_id, name, url, mime, size_kb, pages) '
                 f"VALUES ('{esc(fid)}', '{esc(rv)}', '{esc(name)}', '{esc(url)}', "
@@ -409,19 +417,76 @@ def handler(event: dict, context) -> dict:
             )
             cur.execute(
                 f"UPDATE doc_reviews SET files_count = files_count + 1, "
-                f'pages_count = pages_count + {pages} '
+                f"pages_count = pages_count + {pages}, stage = 'read' "
                 f"WHERE id = '{esc(rv)}'"
             )
             conn.commit()
             return resp(
                 200,
+                {'id': fid, 'name': name, 'url': url, 'pages': pages, 'sizeKb': len(raw) // 1024},
+            )
+
+        if method == 'POST' and action == 'page':
+            rv = body.get('reviewId', '')
+            cur.execute(
+                'SELECT f.* FROM doc_review_files f '
+                f"WHERE f.review_id = '{esc(rv)}' AND f.done_pages < f.pages "
+                'ORDER BY f.created_at LIMIT 1'
+            )
+            f = cur.fetchone()
+            if not f:
+                cur.execute(
+                    f"SELECT COALESCE(SUM(LENGTH(text)), 0) AS chars FROM doc_review_pages "
+                    f"WHERE review_id = '{esc(rv)}'"
+                )
+                chars = cur.fetchone()['chars']
+                cur.execute(
+                    f"UPDATE doc_reviews SET stage = 'ready' WHERE id = '{esc(rv)}'"
+                )
+                conn.commit()
+                return resp(200, {'done': True, 'chars': chars})
+
+            idx = f['done_pages']
+            s3key = f['url'].split('/bucket/', 1)[-1]
+            raw = s3c().get_object(Bucket='files', Key=s3key)['Body'].read()
+            try:
+                text, how = ocr.read_page(raw, f['name'], idx, budget=110)
+            except Exception as e:
+                text, how = '', 'text'
+                cur.execute(
+                    f"UPDATE doc_reviews SET error = '{esc(str(e)[:500])}' WHERE id = '{esc(rv)}'"
+                )
+
+            cur.execute(
+                'INSERT INTO doc_review_pages (id, review_id, file_id, page_no, method, text) '
+                f"VALUES ('{esc(rid(18))}', '{esc(rv)}', '{esc(f['id'])}', {idx + 1}, "
+                f"'{esc(how)}', '{esc(text[:30000])}')"
+            )
+            cur.execute(
+                f"UPDATE doc_review_files SET done_pages = done_pages + 1, "
+                f"ocr_pages = ocr_pages + {1 if how == 'ocr' else 0} "
+                f"WHERE id = '{esc(f['id'])}'"
+            )
+            cur.execute(
+                f"UPDATE doc_reviews SET done_pages = done_pages + 1, "
+                f"ocr_pages = ocr_pages + {1 if how == 'ocr' else 0} "
+                f"WHERE id = '{esc(rv)}'"
+            )
+            conn.commit()
+            cur.execute(
+                f"SELECT done_pages, pages_count FROM doc_reviews WHERE id = '{esc(rv)}'"
+            )
+            st = cur.fetchone()
+            return resp(
+                200,
                 {
-                    'id': fid,
-                    'name': name,
-                    'url': url,
-                    'pages': pages,
-                    'sizeKb': len(raw) // 1024,
+                    'done': False,
+                    'page': idx + 1,
+                    'file': f['name'],
+                    'method': how,
                     'chars': len(text),
+                    'donePages': st['done_pages'],
+                    'totalPages': st['pages_count'],
                 },
             )
 
@@ -433,30 +498,27 @@ def handler(event: dict, context) -> dict:
                 return resp(404, {'error': 'not_found'})
 
             cur.execute(
-                f"SELECT name, url FROM doc_review_files WHERE review_id = '{esc(rv)}' "
+                f"SELECT name FROM doc_review_files WHERE review_id = '{esc(rv)}' "
                 'ORDER BY created_at'
             )
             files = cur.fetchall()
             if not files:
                 return resp(400, {'error': 'no_files'})
 
-            s3 = s3c()
-            chunks = []
-            for f in files:
-                key = f['url'].split('/bucket/', 1)[-1]
-                try:
-                    raw = s3.get_object(Bucket='files', Key=key)['Body'].read()
-                except Exception:
-                    continue
-                txt, _ = extract_text(f['name'], raw)
-                if txt.strip():
-                    chunks.append(f"=== {f['name']} ===\n{txt[:14000]}")
+            cur.execute(
+                'SELECT p.page_no, p.text, f.name FROM doc_review_pages p '
+                'JOIN doc_review_files f ON f.id = p.file_id '
+                f"WHERE p.review_id = '{esc(rv)}' AND LENGTH(p.text) > 40 "
+                'ORDER BY f.created_at, p.page_no'
+            )
+            rows = cur.fetchall()
+            chunks = [f"=== {r['name']}, лист {r['page_no']} ===\n{r['text'][:9000]}" for r in rows]
 
-            joined = '\n\n'.join(chunks)[:48000]
+            joined = '\n\n'.join(chunks)[:60000]
             if not joined.strip():
                 cur.execute(
                     "UPDATE doc_reviews SET status = 'error', error = "
-                    "'Не удалось извлечь текст: возможно, это сканы без текстового слоя' "
+                    "'Не удалось прочитать документацию' "
                     f"WHERE id = '{esc(rv)}'"
                 )
                 conn.commit()
