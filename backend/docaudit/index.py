@@ -310,6 +310,17 @@ def handler(event: dict, context) -> dict:
             body = {}
     action = body.get('action') or params.get('action') or ''
 
+    if action == 'providers':
+        out = {}
+        for name, fn in PROVIDERS:
+            started = time.time()
+            try:
+                r = fn('Ответь строго JSON: {"ok":1}', 20)
+                out[name] = 'ключ не задан' if r is None else f'работает за {time.time() - started:.1f}с'
+            except Exception as e:
+                out[name] = f'{type(e).__name__}: {str(e)[:160]}'
+        return resp(200, out)
+
     conn = db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
