@@ -13,6 +13,13 @@ import { startAutoFlush } from "@/data/photoQueue";
 
 const queryClient = new QueryClient();
 
+const Redirect = ({ to }: { to: string }) => {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+  return null;
+};
+
 const App = () => {
   useEffect(() => startAutoFlush(), []);
 
@@ -26,6 +33,10 @@ const App = () => {
           <Route path="/" element={<Index />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/app" element={<AppDownload />} />
+          <Route
+            path="/rustore"
+            element={<Redirect to="/rustore/index.html" />}
+          />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
