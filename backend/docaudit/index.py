@@ -186,7 +186,7 @@ def ask_cloudru(prompt, budget):
     r = requests.post(
         'https://foundation-models.api.cloud.ru/v1/chat/completions',
         json={
-            'model': 'ai-sage/GigaChat3.5-432B-A28B',
+            'model': 'GigaChat/GigaChat-2-Max',
             'temperature': 0.1,
             'max_tokens': 6000,
             'messages': [{'role': 'user', 'content': prompt}],
@@ -318,6 +318,53 @@ def handler(event: dict, context) -> dict:
             body = {}
     action = body.get('action') or params.get('action') or ''
 
+    if action == 'ocrtest':
+        import ocr as _o
+        c2 = db(); k2 = c2.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        k2.execute(
+            "SELECT url FROM doc_review_files WHERE review_id = '"
+            + esc(body.get('reviewId', '')) + "' ORDER BY created_at LIMIT 1"
+        )
+        row = k2.fetchone(); k2.close(); c2.close()
+        if not row:
+            return resp(200, {'error': 'нет файлов'})
+        raw = s3c().get_object(Bucket='files', Key=row['url'].split('/bucket/', 1)[-1])['Body'].read()
+        started = time.time()
+        try:
+            txt = _o.ocr_image(_o.prep_image(raw), 'image/jpeg', budget=int(body.get('budget', 25)))
+            return resp(200, {'sec': round(time.time() - started, 1), 'chars': len(txt), 'text': txt[:1200]})
+        except Exception as e:
+            return resp(200, {'sec': round(time.time() - started, 1), 'err': str(e)[:300]})
+
+    if action == 'ping2':
+        key = os.environ.get('CLOUDRU_API_KEY', '')
+        out = {'keyLen': len(key), 'keyHead': key[:6] if key else ''}
+        try:
+            r = requests.get(
+                'https://foundation-models.api.cloud.ru/v1/models',
+                headers={'Authorization': f'Bearer {key}'},
+                timeout=3,
+            )
+            out['models'] = r.status_code
+        except Exception as e:
+            out['models'] = str(e)[:120]
+        for m in (body.get('models') or ['openai/gpt-4o-mini']):
+            try:
+                r = requests.post(
+                    'https://foundation-models.api.cloud.ru/v1/chat/completions',
+                    json={
+                        'model': m,
+                        'max_tokens': 5,
+                        'messages': [{'role': 'user', 'content': 'hi'}],
+                    },
+                    headers={'Authorization': f'Bearer {key}'},
+                    timeout=3.5,
+                )
+                out[m] = f'{r.status_code} {r.text[:110]}'
+            except Exception as e:
+                out[m] = str(e)[:110]
+        return resp(200, out)
+
     if action == 'ping':
         key = os.environ.get('CLOUDRU_API_KEY', '')
         if not key:
@@ -327,7 +374,7 @@ def handler(event: dict, context) -> dict:
             r = requests.post(
                 'https://foundation-models.api.cloud.ru/v1/chat/completions',
                 json={
-                    'model': 'ai-sage/GigaChat3.5-432B-A28B',
+                    'model': 'GigaChat/GigaChat-2-Max',
                     'max_tokens': 5,
                     'messages': [{'role': 'user', 'content': 'привет'}],
                 },
