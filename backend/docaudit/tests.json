@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Список проверок проектной документации",
+      "method": "GET",
+      "path": "/?kind=project",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Список проверок исполнительной документации",
+      "method": "GET",
+      "path": "/?kind=executive",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Неизвестное действие отклоняется",
+      "method": "POST",
+      "path": "/",
+      "body": { "action": "nope" },
+      "expectedStatus": 400
+    },
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

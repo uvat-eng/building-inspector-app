@@ -39,6 +39,7 @@ import PhotosSection from '@/components/desk/sections/PhotosSection';
 import DocControlCabinet from '@/components/desk/docs/DocControlCabinet';
 import ObjectDocsCabinet from '@/components/desk/objectdocs/ObjectDocsCabinet';
 import HandbookCabinet from '@/components/desk/handbook/HandbookCabinet';
+import DocAuditCabinet from '@/components/desk/docaudit/DocAuditCabinet';
 
 type View =
   | 'home'
@@ -51,6 +52,8 @@ type View =
   | 'journal'
   | 'photos'
   | 'doccontrol'
+  | 'auditpd'
+  | 'auditid'
   | 'handbook'
   | 'tables'
   | 'geodesy'
@@ -82,6 +85,8 @@ const VIEW_TITLE: Record<View, string> = {
   journal: 'Индивидуальный журнал ИСК',
   photos: 'Фотоотчёты',
   doccontrol: 'Отчёт по документации',
+  auditpd: 'Входной контроль проектной документации',
+  auditid: 'Проверка исполнительной документации',
   handbook: 'Справочник типовых нарушений',
   tables: 'Отчёты таблицы',
   geodesy: 'Акты дубля геодезии',
@@ -433,6 +438,44 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
 
           <button
             type="button"
+            onClick={() => setView('auditpd')}
+            className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+              <Icon name="ScanSearch" size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                Входной контроль проектной документации
+              </span>
+              <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                Проверка ИИ на соответствие нормам и контролепригодность · два акта
+              </span>
+            </span>
+            <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setView('auditid')}
+            className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-sm bg-accent text-accent-foreground">
+              <Icon name="FileSearch" size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-head text-[1em] uppercase tracking-[0.04em]">
+                Проверка исполнительной документации
+              </span>
+              <span className="block truncate text-[0.8em] text-muted-foreground group-hover:text-background/70">
+                Соответствие проекту, нормам и комплектность · акт с замечаниями
+              </span>
+            </span>
+            <Icon name="ArrowRight" size={17} className="flex-none text-accent" />
+          </button>
+
+          <button
+            type="button"
             onClick={() => setView('handbook')}
             className="group flex items-center gap-3 rounded-sm border border-border border-t-2 border-t-accent bg-card px-4 py-4 text-left transition-colors hover:bg-foreground hover:text-background"
           >
@@ -647,6 +690,14 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       {view === 'doccontrol' && <DocControlCabinet onBack={() => setView('home')} />}
 
       {view === 'handbook' && <HandbookCabinet onBack={() => setView('home')} />}
+
+      {view === 'auditpd' && (
+        <DocAuditCabinet kind="project" onBack={() => setView('home')} />
+      )}
+
+      {view === 'auditid' && (
+        <DocAuditCabinet kind="executive" onBack={() => setView('home')} />
+      )}
 
       {view === 'tables' && (
         <ObjectDocsCabinet section="tables" onBack={() => setView('home')} />
