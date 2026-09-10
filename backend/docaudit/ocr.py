@@ -34,7 +34,7 @@ def ocr_image(raw: bytes, mime: str = 'image/jpeg', budget: int = 120) -> str:
         mime = 'image/jpeg'
 
     last = ''
-    for model in (OCR_MODEL, VL_MODEL):
+    for model in (VL_MODEL, OCR_MODEL):
         try:
             r = requests.post(
                 CLOUD_URL,

@@ -318,6 +318,31 @@ def handler(event: dict, context) -> dict:
             body = {}
     action = body.get('action') or params.get('action') or ''
 
+    if action == 'visiontest':
+        import base64 as _b
+        from PIL import Image, ImageDraw
+        im = Image.new('RGB', (600, 200), (255, 255, 255))
+        ImageDraw.Draw(im).text((40, 80), body.get('word', 'ARBUZ-7315'), fill=(0, 0, 0))
+        buf = io.BytesIO(); im.save(buf, 'PNG')
+        b64 = _b.b64encode(buf.getvalue()).decode()
+        out = {}
+        for m in (body.get('models') or ['qwen/qwen3-vl-30b-a3b-instruct']):
+            try:
+                r = requests.post(
+                    'https://foundation-models.api.cloud.ru/v1/chat/completions',
+                    json={'model': m, 'max_tokens': 40, 'temperature': 0, 'messages': [{
+                        'role': 'user', 'content': [
+                            {'type': 'text', 'text': 'Какой текст на картинке? Ответь только текстом.'},
+                            {'type': 'image_url', 'image_url': {'url': f'data:image/png;base64,{b64}'}}]}]},
+                    headers={'Authorization': f"Bearer {os.environ.get('CLOUDRU_API_KEY','')}"},
+                    timeout=60,
+                )
+                j = r.json()
+                out[m] = j['choices'][0]['message']['content'][:90] if r.status_code == 200 else f'{r.status_code} {r.text[:90]}'
+            except Exception as e:
+                out[m] = str(e)[:90]
+        return resp(200, out)
+
     if action == 'ocrtest':
         import ocr as _o
         c2 = db(); k2 = c2.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
