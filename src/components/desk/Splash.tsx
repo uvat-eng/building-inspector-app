@@ -57,8 +57,8 @@ const Splash = ({ onDone }: SplashProps) => {
     if (leaving) return;
     setLeaving(true);
     try {
-      const a = new Audio('/whoosh.mp3');
-      a.volume = 0.5;
+      const a = new Audio('/startup.mp3');
+      a.volume = 0.45;
       a.play().catch(() => undefined);
     } catch {
       /* автовоспроизведение может быть недоступно — не критично */
