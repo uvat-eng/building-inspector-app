@@ -360,6 +360,53 @@ def handler(event: dict, context) -> dict:
     conn = db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
+        if action == 'docx':
+            rv = params.get('id', '') or body.get('reviewId', '')
+            cur.execute(f"SELECT * FROM doc_reviews WHERE id = '{esc(rv)}'")
+            row = cur.fetchone()
+            if not row:
+                return resp(404, {'error': 'not_found'})
+            review = to_review(row)
+
+            cur.execute(
+                f"SELECT * FROM doc_review_notes WHERE review_id = '{esc(rv)}' "
+                'ORDER BY scope, num'
+            )
+            notes = [
+                {
+                    'scope': n['scope'],
+                    'num': n['num'],
+                    'severity': n['severity'],
+                    'section': n['section'],
+                    'text': n['text'],
+                    'norm': n['norm_ref'],
+                    'quote': n['norm_quote'],
+                    'demand': n['demand'],
+                }
+                for n in cur.fetchall()
+            ]
+            cur.execute(
+                f"SELECT name, pages FROM doc_review_files WHERE review_id = '{esc(rv)}' "
+                'ORDER BY created_at'
+            )
+            files = [{'name': f['name'], 'pages': f['pages']} for f in cur.fetchall()]
+
+            import docx_report
+
+            blob = docx_report.build_docx(review, notes, files, row['kind'] == KIND_PD)
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': (
+                        'application/vnd.openxmlformats-officedocument'
+                        '.wordprocessingml.document'
+                    ),
+                    **CORS,
+                },
+                'body': base64.b64encode(blob).decode(),
+                'isBase64Encoded': True,
+            }
+
         if method == 'GET' and action == 'one':
             rv = params.get('id', '')
             cur.execute(f"SELECT * FROM doc_reviews WHERE id = '{esc(rv)}'")

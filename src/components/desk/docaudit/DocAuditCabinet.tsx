@@ -12,6 +12,7 @@ import {
   AuditNote,
   createReview,
   DocReview,
+  downloadReviewDocx,
   ENGINE_LABEL,
   fmtDate,
   groupByObject,
@@ -140,6 +141,27 @@ const DocAuditCabinet = ({ kind, onBack }: Props) => {
     }
   };
 
+  const [saving, setSaving] = useState(false);
+
+  const saveDocx = async (review: DocReview) => {
+    setSaving(true);
+    try {
+      await downloadReviewDocx(review);
+      toast({
+        title: 'Акт выгружен в Word',
+        description: 'Файл сохранён в загрузки — можно отправлять подрядчику.',
+      });
+    } catch (e) {
+      toast({
+        title: 'Не удалось выгрузить акт',
+        description: e instanceof Error ? e.message : 'Попробуйте ещё раз',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const drop = async (id: string) => {
     await removeReview(id);
     if (open?.item.id === id) setOpen(null);
@@ -158,6 +180,15 @@ const DocAuditCabinet = ({ kind, onBack }: Props) => {
           <Button variant="outline" size="sm" onClick={() => setOpen(null)}>
             <Icon name="ArrowLeft" size={15} />
             К загрузке
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => saveDocx(item)}
+            disabled={saving}
+            className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
+          >
+            <Icon name={saving ? 'Loader2' : 'FileDown'} size={15} className={saving ? 'animate-spin' : ''} />
+            {saving ? 'Готовим…' : 'Скачать в Word'}
           </Button>
           <span className="text-[0.82em] text-muted-foreground">
             {item.filesCount} файл(ов) · {item.pagesCount} стр.
@@ -308,6 +339,17 @@ const DocAuditCabinet = ({ kind, onBack }: Props) => {
                           {r.status === 'error' ? ` · ${r.error.slice(0, 60)}` : ''}
                         </span>
                       </button>
+                      {r.status === 'done' && (
+                        <button
+                          type="button"
+                          onClick={() => saveDocx(r)}
+                          disabled={saving}
+                          className="flex-none rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+                          title="Скачать акт в Word"
+                        >
+                          <Icon name="FileDown" size={14} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => drop(r.id)}

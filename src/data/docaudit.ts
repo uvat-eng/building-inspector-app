@@ -180,6 +180,34 @@ export const analyzeReview = async (reviewId: string) => {
   return data;
 };
 
+/** Скачивает акт проверки в формате Word. */
+export const downloadReviewDocx = async (review: DocReview) => {
+  const res = await fetch(`${API}?action=docx&id=${encodeURIComponent(review.id)}`);
+  if (!res.ok) throw new Error('Не удалось сформировать документ');
+
+  const blob = await res.blob();
+  if (blob.size < 1000) throw new Error('Не удалось сформировать документ');
+
+  const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, '-').trim();
+  const name = [
+    'Акт проверки',
+    safe(review.objectName || ''),
+    safe(review.title || ''),
+  ]
+    .filter(Boolean)
+    .join(' — ')
+    .slice(0, 120);
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 export const removeReview = async (id: string) => {
   await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
 };
