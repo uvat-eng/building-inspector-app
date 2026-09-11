@@ -1,4 +1,5 @@
 import Icon from '@/components/ui/icon';
+import SoundToggle from './SoundToggle';
 
 interface DeskHeaderProps {
   onLogin: () => void;
@@ -40,6 +41,7 @@ const DeskHeader = ({ onLogin, onMenu }: DeskHeaderProps) => (
       <span className="hidden text-[0.85em] uppercase tracking-[0.1em] text-muted-foreground md:inline">
         {DATE}
       </span>
+      <SoundToggle />
       <button
         type="button"
         onClick={onLogin}

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
@@ -7,9 +8,19 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
+import { playSfx, sfxForToast } from "@/lib/sfx"
 
 export function Toaster() {
   const { toasts } = useToast()
+  const heard = useRef<string | null>(null)
+
+  // Каждое новое уведомление озвучиваем — звук подбирается по его смыслу.
+  useEffect(() => {
+    const top = toasts[0]
+    if (!top || top.id === heard.current) return
+    heard.current = top.id
+    playSfx(sfxForToast(String(top.title ?? ""), top.variant))
+  }, [toasts])
 
   return (
     <ToastProvider>
