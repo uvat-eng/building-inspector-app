@@ -58,7 +58,7 @@ const Splash = ({ onDone }: SplashProps) => {
     setLeaving(true);
     try {
       const a = new Audio('/startup.mp3');
-      a.volume = 0.45;
+      a.volume = 0.5;
       a.play().catch(() => undefined);
     } catch {
       /* автовоспроизведение может быть недоступно — не критично */
