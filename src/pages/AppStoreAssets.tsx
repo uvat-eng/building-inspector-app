@@ -140,7 +140,7 @@ const AppStoreAssets = () => (
               className="overflow-hidden rounded-xl border border-slate-200 bg-white"
             >
               <img
-                src={`/appstore/${s.file}`}
+                src={`/ios-screens/${s.file}`}
                 alt={s.title}
                 className="w-full border-b border-slate-100"
               />
@@ -149,7 +149,7 @@ const AppStoreAssets = () => (
                   {s.title}
                 </div>
                 <a
-                  href={`/appstore/${s.file}`}
+                  href={`/ios-screens/${s.file}`}
                   download
                   className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
