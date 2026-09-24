@@ -5,8 +5,12 @@ import Tag from '@/components/desk/Tag';
 import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import { useObjects } from '@/data/store';
-import { useAllInspections } from '@/data/inspections';
-import { useOrders } from '@/data/orders';
+import { useAllInspections, updateInspection, Inspection } from '@/data/inspections';
+import { useOrders, Order } from '@/data/orders';
+import ActEditor from '@/components/desk/inspection/ActEditor';
+import OrderQuickView from '@/components/desk/inspection/OrderQuickView';
+import { orderPayload } from '@/lib/makeOrder';
+import { useToast } from '@/hooks/use-toast';
 import { useAllFolders, monthLabel } from '@/data/folders';
 import { useAllSignedDocs, SECTION_META } from '@/data/signed';
 import { useAllDocuments, SECTION_LABEL, fmtSize } from '@/data/documents';
@@ -32,6 +36,8 @@ interface DocItem {
   tone: TagTone;
   url?: string;
   date: string;
+  act?: Inspection;
+  order?: Order;
 }
 
 const fmt = (iso: string) => {
@@ -40,11 +46,14 @@ const fmt = (iso: string) => {
 };
 
 const DocumentsSection = () => {
+  const { toast } = useToast();
   const [kind, setKind] = useState<Kind>('all');
+  const [openAct, setOpenAct] = useState<Inspection | null>(null);
+  const [openOrder, setOpenOrder] = useState<Order | null>(null);
 
   const { list: objects } = useObjects();
   const { items: inspections, loading: l1 } = useAllInspections();
-  const { items: orders, loading: l2 } = useOrders();
+  const { items: orders, loading: l2, create: createOrder } = useOrders();
   const { items: folders, loading: l3 } = useAllFolders('photoreport');
   const { items: signed, loading: l4 } = useAllSignedDocs();
   const { items: projectDocs, loading: l5 } = useAllDocuments();
@@ -62,6 +71,7 @@ const DocumentsSection = () => {
       tone: i.status === 'done' ? 'ok' : 'wait',
       url: i.actUrl,
       date: i.createdAt,
+      act: i,
     }));
 
     const ords: DocItem[] = orders.map((o) => ({
@@ -75,6 +85,7 @@ const DocumentsSection = () => {
       tone: o.status === 'done' ? 'ok' : 'hot',
       url: o.fileUrl,
       date: o.createdAt,
+      order: o,
     }));
 
     const photos: DocItem[] = folders.map((f) => ({
@@ -128,6 +139,40 @@ const DocumentsSection = () => {
     return map;
   }, [all]);
 
+  const makeOrder = async (insp: Inspection) => {
+    try {
+      const { data } = await orderPayload(
+        insp,
+        objTitle(insp.objectId),
+        insp.inspector || '',
+        '',
+        objects.find((o) => o.id === insp.objectId) ?? null,
+      );
+      const order = await createOrder(data);
+      setOpenAct(null);
+      setOpenOrder(order);
+      toast({ title: `Предписание № ${order.number} создано`, description: 'Открываем' });
+    } catch {
+      toast({ title: 'Не удалось оформить предписание', variant: 'destructive' });
+    }
+  };
+
+  if (openAct) {
+    return (
+      <ActEditor
+        inspection={openAct}
+        objectTitle={objTitle(openAct.objectId)}
+        onBack={() => setOpenAct(null)}
+        onFinish={(i) => updateInspection(i.id, { status: 'done' })}
+        onOrder={(i) => makeOrder(i)}
+      />
+    );
+  }
+
+  if (openOrder) {
+    return <OrderQuickView order={openOrder} onBack={() => setOpenOrder(null)} />;
+  }
+
   return (
     <div className="grid min-h-0 flex-1 gap-3.5 lg:grid-cols-[1.4fr_1fr]">
       <Panel
@@ -170,7 +215,15 @@ const DocumentsSection = () => {
               key={d.id}
               title={d.title}
               sub={`${fmt(d.date)} · ${d.sub}`}
-              onClick={d.url ? () => window.open(d.url, '_blank') : undefined}
+              onClick={
+                d.act
+                  ? () => setOpenAct(d.act ?? null)
+                  : d.order
+                    ? () => setOpenOrder(d.order ?? null)
+                    : d.url
+                      ? () => window.open(d.url, '_blank')
+                      : undefined
+              }
               right={<Tag tone={d.tone}>{d.tag}</Tag>}
             />
           ))
