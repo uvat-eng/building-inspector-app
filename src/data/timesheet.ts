@@ -113,10 +113,26 @@ const migrate = (): Timesheet => {
   }
 };
 
-const read = (): Timesheet => {
+/** Табель хранится отдельно под каждого сотрудника — чужие смены не смешиваются. */
+const sheetKey = (userId?: string | null) => {
+  const id = userId ?? localStorage.getItem('gsi-session-v1');
+  return id ? `${KEY}-${id}` : KEY;
+};
+
+const read = (userId?: string | null): Timesheet => {
   try {
-    const raw = localStorage.getItem(KEY);
+    const k = sheetKey(userId);
+    const raw = localStorage.getItem(k);
     if (raw) return JSON.parse(raw) as Timesheet;
+    // Первый вход после обновления: забираем общий табель в личный ящик.
+    if (k !== KEY) {
+      const shared = localStorage.getItem(KEY);
+      if (shared) {
+        localStorage.setItem(k, shared);
+        localStorage.removeItem(KEY);
+        return JSON.parse(shared) as Timesheet;
+      }
+    }
     return migrate();
   } catch {
     return {};
@@ -145,8 +161,8 @@ export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 const API = 'https://functions.poehali.dev/02136fbd-3016-43a0-8cb2-91ae5a7afa63';
 
-const writeLocal = (sheet: Timesheet) => {
-  localStorage.setItem(KEY, JSON.stringify(sheet));
+const writeLocal = (sheet: Timesheet, userId?: string | null) => {
+  localStorage.setItem(sheetKey(userId), JSON.stringify(sheet));
   window.dispatchEvent(new Event(EVENT));
 };
 
@@ -165,7 +181,7 @@ const pushDay = (userId: string, day: string, entries: TimeEntry[]) =>
   });
 
 export const useTimesheet = () => {
-  const [sheet, setSheet] = useState<Timesheet>(read);
+  const [sheet, setSheet] = useState<Timesheet>(() => read());
   const [loading, setLoading] = useState(false);
   const userId = useSyncExternalStore(
     (cb) => {
@@ -180,26 +196,28 @@ export const useTimesheet = () => {
   );
 
   useEffect(() => {
-    const sync = () => setSheet(read());
+    const sync = () => setSheet(read(userId));
     window.addEventListener(EVENT, sync);
     window.addEventListener('storage', sync);
     return () => {
       window.removeEventListener(EVENT, sync);
       window.removeEventListener('storage', sync);
     };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
+    // Сменился сотрудник — сразу показываем его личный табель.
+    setSheet(read(userId));
     if (!userId) return;
     let alive = true;
     setLoading(true);
     fetchSheet(userId)
       .then(async (server) => {
         if (!alive) return;
-        const local = read();
+        const local = read(userId);
         const merged: Timesheet = { ...local, ...server };
         const pending = Object.entries(local).filter(([k]) => !server[k]);
-        writeLocal(merged);
+        writeLocal(merged, userId);
         setSheet(merged);
         await Promise.all(pending.map(([k, v]) => pushDay(userId, k, v)));
       })
@@ -212,10 +230,10 @@ export const useTimesheet = () => {
 
   const setDay = useCallback(
     (key: string, list: TimeEntry[] | null) => {
-      const next = read();
+      const next = read(userId);
       if (list && list.length) next[key] = list;
       else delete next[key];
-      writeLocal(next);
+      writeLocal(next, userId);
       if (userId) pushDay(userId, key, list ?? []).catch(() => undefined);
     },
     [userId],

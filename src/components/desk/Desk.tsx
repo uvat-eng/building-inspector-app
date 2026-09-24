@@ -43,6 +43,7 @@ import { useUsers, setSession } from '@/data/users';
 import { useToast } from '@/hooks/use-toast';
 import useBackGuard from '@/hooks/use-back-guard';
 import { useImpersonation, dropImpersonation } from '@/data/impersonate';
+import { flushQueue, usePhotoQueue } from '@/data/photoQueue';
 import CabinetPicker from '@/components/desk/director/CabinetPicker';
 
 const SECTION_KEY = 'gsi-section-v1';
@@ -63,6 +64,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const [loginOpen, setLoginOpen] = useState(false);
   const [cabinetRole, setCabinetRole] = useState<Role | null>(null);
   const [logoutAsk, setLogoutAsk] = useState(false);
+  const { pending: pendingPhotos } = usePhotoQueue();
   const { profile, save, isAdmin, viewingAs } = useProfile();
   const { impersonation, stop: stopImpersonate } = useImpersonation();
   const { current, reload: reloadUsers } = useUsers();
@@ -89,12 +91,43 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     select(target);
   };
 
-  const logout = () => {
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const logout = async () => {
+    setLoggingOut(true);
+    // Сначала дошлём всё, что не успело уйти на сервер, — иначе снимки пропадут.
+    let left = 0;
+    try {
+      const res = await flushQueue(true);
+      left = res.left;
+    } catch {
+      left = 1;
+    }
+
+    if (left > 0) {
+      setLoggingOut(false);
+      toast({
+        title: 'Есть неотправленные фотографии',
+        description: `Осталось отправить: ${left}. Подключитесь к сети и повторите — иначе снимки останутся только на этом телефоне.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     dropImpersonation();
     setSession(null);
     clearProfile();
     localStorage.removeItem(SECTION_KEY);
     localStorage.removeItem(SCOPE_ENTERED);
+    // Кеши — копии серверных данных. Чистим, чтобы следующий сотрудник
+    // не увидел чужое; при входе они загрузятся заново.
+    [
+      'gsi-inspections-v1',
+      'gsi-docs-cache-v1',
+      'gsi-locations-cache-v1',
+      'gsi-fields-cache-v1',
+    ].forEach((k) => localStorage.removeItem(k));
+    setLoggingOut(false);
     setLogoutAsk(false);
     leaveOk.current = true;
     setObjectId(null);
@@ -102,7 +135,10 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     setCabinetRole(null);
     setHistory([]);
     setSection('objects');
-    toast({ title: 'Вы вышли из учётной записи' });
+    toast({
+      title: 'Вы вышли из учётной записи',
+      description: 'Все рабочие данные сохранены на сервере',
+    });
     onLeaveModule();
   };
 
@@ -367,6 +403,28 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
               Для продолжения работы потребуется снова ввести логин и пароль.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="flex gap-2.5 rounded-sm border border-border bg-secondary/40 p-3 text-[0.82em]">
+            <Icon
+              name={pendingPhotos > 0 ? 'CloudUpload' : 'ShieldCheck'}
+              size={17}
+              className={pendingPhotos > 0 ? 'mt-0.5 flex-none text-warning' : 'mt-0.5 flex-none text-accent'}
+            />
+            <span className="text-muted-foreground">
+              {pendingPhotos > 0 ? (
+                <>
+                  Не отправлено фотографий: <b className="text-foreground">{pendingPhotos}</b>. При
+                  выходе они будут отправлены на сервер — нужна связь.
+                </>
+              ) : (
+                <>
+                  Акты, замечания, предписания, табель и фотографии хранятся на сервере в вашей
+                  учётной записи. После повторного входа всё будет на месте.
+                </>
+              )}
+            </span>
+          </div>
+
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               variant="outline"
@@ -377,10 +435,15 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
             </Button>
             <Button
               onClick={logout}
+              disabled={loggingOut}
               className="flex-1 gap-2 rounded-sm bg-destructive font-head uppercase tracking-[0.06em] text-destructive-foreground hover:bg-destructive/90"
             >
-              <Icon name="LogOut" size={16} />
-              Выйти
+              <Icon
+                name={loggingOut ? 'Loader2' : 'LogOut'}
+                size={16}
+                className={loggingOut ? 'animate-spin' : ''}
+              />
+              {loggingOut ? 'Сохраняем…' : 'Выйти'}
             </Button>
           </div>
         </DialogContent>
