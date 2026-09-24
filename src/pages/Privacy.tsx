@@ -4,7 +4,7 @@ const Privacy = () => (
       Политика конфиденциальности
     </h1>
     <p className="mt-2 text-[0.82em] uppercase tracking-[0.12em] text-muted-foreground">
-      ООО «Глобал-Стройинжиниринг»
+      ООО «Глобал-Стройинжиниринг» · редакция от 24 сентября 2026 года
     </p>
 
     <div className="mt-6 space-y-4 text-muted-foreground">
@@ -65,6 +65,28 @@ const Privacy = () => (
         <p className="mt-1.5">
           Сотрудник вправе запросить сведения об обработке своих персональных
           данных, их уточнение или удаление, обратившись к работодателю.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="font-head text-[1.05em] uppercase tracking-[0.02em] text-foreground">
+          6. Удаление учётной записи
+        </h2>
+        <p className="mt-1.5">
+          Учётные записи создаёт и удаляет администратор организации. Чтобы
+          удалить свою запись и связанные с ней данные, направьте запрос на
+          адрес uskov_an@mail.ru или позвоните по телефону 8 3452 90-12-44.
+          Запрос обрабатывается в течение 30 дней.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="font-head text-[1.05em] uppercase tracking-[0.02em] text-foreground">
+          7. Контакты
+        </h2>
+        <p className="mt-1.5">
+          ООО «Глобал-Стройинжиниринг», электронная почта uskov_an@mail.ru,
+          телефон 8 3452 90-12-44.
         </p>
       </div>
     </div>
