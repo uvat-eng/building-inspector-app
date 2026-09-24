@@ -73,63 +73,16 @@ jobs:
           sips -s format png -z 240 240  /tmp/emblem.png --out "$SPLASH/splash@2x.png" >/dev/null
           sips -s format png -z 360 360  /tmp/emblem.png --out "$SPLASH/splash@3x.png" >/dev/null
 
-          # Иконка приложения: прозрачность запрещена правилами Apple.
-          # Готовим эмблему с полем по краям, чтобы она не упиралась в скругление угла,
-          # и кладём её на сплошной белый холст.
-          sips -s format png -z 900 900 /tmp/emblem.png --out /tmp/logo900.png >/dev/null
-
-          # padToHeightWidth дополняет картинку до нужного размера заливкой фона.
-          sips /tmp/logo900.png \
-            -p 1024 1024 \
-            --padColor FFFFFF \
-            --out /tmp/icon_padded.png >/dev/null
-
-          # sips сохраняет альфа-канал даже поверх сплошного фона, поэтому убираем его
-          # отдельно: системный Python на macOS умеет записать PNG без прозрачности.
-          cat > /tmp/flatten.py <<'PYEOF'
-          import Quartz
-          from CoreFoundation import CFURLCreateWithFileSystemPath, kCFAllocatorDefault
-
-          SRC = '/tmp/icon_padded.png'
-          DST = 'ios/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png'
-          SIZE = 1024
-
-          url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, SRC, 0, False)
-          image = Quartz.CGImageSourceCreateImageAtIndex(
-              Quartz.CGImageSourceCreateWithURL(url, None), 0, None)
-
-          # kCGImageAlphaNoneSkipLast — холст вовсе без альфа-канала.
-          ctx = Quartz.CGBitmapContextCreate(
-              None, SIZE, SIZE, 8, 0,
-              Quartz.CGColorSpaceCreateDeviceRGB(),
-              Quartz.kCGImageAlphaNoneSkipLast)
-
-          Quartz.CGContextSetRGBFillColor(ctx, 1, 1, 1, 1)
-          Quartz.CGContextFillRect(ctx, Quartz.CGRectMake(0, 0, SIZE, SIZE))
-          Quartz.CGContextDrawImage(ctx, Quartz.CGRectMake(0, 0, SIZE, SIZE), image)
-
-          out_url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, DST, 0, False)
-          dest = Quartz.CGImageDestinationCreateWithURL(out_url, 'public.png', 1, None)
-          Quartz.CGImageDestinationAddImage(dest, Quartz.CGBitmapContextCreateImage(ctx), None)
-          assert Quartz.CGImageDestinationFinalize(dest), 'не удалось сохранить иконку'
-          print('иконка записана без альфа-канала')
-          PYEOF
-
-          # Основной способ — через графику macOS. Если библиотека недоступна,
-          # переносим иконку через формат, который прозрачность просто не поддерживает.
-          # set +e нужен, чтобы неудача первого способа не оборвала сборку.
-          set +e
-          /usr/bin/python3 /tmp/flatten.py
-          FLATTEN_OK=$?
-          set -e
-
-          if [ $FLATTEN_OK -ne 0 ]; then
-            echo "Графическая библиотека недоступна, идём обходным путём через BMP."
-            sips -s format bmp /tmp/icon_padded.png --out /tmp/icon.bmp >/dev/null
-            sips -s format png /tmp/icon.bmp --out "$ICONSET/icon-1024.png" >/dev/null
+          # Иконка приложения уже подготовлена заранее и лежит в проекте:
+          # 1024x1024, белый фон, без альфа-канала — ровно как требует Apple.
+          # Обрабатывать её на сервере нельзя: sips возвращает прозрачность обратно.
+          if [ -f public/ios-icon-1024.png ]; then
+            cp public/ios-icon-1024.png "$ICONSET/icon-1024.png"
+          else
+            curl -sSL --max-time 60 "$SITE_URL/ios-icon-1024.png" -o "$ICONSET/icon-1024.png"
           fi
 
-          # Контрольная проверка: в готовой иконке не должно остаться прозрачности.
+          # Контрольная проверка: размер и отсутствие прозрачности.
           ALPHA=$(sips -g hasAlpha "$ICONSET/icon-1024.png" | tail -1 | awk '{print $2}')
           W=$(sips -g pixelWidth "$ICONSET/icon-1024.png" | tail -1 | awk '{print $2}')
           H=$(sips -g pixelHeight "$ICONSET/icon-1024.png" | tail -1 | awk '{print $2}')
