@@ -215,9 +215,18 @@ const AppStoreAssets = () => (
       <Section title="Прямые ссылки">
         <div className="mt-4 space-y-2">
           {[
-            { name: 'Политика конфиденциальности', url: `${SITE}/privacy` },
-            { name: 'Страница поддержки', url: SITE },
-            { name: 'Маркетинговая страница', url: `${SITE}/app` },
+            {
+              name: 'Политика конфиденциальности',
+              url: 'https://xn--e1afhkhdkdm.su/privacy',
+            },
+            {
+              name: 'URL службы поддержки',
+              url: 'https://xn--e1afhkhdkdm.su/support',
+            },
+            {
+              name: 'Маркетинговая страница (необязательно)',
+              url: 'https://xn--e1afhkhdkdm.su/app',
+            },
           ].map((l) => (
             <div
               key={l.url}

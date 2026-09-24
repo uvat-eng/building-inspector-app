@@ -10,6 +10,7 @@ import AppDownload from "./pages/AppDownload";
 import NotFound from "./pages/NotFound";
 import RustoreAssets from "./pages/RustoreAssets";
 import AppStoreAssets from "./pages/AppStoreAssets";
+import Support from "./pages/Support";
 import { useEffect } from "react";
 import { startAutoFlush } from "@/data/photoQueue";
 
@@ -30,6 +31,7 @@ const App = () => {
           <Route path="/app" element={<AppDownload />} />
           <Route path="/rustore" element={<RustoreAssets />} />
           <Route path="/appstore" element={<AppStoreAssets />} />
+          <Route path="/support" element={<Support />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
