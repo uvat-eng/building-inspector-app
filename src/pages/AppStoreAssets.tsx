@@ -83,6 +83,36 @@ const CopyBtn = ({ text }: { text: string }) => {
   );
 };
 
+const ShotGrid = ({ folder }: { folder: string }) => (
+  <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+    {SHOTS.map((s) => (
+      <div
+        key={s.file}
+        className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+      >
+        <img
+          src={`/${folder}/${s.file}`}
+          alt={s.title}
+          className="w-full border-b border-slate-100"
+        />
+        <div className="p-2.5">
+          <div className="text-xs font-semibold leading-tight text-slate-700">
+            {s.title}
+          </div>
+          <a
+            href={`/${folder}/${s.file}`}
+            download
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            <Icon name="Download" size={12} />
+            Скачать
+          </a>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <>
     <h2 className="mt-9 border-b-2 border-primary pb-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
@@ -128,38 +158,20 @@ const AppStoreAssets = () => (
         </div>
       </Section>
 
-      <Section title="Скриншоты · 1290 × 2796 (iPhone 6.7″)">
-        <p className="mt-3 text-sm text-slate-500">
-          Apple требует минимум три штуки. Загружаются в разделе «Информация о
-          версии» вашего приложения.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {SHOTS.map((s) => (
-            <div
-              key={s.file}
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white"
-            >
-              <img
-                src={`/ios-screens/${s.file}`}
-                alt={s.title}
-                className="w-full border-b border-slate-100"
-              />
-              <div className="p-2.5">
-                <div className="text-xs font-semibold leading-tight text-slate-700">
-                  {s.title}
-                </div>
-                <a
-                  href={`/ios-screens/${s.file}`}
-                  download
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  <Icon name="Download" size={12} />
-                  Скачать
-                </a>
-              </div>
-            </div>
-          ))}
+      <Section title="Скриншоты · 6,5″ · 1284 × 2778">
+        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          Этот набор подходит в слот «6,5-дюймовый дисплей» — тот, что подсвечен
+          красным в вашей карточке. Загружайте именно его.
         </div>
+        <ShotGrid folder="ios-screens-65" />
+      </Section>
+
+      <Section title="Скриншоты · 6,7″ · 1290 × 2796">
+        <p className="mt-3 text-sm text-slate-500">
+          Запасной набор для слота «6,7-дюймовый дисплей». Если такого слота нет —
+          пропустите.
+        </p>
+        <ShotGrid folder="ios-screens" />
       </Section>
 
       <Section title="Тексты карточки">
