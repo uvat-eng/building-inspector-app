@@ -1,5 +1,5 @@
 const Topbar = () => (
-  <div className="flex h-[38px] flex-none items-center justify-between border-b border-border bg-card px-4 text-[0.8em] tracking-[0.02em] text-muted-foreground sm:px-[22px]">
+  <div className="pt-safe flex h-[38px] flex-none items-center justify-between border-b border-border bg-card px-4 text-[0.8em] tracking-[0.02em] text-muted-foreground [height:calc(38px+env(safe-area-inset-top,0px))] sm:px-[22px]">
     <div className="truncate">
       <a href="tel:+73452901244" className="font-bold text-foreground transition-colors hover:text-accent">
         8 3452 90-12-44

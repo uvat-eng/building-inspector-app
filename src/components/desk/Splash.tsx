@@ -73,7 +73,7 @@ const Splash = ({ onDone }: SplashProps) => {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-white"
+      className="pt-safe pb-safe fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-white"
       style={leaving ? { animation: 'gsi-leave 0.65s ease-in forwards' } : undefined}
     >
       <style>{`

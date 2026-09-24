@@ -338,7 +338,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
       </Dialog>
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-        <SheetContent side="left" className="w-[260px] border-0 bg-card p-0">
+        <SheetContent side="left" className="pt-safe pb-safe w-[260px] border-0 bg-card p-0">
           <SheetTitle className="sr-only">Разделы</SheetTitle>
           <SideMenu
             active={section}
