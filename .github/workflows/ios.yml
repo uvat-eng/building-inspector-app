@@ -811,7 +811,13 @@ jobs:
         run: |
           set -e
           mkdir -p ~/private_keys
-          echo "$KEY_P8" | base64 --decode > ~/private_keys/AuthKey_$KEY_ID.p8
+          # Ключ принимаем в любом виде: как обычный текст из файла .p8
+          # или перекодированным — разбираемся по первой строке.
+          if echo "$KEY_P8" | grep -q "BEGIN PRIVATE KEY"; then
+            echo "$KEY_P8" > ~/private_keys/AuthKey_$KEY_ID.p8
+          else
+            echo "$KEY_P8" | base64 --decode > ~/private_keys/AuthKey_$KEY_ID.p8
+          fi
 
           xcrun altool --upload-app -f $RUNNER_TEMP/export/InspectorSK.ipa \
             -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
