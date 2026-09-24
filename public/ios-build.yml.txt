@@ -663,6 +663,10 @@ jobs:
               iOS: "14.0"
             createIntermediateGroups: true
             developmentLanguage: ru
+            # Формат файла проекта: новые версии генератора пишут вариант,
+            # который открывает только Xcode 16. Закрепляем совместимый.
+            objectVersion: 54
+            xcodeVersion: "1540"
 
           settings:
             base:
@@ -707,6 +711,18 @@ jobs:
           brew install xcodegen
           xcodegen generate
           ls -la InspectorSK.xcodeproj
+
+          # Формат файла проекта должен быть по зубам установленному Xcode.
+          FMT=$(grep -m1 objectVersion InspectorSK.xcodeproj/project.pbxproj | tr -dc '0-9')
+          echo "формат файла проекта: $FMT"
+          if [ "$FMT" -gt 60 ]; then
+            echo "Формат слишком новый, понижаем до совместимого."
+            sed -i '' "s/objectVersion = $FMT;/objectVersion = 54;/" InspectorSK.xcodeproj/project.pbxproj
+            grep -m1 objectVersion InspectorSK.xcodeproj/project.pbxproj
+          fi
+
+          # Проверяем, что Xcode действительно открывает проект.
+          xcodebuild -list -project InspectorSK.xcodeproj
 
       # --- Проверочная сборка: ключи Apple не нужны ---
 
