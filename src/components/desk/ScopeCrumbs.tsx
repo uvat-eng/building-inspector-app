@@ -12,7 +12,13 @@ import { cn } from '@/lib/utils';
 import { useScope } from '@/data/scope';
 import { useLocations } from '@/data/locations';
 import { useObjects, NO_FIELD } from '@/data/store';
-import { useProfile, ROLE_LABEL, ROLE_ICON, canSeeLocation } from '@/data/profile';
+import { useProfile, ROLE_LABEL, ROLE_ICON, canSeeLocation, shortFio } from '@/data/profile';
+
+/** Первые буквы фамилии и имени для кружка рядом с кнопкой выхода. */
+const initials = (fio: string) => {
+  const p = fio.trim().split(/\s+/);
+  return ((p[0]?.[0] ?? '') + (p[1]?.[0] ?? '')).toUpperCase() || '—';
+};
 
 interface ScopeCrumbsProps {
   onLeaveModule: () => void;
@@ -157,6 +163,22 @@ const ScopeCrumbs = ({
           <Icon name="Repeat" size={14} />
           <span className="hidden sm:inline">Сменить</span>
         </button>
+
+        {onLogout && profile.fio && (
+          <button
+            type="button"
+            onClick={onCabinet}
+            title={`${profile.fio} · ${ROLE_LABEL[profile.role]}`}
+            className="flex min-w-0 flex-none items-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-secondary"
+          >
+            <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-accent text-[0.68em] font-bold text-accent-foreground">
+              {initials(profile.fio)}
+            </span>
+            <span className="hidden max-w-[9rem] truncate text-[0.82em] font-bold tracking-[0.02em] text-foreground sm:inline">
+              {shortFio(profile.fio)}
+            </span>
+          </button>
+        )}
 
         {onLogout && (
           <button
