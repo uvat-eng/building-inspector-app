@@ -15,7 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
 import { Inspection, useInspections, suggestNorms } from '@/data/inspections';
-import { useContractor, useOrders } from '@/data/orders';
+import { useContractor, useOrders, Order } from '@/data/orders';
+import OrderView from '@/components/desk/inspection/OrderView';
 import { downloadRegistry } from '@/lib/registryXls';
 import NewInspection from '@/components/desk/inspection/NewInspection';
 import ActEditor from '@/components/desk/inspection/ActEditor';
@@ -44,6 +45,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
   );
   const active = items.find((i) => i.id === activeId) ?? null;
   const [ask, setAsk] = useState<Inspection | null>(null);
+  const [madeOrder, setMadeOrder] = useState<Order | null>(null);
   const last = items[0] ?? null;
   const [busy, setBusy] = useState(false);
 
@@ -149,16 +151,26 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
       });
       toast({
         title: `Предписание № ${order.number} создано`,
-        description: 'Открыть можно в разделе «Предписания».',
+        description: `Пунктов: ${defects.length} · открываем`,
       });
       setAsk(null);
-      onOrdersOpen?.();
+      setMadeOrder(order);
     } catch {
       toast({ title: 'Не удалось оформить предписание', variant: 'destructive' });
     } finally {
       setBusy(false);
     }
   };
+
+  if (madeOrder) {
+    return (
+      <OrderView
+        order={madeOrder}
+        contractor={contractor}
+        onBack={() => setMadeOrder(null)}
+      />
+    );
+  }
 
   if (view === 'new') {
     return (
@@ -308,7 +320,10 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
                 <button
                   key={i.id}
                   type="button"
-                  onClick={() => setAsk(i)}
+                  onClick={() => {
+                    setActiveId(i.id);
+                    setView('act');
+                  }}
                   className="group flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-foreground hover:text-background"
                 >
                   <span className="w-6 flex-none text-center font-head text-[0.85em] text-muted-foreground group-hover:text-background/70">
@@ -340,7 +355,24 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
                       {i.actUrl ? 'в системе' : 'черновик'}
                     </span>
                   </span>
-                  <Icon name="ChevronRight" size={18} className="flex-none opacity-40" />
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    title="Другие действия"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAsk(i);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.stopPropagation();
+                        setAsk(i);
+                      }
+                    }}
+                    className="flex h-8 w-8 flex-none items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-secondary group-hover:text-background"
+                  >
+                    <Icon name="EllipsisVertical" size={17} />
+                  </span>
                 </button>
               ))
             )}

@@ -25,13 +25,14 @@ import { useUsers } from '@/data/users';
 import DocsCabinet from '@/components/desk/DocsCabinet';
 import InspectionsCabinet from '@/components/desk/inspection/InspectionsCabinet';
 import OrdersCabinet from '@/components/desk/inspection/OrdersCabinet';
+import OrderQuickView from '@/components/desk/inspection/OrderQuickView';
 import ContractorCard from '@/components/desk/inspection/ContractorCard';
 import FoldersCabinet from '@/components/desk/inspection/FoldersCabinet';
 import CabinetBar from '@/components/desk/CabinetBar';
 import useBackGuard from '@/hooks/use-back-guard';
 import OutfitCabinet from '@/components/desk/outfit/OutfitCabinet';
 import DefectsSection from '@/components/desk/sections/DefectsSection';
-import { downloadOrder, downloadOrdersDigest } from '@/lib/orderDoc';
+import { downloadOrdersDigest } from '@/lib/orderDoc';
 import IndReportsCabinet from '@/components/desk/indreports/IndReportsCabinet';
 import RollupCabinet from '@/components/desk/rollup/RollupCabinet';
 import JournalCabinet from '@/components/desk/journal/JournalCabinet';
@@ -108,6 +109,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
 
   const [openObject, setOpenObject] = useState<string | null>(null);
   const [objectView, setObjectView] = useState<ObjView>('menu');
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     setObjectView('menu');
@@ -163,7 +165,8 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
     </Panel>
   );
 
-  useBackGuard(view !== 'home' && !openObject, () => setView('home'));
+  useBackGuard(!!openOrderId, () => setOpenOrderId(null));
+  useBackGuard(view !== 'home' && !openObject && !openOrderId, () => setView('home'));
   useBackGuard(!!openObject && objectView !== 'menu', () => setObjectView('menu'));
   useBackGuard(!!openObject && objectView === 'menu', () => {
     setOpenObject(null);
@@ -220,6 +223,27 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
       <div className="flex min-h-0 flex-1 flex-col">{node}</div>
     </div>
   );
+
+  const openOrder = allOrders.find((o) => o.id === openOrderId) ?? null;
+
+  if (openOrder) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <CabinetBar
+          crumbs={[
+            { label: 'Кабинет', icon: 'IdCard', onClick: () => setOpenOrderId(null) },
+            { label: `Предписание № ${openOrder.number}` },
+          ]}
+          backLabel="К предписаниям"
+          onBack={() => setOpenOrderId(null)}
+          onExit={onExit}
+        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <OrderQuickView order={openOrder} onBack={() => setOpenOrderId(null)} />
+        </div>
+      </div>
+    );
+  }
 
   if (active) {
     if (objectView === 'docs' || objectView === 'contract') {
@@ -748,9 +772,7 @@ const InspectorCabinet = ({ onExit }: InspectorCabinetProps) => {
                   o.issuedTo || '—',
                   new Date(o.createdAt).toLocaleDateString('ru'),
                 ].join(' · ')}
-                onClick={() =>
-                  downloadOrder(o, null)
-                }
+                onClick={() => setOpenOrderId(o.id)}
                 right={<Tag tone={o.status === 'done' ? 'ok' : 'wait'}>{o.deadline || '—'}</Tag>}
               />
             ))

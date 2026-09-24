@@ -23,6 +23,10 @@ import {
 import { MONTHS } from '@/data/timesheet';
 import { orderPayload } from '@/lib/makeOrder';
 import DictateDialog from '@/components/desk/defects/DictateDialog';
+import OrderQuickView from '@/components/desk/inspection/OrderQuickView';
+import { Order } from '@/data/orders';
+import ActEditor from '@/components/desk/inspection/ActEditor';
+import { updateInspection } from '@/data/inspections';
 
 const monthKey = (iso: string) => {
   const d = new Date(iso);
@@ -47,6 +51,8 @@ const DefectsSection = () => {
   const [busy, setBusy] = useState(false);
   const [openAct, setOpenAct] = useState<string | null>(null);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
+  const [madeOrder, setMadeOrder] = useState<Order | null>(null);
+  const [editAct, setEditAct] = useState<Inspection | null>(null);
 
   const byMonth = useMemo(() => {
     const map = new Map<string, Inspection[]>();
@@ -103,6 +109,7 @@ const DefectsSection = () => {
       setDictate(false);
       setOpenMonth(monthKey(insp.createdAt));
       setOpenAct(insp.id);
+      setEditAct(insp);
       toast({
         title: `Акт № ${insp.number} создан`,
         description: `${data.lines.length} замечаний · ${objTitle(data.objectId)} · нормы подбираются`,
@@ -125,9 +132,10 @@ const DefectsSection = () => {
         objects.find((o) => o.id === insp.objectId) ?? null,
       );
       const order = await createOrder(data);
+      setMadeOrder(order);
       toast({
         title: `Предписание № ${order.number} создано`,
-        description: `${count} пунктов · раздел «Акты и документы»`,
+        description: `${count} пунктов · открываем`,
       });
     } catch {
       toast({ title: 'Не удалось оформить предписание', variant: 'destructive' });
@@ -135,6 +143,25 @@ const DefectsSection = () => {
       setBusy(false);
     }
   };
+
+  if (madeOrder) {
+    return <OrderQuickView order={madeOrder} onBack={() => setMadeOrder(null)} />;
+  }
+
+  if (editAct) {
+    return (
+      <ActEditor
+        inspection={editAct}
+        objectTitle={objTitle(editAct.objectId)}
+        onBack={() => {
+          setEditAct(null);
+          reload();
+        }}
+        onFinish={(i) => updateInspection(i.id, { status: 'done' })}
+        onOrder={(i) => makeOrder(i)}
+      />
+    );
+  }
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-0.5">
@@ -186,29 +213,39 @@ const DefectsSection = () => {
                   const isOpen = openAct === insp.id;
                   return (
                     <div key={insp.id} className="border-t border-border/60 bg-secondary/20">
-                      <button
-                        type="button"
-                        onClick={() => setOpenAct((p) => (p === insp.id ? null : insp.id))}
-                        className="flex w-full items-center gap-3 px-4 py-3 pl-8 text-left transition-colors hover:bg-secondary/60"
-                      >
-                        <Icon
-                          name={isOpen ? 'ChevronDown' : 'ChevronRight'}
-                          size={16}
-                          className="flex-none text-muted-foreground"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[0.95em]">
-                            Акт № {insp.number}
+                      <div className="flex w-full items-center gap-2 px-4 py-3 pl-8 transition-colors hover:bg-secondary/60">
+                        <button
+                          type="button"
+                          title={isOpen ? 'Свернуть' : 'Показать замечания'}
+                          onClick={() => setOpenAct((p) => (p === insp.id ? null : insp.id))}
+                          className="flex h-8 w-8 flex-none items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-secondary"
+                        >
+                          <Icon name={isOpen ? 'ChevronDown' : 'ChevronRight'} size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditAct(insp)}
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[0.95em]">
+                              Акт № {insp.number}
+                            </span>
+                            <span className="block truncate text-[0.8em] text-muted-foreground">
+                              {fmtDate(insp.createdAt)} · {objTitle(insp.objectId)} ·{' '}
+                              {insp.workType || 'вид работ не указан'}
+                            </span>
                           </span>
-                          <span className="block truncate text-[0.8em] text-muted-foreground">
-                            {fmtDate(insp.createdAt)} · {objTitle(insp.objectId)} ·{' '}
-                            {insp.workType || 'вид работ не указан'}
-                          </span>
-                        </span>
-                        <Tag tone={insp.status === 'done' ? 'ok' : 'wait'}>
-                          {items.length || insp.defectCount || 0} зам.
-                        </Tag>
-                      </button>
+                          <Tag tone={insp.status === 'done' ? 'ok' : 'wait'}>
+                            {items.length || insp.defectCount || 0} зам.
+                          </Tag>
+                          <Icon
+                            name="SquarePen"
+                            size={16}
+                            className="flex-none text-accent"
+                          />
+                        </button>
+                      </div>
 
                       {isOpen && (
                         <div className="bg-card px-4 pb-3 pl-8 pt-1">
@@ -219,43 +256,66 @@ const DefectsSection = () => {
                           ) : (
                             <ol className="flex flex-col">
                               {items.map((d) => (
-                                <li
-                                  key={d.id}
-                                  className="flex gap-3 border-b border-border/50 py-2.5 last:border-b-0"
-                                >
-                                  <span className="w-5 flex-none text-right font-head text-[0.9em] text-accent">
-                                    {d.pos}
-                                  </span>
-                                  <span className="min-w-0 flex-1">
-                                    <span className="block text-[0.92em]">{d.title}</span>
-                                    <span className="block text-[0.8em] text-muted-foreground">
-                                      {d.normRef ? (
-                                        d.normRef
-                                      ) : (
-                                        <span className="inline-flex items-center gap-1">
-                                          <Icon name="Sparkles" size={12} /> норма подбирается
-                                        </span>
-                                      )}
-                                      {d.deadline ? ` · срок ${d.deadline}` : ''}
+                                <li key={d.id} className="border-b border-border/50 last:border-b-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditAct(insp)}
+                                    className="flex w-full gap-3 py-2.5 text-left transition-colors hover:bg-secondary/50"
+                                  >
+                                    <span className="w-5 flex-none text-right font-head text-[0.9em] text-accent">
+                                      {d.pos}
                                     </span>
-                                  </span>
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block text-[0.92em]">{d.title}</span>
+                                      <span className="block text-[0.8em] text-muted-foreground">
+                                        {d.normRef ? (
+                                          d.normRef
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1">
+                                            <Icon name="Sparkles" size={12} /> норма подбирается
+                                          </span>
+                                        )}
+                                        {d.deadline ? ` · срок ${d.deadline}` : ''}
+                                      </span>
+                                    </span>
+                                    <Icon
+                                      name="ChevronRight"
+                                      size={15}
+                                      className="mt-1 flex-none text-muted-foreground"
+                                    />
+                                  </button>
                                 </li>
                               ))}
                             </ol>
                           )}
 
-                          <Button
-                            size="sm"
-                            disabled={busy || items.length === 0}
-                            onClick={() => makeOrder(insp)}
-                            className={cn(
-                              'mt-3 h-9 w-full gap-2 rounded-sm font-head text-[0.85em] uppercase tracking-[0.06em]',
-                              'bg-accent text-accent-foreground hover:bg-accent/90',
-                            )}
-                          >
-                            <Icon name="FileWarning" size={15} />
-                            Сформировать предписание
-                          </Button>
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditAct(insp)}
+                              className="h-9 flex-1 gap-2 rounded-sm font-head text-[0.85em] uppercase tracking-[0.06em]"
+                            >
+                              <Icon name="SquarePen" size={15} />
+                              Открыть акт
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={busy || items.length === 0}
+                              onClick={() => makeOrder(insp)}
+                              className={cn(
+                                'h-9 flex-1 gap-2 rounded-sm font-head text-[0.85em] uppercase tracking-[0.06em]',
+                                'bg-accent text-accent-foreground hover:bg-accent/90',
+                              )}
+                            >
+                              <Icon
+                                name={busy ? 'Loader2' : 'FileWarning'}
+                                size={15}
+                                className={busy ? 'animate-spin' : ''}
+                              />
+                              Сформировать предписание
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>

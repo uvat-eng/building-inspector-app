@@ -185,6 +185,14 @@ export const createInspection = async (data: Partial<Inspection>) => {
   return item;
 };
 
+export const updateInspection = async (id: string, patch: Partial<Inspection>) => {
+  await fetch(API, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, patch }),
+  });
+};
+
 export const addDefect = async (inspectionId: string, title: string, deadline = '') => {
   const res = await fetch(`${API}?action=defect`, {
     method: 'POST',
