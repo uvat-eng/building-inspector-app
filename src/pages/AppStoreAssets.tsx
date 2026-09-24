@@ -45,11 +45,17 @@ const DESCRIPTION = `«Инспектор СК» — рабочий инстру
 
 const REVIEW_NOTES = `Приложение предназначено для внутреннего использования сотрудниками ООО «Глобал-Стройинжиниринг» (строительный контроль). Регистрация самостоятельная не предусмотрена — учётные записи создаёт администратор организации.
 
-Для проверки используйте демонстрационную учётную запись:
-Логин: [укажите логин]
-Пароль: [укажите пароль]
+Для проверки созданы две демонстрационные учётные записи. В поле «ФИО» на экране входа введите логин полностью, как указано ниже.
 
-Учётная запись открывает кабинет руководителя со всеми разделами приложения.
+1) Руководитель проекта — полный доступ ко всем разделам
+Логин: Demo Manager
+Пароль: Demo2026!
+
+2) Инспектор строительного контроля — выезды, акты, фотофиксация
+Логин: Demo Inspector
+Пароль: Demo2026!
+
+Смена пароля при первом входе для этих записей отключена. Обе записи открывают рабочие данные по объектам в Якутии.
 
 Геолокация используется для фиксации рабочих перемещений инспекторов между строительными объектами. Данные собираются только когда приложение открыто и только после явного согласия сотрудника. Политика конфиденциальности: ${SITE}/privacy
 
@@ -255,15 +261,54 @@ const AppStoreAssets = () => (
         </div>
       </Section>
 
+      <Section title="Демонстрационные учётные записи">
+        <p className="mt-3 text-sm text-slate-500">
+          Созданы и проверены — вход работает, смена пароля при первом входе
+          отключена. Логин вводится в поле «ФИО» на экране входа.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              role: 'Руководитель проекта',
+              note: 'Полный доступ ко всем разделам',
+              login: 'Demo Manager',
+            },
+            {
+              role: 'Инспектор СК',
+              note: 'Выезды, акты, фотофиксация',
+              login: 'Demo Inspector',
+            },
+          ].map((a) => (
+            <div key={a.login} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="font-semibold text-slate-800">{a.role}</div>
+              <div className="mt-0.5 text-xs text-slate-500">{a.note}</div>
+              <dl className="mt-3 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">Логин</dt>
+                  <dd className="font-mono font-semibold text-slate-800">{a.login}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">Пароль</dt>
+                  <dd className="font-mono font-semibold text-slate-800">Demo2026!</dd>
+                </div>
+              </dl>
+              <div className="mt-3">
+                <CopyBtn text={`Логин: ${a.login}\nПароль: Demo2026!`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       <div className="mt-10 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-relaxed text-amber-900">
         <div className="flex items-start gap-2.5">
           <Icon name="TriangleAlert" size={18} className="mt-0.5 shrink-0" />
           <div>
-            <div className="font-semibold">Перед отправкой на проверку</div>
+            <div className="font-semibold">Не удаляйте эти учётные записи</div>
             <p className="mt-1.5">
-              В заметке для проверяющего замените «[укажите логин]» и «[укажите
-              пароль]» на настоящие данные демонстрационной учётной записи.
-              Проверьте, что она работает и открывает все разделы.
+              Пока приложение на проверке, записи Demo Manager и Demo Inspector
+              должны оставаться рабочими. Если их удалить, проверяющий не сможет
+              войти и отклонит заявку.
             </p>
           </div>
         </div>
