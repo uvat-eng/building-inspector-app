@@ -33,16 +33,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { SectionId, MENU } from '@/data/mock';
-import { useProfile, ROLE_SECTIONS, ROLE_LABEL, Role } from '@/data/profile';
+import { useProfile, ROLE_SECTIONS, ROLE_LABEL, Role, clearProfile } from '@/data/profile';
 import { useModule } from '@/data/modules';
 import { useScope } from '@/data/scope';
 import ModulePicker from '@/components/desk/ModulePicker';
 import ScopePicker from '@/components/desk/ScopePicker';
 import ScopeCrumbs from '@/components/desk/ScopeCrumbs';
-import { useUsers } from '@/data/users';
+import { useUsers, setSession } from '@/data/users';
 import { useToast } from '@/hooks/use-toast';
 import useBackGuard from '@/hooks/use-back-guard';
-import { useImpersonation } from '@/data/impersonate';
+import { useImpersonation, dropImpersonation } from '@/data/impersonate';
 import CabinetPicker from '@/components/desk/director/CabinetPicker';
 
 const SECTION_KEY = 'gsi-section-v1';
@@ -62,6 +62,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const [objectEdit, setObjectEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [cabinetRole, setCabinetRole] = useState<Role | null>(null);
+  const [logoutAsk, setLogoutAsk] = useState(false);
   const { profile, save, isAdmin, viewingAs } = useProfile();
   const { impersonation, stop: stopImpersonate } = useImpersonation();
   const { current, reload: reloadUsers } = useUsers();
@@ -86,6 +87,23 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     const target = leaveTo;
     setLeaveTo(null);
     select(target);
+  };
+
+  const logout = () => {
+    dropImpersonation();
+    setSession(null);
+    clearProfile();
+    localStorage.removeItem(SECTION_KEY);
+    localStorage.removeItem(SCOPE_ENTERED);
+    setLogoutAsk(false);
+    leaveOk.current = true;
+    setObjectId(null);
+    setObjectEdit(false);
+    setCabinetRole(null);
+    setHistory([]);
+    setSection('objects');
+    toast({ title: 'Вы вышли из учётной записи' });
+    onLeaveModule();
   };
 
   const select = (id: SectionId) => {
@@ -210,6 +228,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
           onLeaveModule={onLeaveModule}
           onLeaveScope={onLeaveScope}
           onCabinet={() => select('cabinet')}
+          onLogout={current ? () => setLogoutAsk(true) : undefined}
         />
       </div>
 
@@ -337,6 +356,36 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={logoutAsk} onOpenChange={setLogoutAsk}>
+        <DialogContent className="max-w-sm rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="font-head text-[1.2em] uppercase tracking-[0.03em]">
+              Выйти из учётной записи?
+            </DialogTitle>
+            <DialogDescription className="text-[0.85em]">
+              {profile.fio ? `Вы вошли как ${profile.fio}. ` : ''}
+              Для продолжения работы потребуется снова ввести логин и пароль.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setLogoutAsk(false)}
+              className="flex-1 rounded-sm font-head uppercase tracking-[0.06em]"
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={logout}
+              className="flex-1 gap-2 rounded-sm bg-destructive font-head uppercase tracking-[0.06em] text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Icon name="LogOut" size={16} />
+              Выйти
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="pt-safe pb-safe w-[260px] border-0 bg-card p-0">
           <SheetTitle className="sr-only">Разделы</SheetTitle>
@@ -346,6 +395,10 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
             onOpenCabinetOf={(r) => {
               setMenuOpen(false);
               setCabinetRole(r);
+            }}
+            onLogout={() => {
+              setMenuOpen(false);
+              setLogoutAsk(true);
             }}
             className="h-full rounded-none"
           />

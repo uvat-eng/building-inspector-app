@@ -75,6 +75,12 @@ export const startImpersonation = (target: User, ownProfile: Profile) => {
   window.dispatchEvent(new Event(EVENT));
 };
 
+/** Полный сброс подмены без возврата прежней сессии — для выхода из аккаунта. */
+export const dropImpersonation = () => {
+  localStorage.removeItem(KEY);
+  window.dispatchEvent(new Event(EVENT));
+};
+
 /** Возврат директора в собственный кабинет. */
 export const stopImpersonation = () => {
   const cur = readImpersonation();

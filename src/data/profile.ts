@@ -290,6 +290,11 @@ export const useProfile = () => {
   };
 };
 
+export const clearProfile = () => {
+  localStorage.removeItem(KEY);
+  window.dispatchEvent(new Event(EVENT));
+};
+
 export const shortFio = (fio: string) => {
   const parts = fio.trim().split(/\s+/);
   if (parts.length < 2) return fio.trim();

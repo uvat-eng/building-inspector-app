@@ -18,12 +18,18 @@ interface ScopeCrumbsProps {
   onLeaveModule: () => void;
   onLeaveScope: () => void;
   onCabinet: () => void;
+  onLogout?: () => void;
 }
 
 const trigger =
   'flex flex-none items-center gap-1.5 rounded-sm px-2 py-1 font-head text-[0.92em] font-bold uppercase tracking-[0.04em] transition-colors hover:bg-secondary sm:text-[1.02em]';
 
-const ScopeCrumbs = ({ onLeaveModule, onLeaveScope, onCabinet }: ScopeCrumbsProps) => {
+const ScopeCrumbs = ({
+  onLeaveModule,
+  onLeaveScope,
+  onCabinet,
+  onLogout,
+}: ScopeCrumbsProps) => {
   const { scope, save } = useScope();
   const { list: locations } = useLocations();
   const { list: objects } = useObjects();
@@ -141,15 +147,29 @@ const ScopeCrumbs = ({ onLeaveModule, onLeaveScope, onCabinet }: ScopeCrumbsProp
         </span>
       </button>
 
-      <button
-        type="button"
-        onClick={onLeaveScope}
-        title="Сменить локацию или проект"
-        className="ml-auto flex flex-none items-center gap-1 rounded-sm px-2 py-1 text-[0.8em] font-bold uppercase tracking-[0.06em] text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
-      >
-        <Icon name="Repeat" size={14} />
-        <span className="hidden sm:inline">Сменить</span>
-      </button>
+      <div className="ml-auto flex flex-none items-center gap-1">
+        <button
+          type="button"
+          onClick={onLeaveScope}
+          title="Сменить локацию или проект"
+          className="flex flex-none items-center gap-1 rounded-sm px-2 py-1 text-[0.8em] font-bold uppercase tracking-[0.06em] text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+        >
+          <Icon name="Repeat" size={14} />
+          <span className="hidden sm:inline">Сменить</span>
+        </button>
+
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Выйти из учётной записи"
+            className="flex flex-none items-center gap-1.5 rounded-sm border border-border bg-card px-2.5 py-1.5 text-[0.8em] font-bold uppercase tracking-[0.06em] text-foreground transition-colors hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <Icon name="LogOut" size={15} />
+            <span className="hidden sm:inline">Выйти</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 };

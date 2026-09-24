@@ -13,10 +13,17 @@ interface SideMenuProps {
   active: SectionId;
   onSelect: (id: SectionId) => void;
   onOpenCabinetOf?: (role: Role) => void;
+  onLogout?: () => void;
   className?: string;
 }
 
-const SideMenu = ({ active, onSelect, onOpenCabinetOf, className }: SideMenuProps) => {
+const SideMenu = ({
+  active,
+  onSelect,
+  onOpenCabinetOf,
+  onLogout,
+  className,
+}: SideMenuProps) => {
   const { profile } = useProfile();
   const { current } = useUsers();
   const { impersonation } = useImpersonation();
@@ -90,6 +97,16 @@ const SideMenu = ({ active, onSelect, onOpenCabinetOf, className }: SideMenuProp
       })}
     </ul>
     <ProfileCard />
+    {current && onLogout && (
+      <button
+        type="button"
+        onClick={onLogout}
+        className="flex w-full flex-none items-center justify-center gap-2 border-t-2 border-foreground/85 bg-card px-[18px] py-3.5 text-[0.88em] font-bold uppercase tracking-[0.08em] text-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
+      >
+        <Icon name="LogOut" size={16} />
+        Выйти из учётной записи
+      </button>
+    )}
   </nav>
   );
 };
