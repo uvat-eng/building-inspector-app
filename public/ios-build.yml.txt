@@ -53,7 +53,9 @@ jobs:
       - name: Готовим иконку и заставку
         run: |
           set -e
-          python3 -m pip install --quiet --disable-pip-version-check Pillow
+          # Ставим библиотеку в отдельное окружение: в системный Python macOS писать нельзя.
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install --quiet --disable-pip-version-check Pillow
 
           # Эмблему берём из проекта, а если её там нет — с рабочего сайта.
           if [ -f public/emblem.png ]; then
@@ -62,7 +64,7 @@ jobs:
             curl -sSL --max-time 60 "$SITE_URL/emblem.png" -o /tmp/emblem.png
           fi
 
-          python3 <<'PYEOF'
+          /tmp/venv/bin/python3 <<'PYEOF'
           from PIL import Image
           src = Image.open('/tmp/emblem.png').convert('RGBA')
 
