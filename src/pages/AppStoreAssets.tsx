@@ -180,6 +180,14 @@ const AppStoreAssets = () => (
         <ShotGrid folder="ios-screens" />
       </Section>
 
+      <Section title="Скриншоты для iPad · 2048 × 2732">
+        <p className="mt-3 text-sm text-slate-500">
+          Вкладка «iPad» → слот 12,9-дюймового дисплея. Нужны, только если
+          приложение заявлено для iPad.
+        </p>
+        <ShotGrid folder="ipad-screens" />
+      </Section>
+
       <Section title="Тексты карточки">
         <div className="mt-4 space-y-4">
           {BLOCKS.map((b) => (
@@ -232,6 +240,84 @@ const AppStoreAssets = () => (
         </div>
       </Section>
 
+      <Section title="Конфиденциальность приложения">
+        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+          Сейчас в карточке указано «сбор данных не ведётся» — это неверно.
+          Приложение собирает геопозицию и данные сотрудников. Оставите как есть —
+          приложение отклонят.
+        </div>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+          <div className="font-semibold text-slate-800">Шаг 1 · Ссылка на политику</div>
+          <p className="mt-1 text-sm text-slate-500">
+            Поле «Политика конфиденциальности (URL)». Вставьте адрес в этом виде —
+            кириллический App Store Connect часто не принимает.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 p-3">
+            <code className="break-all text-sm text-slate-700">
+              https://xn--e1afhkhdkdm.su/privacy
+            </code>
+            <CopyBtn text="https://xn--e1afhkhdkdm.su/privacy" />
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Второе поле «URL-адрес параметров конфиденциальности» — необязательное,
+            оставьте пустым.
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+          <div className="font-semibold text-slate-800">Шаг 2 · Типы данных</div>
+          <p className="mt-1 text-sm text-slate-500">
+            Нажмите «Редактировать» рядом с «Типы данных» и отметьте три пункта.
+            Для каждого ответы одинаковые.
+          </p>
+          <div className="mt-4 space-y-3">
+            {[
+              {
+                name: 'Геопозиция → Точная геопозиция',
+                why: 'Фиксация рабочих перемещений инспекторов между объектами',
+              },
+              {
+                name: 'Контактные данные → Имя, Номер телефона',
+                why: 'Учётная запись сотрудника и подписание документов',
+              },
+              {
+                name: 'Идентификаторы → Идентификатор пользователя',
+                why: 'Привязка актов и табеля к сотруднику',
+              },
+            ].map((d) => (
+              <div key={d.name} className="rounded-lg border border-slate-200 p-3">
+                <div className="text-sm font-semibold text-slate-800">{d.name}</div>
+                <div className="mt-0.5 text-xs text-slate-500">{d.why}</div>
+                <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                  <li>
+                    Цель — <b>Функциональность приложения</b>
+                  </li>
+                  <li>
+                    Связаны с личностью пользователя — <b>Да</b>
+                  </li>
+                  <li>
+                    Используются для отслеживания — <b>Нет</b>
+                  </li>
+                </ul>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Реклама, аналитика, персонализация, история поиска, покупки, контакты,
+            фото из галереи — не отмечайте.
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+          <div className="font-semibold text-slate-800">Шаг 3 · Публикация</div>
+          <p className="mt-1 text-sm text-slate-500">
+            Нажмите «Опубликовать» в правом верхнем углу раздела. Без этого анкета
+            не сохранится и проверка не запустится.
+          </p>
+        </div>
+      </Section>
+
       <Section title="Ответы на вопросы Apple">
         <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-600">
           <p>
@@ -246,12 +332,6 @@ const AppStoreAssets = () => (
           <p>
             <span className="font-semibold text-slate-800">Категория.</span> Основная
             — «Бизнес», дополнительная — «Производительность».
-          </p>
-          <p>
-            <span className="font-semibold text-slate-800">Сбор данных.</span> В
-            анкете конфиденциальности отметьте: геопозиция (привязана к личности,
-            для работы приложения), контактные данные, идентификаторы. Реклама и
-            отслеживание — не используются.
           </p>
           <p>
             <span className="font-semibold text-slate-800">Доступ для проверки.</span>{' '}
