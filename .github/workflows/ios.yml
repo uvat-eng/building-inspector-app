@@ -53,9 +53,8 @@ jobs:
       - name: Готовим иконку и заставку
         run: |
           set -e
-          # Ставим библиотеку в отдельное окружение: в системный Python macOS писать нельзя.
-          python3 -m venv /tmp/venv
-          /tmp/venv/bin/pip install --quiet --disable-pip-version-check Pillow
+          # Работаем только штатными утилитами macOS: sips и Quartz уже стоят на сборочном сервере,
+          # ничего доустанавливать не нужно.
 
           # Эмблему берём из проекта, а если её там нет — с рабочего сайта.
           if [ -f public/emblem.png ]; then
@@ -64,29 +63,58 @@ jobs:
             curl -sSL --max-time 60 "$SITE_URL/emblem.png" -o /tmp/emblem.png
           fi
 
-          /tmp/venv/bin/python3 <<'PYEOF'
-          from PIL import Image
-          src = Image.open('/tmp/emblem.png').convert('RGBA')
+          ICONSET=ios/Resources/Assets.xcassets/AppIcon.appiconset
+          SPLASH=ios/Resources/Assets.xcassets/SplashLogo.imageset
 
-          # Иконка iOS не допускает прозрачности — подкладываем белый фон.
-          flat = Image.new('RGB', src.size, (255, 255, 255))
-          flat.paste(src, mask=src.split()[3])
+          # Заставка — с прозрачностью, она ложится на светлый фон экрана запуска.
+          sips -s format png -z 120 120  /tmp/emblem.png --out "$SPLASH/splash.png"    >/dev/null
+          sips -s format png -z 240 240  /tmp/emblem.png --out "$SPLASH/splash@2x.png" >/dev/null
+          sips -s format png -z 360 360  /tmp/emblem.png --out "$SPLASH/splash@3x.png" >/dev/null
 
-          # Небольшое поле, чтобы эмблема не упиралась в скругление угла.
-          pad = int(src.size[0] * 0.06)
-          canvas = Image.new('RGB', src.size, (255, 255, 255))
-          canvas.paste(flat.resize((src.size[0] - pad * 2, src.size[1] - pad * 2), Image.LANCZOS), (pad, pad))
-          canvas.resize((1024, 1024), Image.LANCZOS).save(
-              'ios/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png', 'PNG')
+          # Иконка приложения: прозрачность запрещена правилами Apple, подкладываем белый фон
+          # и оставляем поле по краям, чтобы эмблема не упиралась в скругление угла.
+          sips -s format png -z 900 900 /tmp/emblem.png --out /tmp/logo900.png >/dev/null
 
-          d = 'ios/Resources/Assets.xcassets/SplashLogo.imageset/'
-          for scale, name in [(1, 'splash.png'), (2, 'splash@2x.png'), (3, 'splash@3x.png')]:
-              src.resize((120 * scale, 120 * scale), Image.LANCZOS).save(d + name)
+          /usr/bin/python3 <<'PYEOF'
+          import Quartz
+          from CoreFoundation import CFURLCreateWithFileSystemPath, kCFAllocatorDefault
 
-          chk = Image.open('ios/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png')
-          assert chk.mode == 'RGB', 'в иконке осталась прозрачность'
-          print('иконка готова:', chk.size, chk.mode)
+          def load(path):
+              url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path, 0, False)
+              src = Quartz.CGImageSourceCreateWithURL(url, None)
+              return Quartz.CGImageSourceCreateImageAtIndex(src, 0, None)
+
+          logo = load('/tmp/logo900.png')
+          size = 1024
+          space = Quartz.CGColorSpaceCreateDeviceRGB()
+
+          # kCGImageAlphaNoneSkipLast — холст без альфа-канала, то есть полностью непрозрачный.
+          ctx = Quartz.CGBitmapContextCreate(None, size, size, 8, 0, space, Quartz.kCGImageAlphaNoneSkipLast)
+          Quartz.CGContextSetRGBFillColor(ctx, 1, 1, 1, 1)
+          Quartz.CGContextFillRect(ctx, Quartz.CGRectMake(0, 0, size, size))
+
+          side = 900
+          off = (size - side) / 2
+          Quartz.CGContextDrawImage(ctx, Quartz.CGRectMake(off, off, side, side), logo)
+
+          out = Quartz.CGBitmapContextCreateImage(ctx)
+          url = CFURLCreateWithFileSystemPath(
+              kCFAllocatorDefault,
+              'ios/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png', 0, False)
+          dest = Quartz.CGImageDestinationCreateWithURL(url, 'public.png', 1, None)
+          Quartz.CGImageDestinationAddImage(dest, out, None)
+          assert Quartz.CGImageDestinationFinalize(dest), 'не удалось сохранить иконку'
+          print('иконка готова: 1024x1024, фон сплошной')
           PYEOF
+
+          # Контрольная проверка: в готовой иконке не должно остаться прозрачности.
+          ALPHA=$(sips -g hasAlpha "$ICONSET/icon-1024.png" | tail -1 | awk '{print $2}')
+          echo "прозрачность в иконке: $ALPHA"
+          if [ "$ALPHA" = "yes" ]; then
+            echo "ОШИБКА: Apple отклонит иконку с прозрачностью"
+            exit 1
+          fi
+          sips -g pixelWidth -g pixelHeight "$ICONSET/icon-1024.png"
 
       - name: Описываем наборы картинок
         run: |
@@ -635,6 +663,10 @@ jobs:
               iOS: "14.0"
             createIntermediateGroups: true
             developmentLanguage: ru
+            # Формат файла проекта: новые версии генератора пишут вариант,
+            # который открывает только Xcode 16. Закрепляем совместимый.
+            objectVersion: 54
+            xcodeVersion: "1540"
 
           settings:
             base:
@@ -679,6 +711,18 @@ jobs:
           brew install xcodegen
           xcodegen generate
           ls -la InspectorSK.xcodeproj
+
+          # Формат файла проекта должен быть по зубам установленному Xcode.
+          FMT=$(grep -m1 objectVersion InspectorSK.xcodeproj/project.pbxproj | tr -dc '0-9')
+          echo "формат файла проекта: $FMT"
+          if [ "$FMT" -gt 60 ]; then
+            echo "Формат слишком новый, понижаем до совместимого."
+            sed -i '' "s/objectVersion = $FMT;/objectVersion = 54;/" InspectorSK.xcodeproj/project.pbxproj
+            grep -m1 objectVersion InspectorSK.xcodeproj/project.pbxproj
+          fi
+
+          # Проверяем, что Xcode действительно открывает проект.
+          xcodebuild -list -project InspectorSK.xcodeproj
 
       # --- Проверочная сборка: ключи Apple не нужны ---
 
