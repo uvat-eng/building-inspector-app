@@ -1,0 +1,806 @@
+name: Сборка для iPhone (Инспектор СК)
+
+# Файл самодостаточный: проект для iPhone создаётся прямо на сборочном сервере.
+# Запуск вручную: вкладка Actions → этот процесс → Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Что собрать"
+        required: true
+        default: check
+        type: choice
+        options:
+          - check       # проверка сборки без подписи, ключи Apple не нужны
+          - testflight  # подписанный архив и выгрузка в TestFlight
+
+env:
+  APP_NAME: InspectorSK
+  BUNDLE_ID: ru.globalstroy.inspector
+  SITE_URL: https://xn--e1afhkhdkdm.su
+  APP_VERSION: "1.4"
+  BUILD_NUMBER: "5"
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 40
+
+    steps:
+      - name: Получаем исходники
+        uses: actions/checkout@v4
+
+      - name: Выбираем Xcode
+        run: |
+          if [ -d /Applications/Xcode_15.4.app ]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app
+          else
+            LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+            echo "Xcode 15.4 не найден, используем $LATEST"
+            sudo xcode-select -s "$LATEST"
+          fi
+          xcodebuild -version
+
+      - name: Создаём структуру проекта
+        run: |
+          set -e
+          mkdir -p ios/Sources
+          mkdir -p ios/Resources/Assets.xcassets/AppIcon.appiconset
+          mkdir -p ios/Resources/Assets.xcassets/BrandColor.colorset
+          mkdir -p ios/Resources/Assets.xcassets/SplashLogo.imageset
+
+      - name: Готовим иконку и заставку
+        run: |
+          set -e
+          python3 -m pip install --quiet --disable-pip-version-check Pillow
+
+          # Эмблему берём из проекта, а если её там нет — с рабочего сайта.
+          if [ -f public/emblem.png ]; then
+            cp public/emblem.png /tmp/emblem.png
+          else
+            curl -sSL --max-time 60 "$SITE_URL/emblem.png" -o /tmp/emblem.png
+          fi
+
+          python3 <<'PYEOF'
+          from PIL import Image
+          src = Image.open('/tmp/emblem.png').convert('RGBA')
+
+          # Иконка iOS не допускает прозрачности — подкладываем белый фон.
+          flat = Image.new('RGB', src.size, (255, 255, 255))
+          flat.paste(src, mask=src.split()[3])
+
+          # Небольшое поле, чтобы эмблема не упиралась в скругление угла.
+          pad = int(src.size[0] * 0.06)
+          canvas = Image.new('RGB', src.size, (255, 255, 255))
+          canvas.paste(flat.resize((src.size[0] - pad * 2, src.size[1] - pad * 2), Image.LANCZOS), (pad, pad))
+          canvas.resize((1024, 1024), Image.LANCZOS).save(
+              'ios/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png', 'PNG')
+
+          d = 'ios/Resources/Assets.xcassets/SplashLogo.imageset/'
+          for scale, name in [(1, 'splash.png'), (2, 'splash@2x.png'), (3, 'splash@3x.png')]:
+              src.resize((120 * scale, 120 * scale), Image.LANCZOS).save(d + name)
+
+          chk = Image.open('ios/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png')
+          assert chk.mode == 'RGB', 'в иконке осталась прозрачность'
+          print('иконка готова:', chk.size, chk.mode)
+          PYEOF
+
+      - name: Описываем наборы картинок
+        run: |
+          set -e
+          cat > ios/Resources/Assets.xcassets/Contents.json <<'EOF'
+          { "info" : { "author" : "xcode", "version" : 1 } }
+          EOF
+
+          cat > ios/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json <<'EOF'
+          {
+            "images" : [
+              { "filename" : "icon-1024.png", "idiom" : "universal", "platform" : "ios", "size" : "1024x1024" }
+            ],
+            "info" : { "author" : "xcode", "version" : 1 }
+          }
+          EOF
+
+          cat > ios/Resources/Assets.xcassets/BrandColor.colorset/Contents.json <<'EOF'
+          {
+            "colors" : [
+              { "color" : { "color-space" : "srgb",
+                "components" : { "alpha" : "1.000", "blue" : "0xF5", "green" : "0xF5", "red" : "0xF5" } },
+                "idiom" : "universal" }
+            ],
+            "info" : { "author" : "xcode", "version" : 1 }
+          }
+          EOF
+
+          cat > ios/Resources/Assets.xcassets/SplashLogo.imageset/Contents.json <<'EOF'
+          {
+            "images" : [
+              { "filename" : "splash.png", "idiom" : "universal", "scale" : "1x" },
+              { "filename" : "splash@2x.png", "idiom" : "universal", "scale" : "2x" },
+              { "filename" : "splash@3x.png", "idiom" : "universal", "scale" : "3x" }
+            ],
+            "info" : { "author" : "xcode", "version" : 1 }
+          }
+          EOF
+
+      - name: Пишем код приложения
+        run: |
+          set -e
+          cat > ios/Sources/AppDelegate.swift <<'EOF'
+          import UIKit
+
+          @main
+          final class AppDelegate: UIResponder, UIApplicationDelegate {
+
+              var window: UIWindow?
+
+              func application(_ app: UIApplication,
+                               didFinishLaunchingWithOptions opts: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+                  let w = UIWindow(frame: UIScreen.main.bounds)
+                  w.rootViewController = ViewController()
+                  w.makeKeyAndVisible()
+                  window = w
+                  return true
+              }
+
+              /// На телефоне работаем вертикально, на планшете — в любом положении.
+              func application(_ app: UIApplication,
+                               supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+                  UIDevice.current.userInterfaceIdiom == .pad ? .all : .portrait
+              }
+          }
+          EOF
+
+          cat > ios/Sources/ViewController.swift <<'EOF'
+          import UIKit
+          import WebKit
+          import CoreLocation
+
+          /// Главный экран: рабочий стол инспектора внутри веб-контейнера.
+          final class ViewController: UIViewController {
+
+              private let host = "https://xn--e1afhkhdkdm.su"
+              private var site: URL { URL(string: host + "/")! }
+
+              private var web: WKWebView!
+              private var progress: UIProgressView!
+              private var refreshButton: UIButton!
+              private let locationManager = CLLocationManager()
+              private var offlineView: UIView?
+              private var progressObs: NSKeyValueObservation?
+              private var locationAsked = false
+
+              override func viewDidLoad() {
+                  super.viewDidLoad()
+                  view.backgroundColor = UIColor(named: "BrandColor") ?? .systemBackground
+                  buildWebView()
+                  buildProgressBar()
+                  buildRefreshButton()
+                  observeProgress()
+                  load()
+              }
+
+              override var preferredStatusBarStyle: UIStatusBarStyle { .darkContent }
+
+              private func buildWebView() {
+                  let cfg = WKWebViewConfiguration()
+
+                  // Видео инструктажей не разворачиваем на весь экран принудительно.
+                  cfg.allowsInlineMediaPlayback = true
+                  cfg.mediaTypesRequiringUserActionForPlayback = []
+
+                  // Общее хранилище: вход и настройки сохраняются между запусками.
+                  cfg.websiteDataStore = .default()
+                  cfg.processPool = WKProcessPool()
+
+                  let prefs = WKPreferences()
+                  prefs.javaScriptCanOpenWindowsAutomatically = true
+                  cfg.preferences = prefs
+
+                  // Признак приложения — штатный способ, без частных интерфейсов.
+                  cfg.applicationNameForUserAgent = "InspectorSK/1.4 (iOS)"
+
+                  if #available(iOS 14.0, *) {
+                      cfg.defaultWebpagePreferences.allowsContentJavaScript = true
+                  }
+
+                  web = WKWebView(frame: .zero, configuration: cfg)
+                  web.translatesAutoresizingMaskIntoConstraints = false
+                  web.navigationDelegate = self
+                  web.uiDelegate = self
+                  web.allowsBackForwardNavigationGestures = true
+                  web.scrollView.contentInsetAdjustmentBehavior = .never
+                  web.backgroundColor = UIColor(named: "BrandColor") ?? .systemBackground
+                  web.isOpaque = false
+
+                  view.addSubview(web)
+                  NSLayoutConstraint.activate([
+                      web.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                      web.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                      web.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                      web.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+                  ])
+              }
+
+              private func buildProgressBar() {
+                  progress = UIProgressView(progressViewStyle: .bar)
+                  progress.translatesAutoresizingMaskIntoConstraints = false
+                  progress.progressTintColor = UIColor(red: 0.12, green: 0.23, blue: 0.43, alpha: 1)
+                  progress.trackTintColor = .clear
+                  progress.alpha = 0
+                  view.addSubview(progress)
+
+                  NSLayoutConstraint.activate([
+                      progress.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                      progress.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                      progress.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                      progress.heightAnchor.constraint(equalToConstant: 2.5)
+                  ])
+              }
+
+              /// Круглая кнопка обновления в правом нижнем углу — как в версии для Android.
+              private func buildRefreshButton() {
+                  refreshButton = UIButton(type: .system)
+                  refreshButton.translatesAutoresizingMaskIntoConstraints = false
+                  refreshButton.backgroundColor = UIColor.white.withAlphaComponent(0.92)
+                  refreshButton.tintColor = UIColor(red: 0.12, green: 0.23, blue: 0.43, alpha: 1)
+                  refreshButton.layer.cornerRadius = 24
+                  refreshButton.layer.shadowColor = UIColor.black.cgColor
+                  refreshButton.layer.shadowOpacity = 0.18
+                  refreshButton.layer.shadowRadius = 5
+                  refreshButton.layer.shadowOffset = CGSize(width: 0, height: 2)
+                  refreshButton.alpha = 0.55
+                  refreshButton.accessibilityLabel = "Обновить страницу"
+
+                  let symbol = UIImage.SymbolConfiguration(pointSize: 19, weight: .medium)
+                  refreshButton.setImage(UIImage(systemName: "arrow.clockwise", withConfiguration: symbol), for: .normal)
+                  refreshButton.addTarget(self, action: #selector(reloadTapped), for: .touchUpInside)
+
+                  view.addSubview(refreshButton)
+                  NSLayoutConstraint.activate([
+                      refreshButton.widthAnchor.constraint(equalToConstant: 48),
+                      refreshButton.heightAnchor.constraint(equalToConstant: 48),
+                      refreshButton.trailingAnchor.constraint(
+                          equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -14),
+                      refreshButton.bottomAnchor.constraint(
+                          equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -14)
+                  ])
+              }
+
+              private func observeProgress() {
+                  progressObs = web.observe(\.estimatedProgress, options: .new) { [weak self] w, _ in
+                      guard let self = self else { return }
+                      let done = w.estimatedProgress >= 1
+                      self.progress.setProgress(Float(w.estimatedProgress), animated: true)
+                      UIView.animate(withDuration: 0.25) { self.progress.alpha = done ? 0 : 1 }
+                      if done { self.progress.setProgress(0, animated: false) }
+                  }
+              }
+
+              private func load() {
+                  var req = URLRequest(url: site)
+                  req.cachePolicy = .useProtocolCachePolicy
+                  req.timeoutInterval = 25
+                  web.load(req)
+              }
+
+              @objc private func reloadTapped() {
+                  refreshButton.alpha = 1
+                  offlineView?.removeFromSuperview()
+                  offlineView = nil
+
+                  if web.url == nil {
+                      load()
+                  } else {
+                      web.reloadFromOrigin()
+                  }
+
+                  UIView.animate(withDuration: 0.3, delay: 1.2) { self.refreshButton.alpha = 0.55 }
+              }
+
+              /// Запрашиваем геолокацию заранее, чтобы фотофиксация сразу получала координаты.
+              func prepareLocation() {
+                  guard !locationAsked else { return }
+                  if locationManager.authorizationStatus == .notDetermined {
+                      locationAsked = true
+                      locationManager.requestWhenInUseAuthorization()
+                  }
+              }
+
+              private func showOffline() {
+                  guard offlineView == nil else { return }
+
+                  let box = UIView()
+                  box.translatesAutoresizingMaskIntoConstraints = false
+                  box.backgroundColor = UIColor(named: "BrandColor") ?? .systemBackground
+
+                  let icon = UIImageView(image: UIImage(systemName: "wifi.slash"))
+                  icon.tintColor = .secondaryLabel
+                  icon.contentMode = .scaleAspectFit
+                  icon.translatesAutoresizingMaskIntoConstraints = false
+
+                  let title = UILabel()
+                  title.text = "Нет подключения к интернету"
+                  title.font = .systemFont(ofSize: 18, weight: .semibold)
+                  title.textColor = .label
+                  title.textAlignment = .center
+                  title.numberOfLines = 0
+                  title.translatesAutoresizingMaskIntoConstraints = false
+
+                  let hint = UILabel()
+                  hint.text = "Проверьте связь на объекте и повторите попытку."
+                  hint.font = .systemFont(ofSize: 15)
+                  hint.textColor = .secondaryLabel
+                  hint.textAlignment = .center
+                  hint.numberOfLines = 0
+                  hint.translatesAutoresizingMaskIntoConstraints = false
+
+                  let retry = UIButton(type: .system)
+                  retry.setTitle("Повторить", for: .normal)
+                  retry.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+                  retry.backgroundColor = UIColor(red: 0.12, green: 0.23, blue: 0.43, alpha: 1)
+                  retry.setTitleColor(.white, for: .normal)
+                  retry.layer.cornerRadius = 6
+                  retry.translatesAutoresizingMaskIntoConstraints = false
+                  retry.addTarget(self, action: #selector(reloadTapped), for: .touchUpInside)
+
+                  box.addSubview(icon)
+                  box.addSubview(title)
+                  box.addSubview(hint)
+                  box.addSubview(retry)
+                  view.addSubview(box)
+                  offlineView = box
+
+                  NSLayoutConstraint.activate([
+                      box.topAnchor.constraint(equalTo: view.topAnchor),
+                      box.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                      box.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                      box.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+
+                      icon.centerXAnchor.constraint(equalTo: box.centerXAnchor),
+                      icon.centerYAnchor.constraint(equalTo: box.centerYAnchor, constant: -90),
+                      icon.widthAnchor.constraint(equalToConstant: 54),
+                      icon.heightAnchor.constraint(equalToConstant: 54),
+
+                      title.topAnchor.constraint(equalTo: icon.bottomAnchor, constant: 18),
+                      title.leadingAnchor.constraint(equalTo: box.leadingAnchor, constant: 32),
+                      title.trailingAnchor.constraint(equalTo: box.trailingAnchor, constant: -32),
+
+                      hint.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 8),
+                      hint.leadingAnchor.constraint(equalTo: box.leadingAnchor, constant: 32),
+                      hint.trailingAnchor.constraint(equalTo: box.trailingAnchor, constant: -32),
+
+                      retry.topAnchor.constraint(equalTo: hint.bottomAnchor, constant: 22),
+                      retry.centerXAnchor.constraint(equalTo: box.centerXAnchor),
+                      retry.widthAnchor.constraint(equalToConstant: 170),
+                      retry.heightAnchor.constraint(equalToConstant: 46)
+                  ])
+              }
+          }
+
+          extension ViewController: WKNavigationDelegate {
+
+              func webView(_ w: WKWebView,
+                           decidePolicyFor action: WKNavigationAction,
+                           decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+
+                  guard let url = action.request.url else {
+                      decisionHandler(.allow)
+                      return
+                  }
+                  let s = url.absoluteString
+
+                  // Телефон, почта и мессенджеры открываем системно.
+                  let external = ["tel:", "mailto:", "sms:", "whatsapp:", "tg:", "maps:"]
+                  if external.contains(where: { s.hasPrefix($0) }) {
+                      UIApplication.shared.open(url)
+                      decisionHandler(.cancel)
+                      return
+                  }
+
+                  // Ссылки на сторонние сайты уводим в Safari, чтобы не запирать пользователя.
+                  if let h = url.host,
+                     !h.contains("xn--e1afhkhdkdm.su"),
+                     !h.contains("poehali.dev"),
+                     action.navigationType == .linkActivated {
+                      UIApplication.shared.open(url)
+                      decisionHandler(.cancel)
+                      return
+                  }
+
+                  decisionHandler(.allow)
+              }
+
+              func webView(_ w: WKWebView, didFinish nav: WKNavigation!) {
+                  offlineView?.removeFromSuperview()
+                  offlineView = nil
+                  prepareLocation()
+              }
+
+              func webView(_ w: WKWebView, didFail nav: WKNavigation!, withError e: Error) {
+                  handle(e)
+              }
+
+              func webView(_ w: WKWebView, didFailProvisionalNavigation nav: WKNavigation!, withError e: Error) {
+                  handle(e)
+              }
+
+              private func handle(_ e: Error) {
+                  // Отменённая навигация — не ошибка связи, экран показывать не нужно.
+                  guard (e as NSError).code != NSURLErrorCancelled else { return }
+                  showOffline()
+              }
+          }
+
+          extension ViewController: WKUIDelegate {
+
+              /// Ссылки с target=_blank открываем в том же окне, иначе они молча теряются.
+              func webView(_ w: WKWebView,
+                           createWebViewWith cfg: WKWebViewConfiguration,
+                           for action: WKNavigationAction,
+                           windowFeatures: WKWindowFeatures) -> WKWebView? {
+                  if action.targetFrame == nil, let url = action.request.url {
+                      w.load(URLRequest(url: url))
+                  }
+                  return nil
+              }
+
+              /// Запрос камеры и микрофона передаём системному диалогу iOS.
+              @available(iOS 15.0, *)
+              func webView(_ w: WKWebView,
+                           requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                           initiatedByFrame frame: WKFrameInfo,
+                           type: WKMediaCaptureType,
+                           decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+                  decisionHandler(.prompt)
+              }
+
+              func webView(_ w: WKWebView, runJavaScriptAlertPanelWithMessage msg: String,
+                           initiatedByFrame f: WKFrameInfo,
+                           completionHandler done: @escaping () -> Void) {
+                  let a = UIAlertController(title: nil, message: msg, preferredStyle: .alert)
+                  a.addAction(UIAlertAction(title: "ОК", style: .default) { _ in done() })
+                  present(a, animated: true)
+              }
+
+              func webView(_ w: WKWebView, runJavaScriptConfirmPanelWithMessage msg: String,
+                           initiatedByFrame f: WKFrameInfo,
+                           completionHandler done: @escaping (Bool) -> Void) {
+                  let a = UIAlertController(title: nil, message: msg, preferredStyle: .alert)
+                  a.addAction(UIAlertAction(title: "Отмена", style: .cancel) { _ in done(false) })
+                  a.addAction(UIAlertAction(title: "ОК", style: .default) { _ in done(true) })
+                  present(a, animated: true)
+              }
+
+              func webView(_ w: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String,
+                           defaultText: String?, initiatedByFrame f: WKFrameInfo,
+                           completionHandler done: @escaping (String?) -> Void) {
+                  let a = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
+                  a.addTextField { $0.text = defaultText }
+                  a.addAction(UIAlertAction(title: "Отмена", style: .cancel) { _ in done(nil) })
+                  a.addAction(UIAlertAction(title: "ОК", style: .default) { _ in
+                      done(a.textFields?.first?.text)
+                  })
+                  present(a, animated: true)
+              }
+          }
+          EOF
+
+      - name: Пишем настройки приложения
+        run: |
+          set -e
+          cat > ios/Resources/Info.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDevelopmentRegion</key>
+              <string>ru_RU</string>
+              <key>CFBundleDisplayName</key>
+              <string>Инспектор СК</string>
+              <key>CFBundleExecutable</key>
+              <string>$(EXECUTABLE_NAME)</string>
+              <key>CFBundleIdentifier</key>
+              <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+              <key>CFBundleInfoDictionaryVersion</key>
+              <string>6.0</string>
+              <key>CFBundleName</key>
+              <string>$(PRODUCT_NAME)</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.4</string>
+              <key>CFBundleVersion</key>
+              <string>5</string>
+
+              <key>LSRequiresIPhoneOS</key>
+              <true/>
+              <key>UILaunchStoryboardName</key>
+              <string>LaunchScreen</string>
+              <key>UIUserInterfaceStyle</key>
+              <string>Light</string>
+              <key>UIViewControllerBasedStatusBarAppearance</key>
+              <true/>
+
+              <key>UISupportedInterfaceOrientations</key>
+              <array>
+                  <string>UIInterfaceOrientationPortrait</string>
+              </array>
+              <key>UISupportedInterfaceOrientations~ipad</key>
+              <array>
+                  <string>UIInterfaceOrientationPortrait</string>
+                  <string>UIInterfaceOrientationPortraitUpsideDown</string>
+                  <string>UIInterfaceOrientationLandscapeLeft</string>
+                  <string>UIInterfaceOrientationLandscapeRight</string>
+              </array>
+
+              <key>NSCameraUsageDescription</key>
+              <string>Камера используется для фотофиксации нарушений на строительном объекте и съёмки исполнительной документации при проведении проверки.</string>
+              <key>NSPhotoLibraryUsageDescription</key>
+              <string>Доступ к фотографиям нужен, чтобы прикрепить к акту проверки ранее снятые на объекте фотографии и сканы документов.</string>
+              <key>NSPhotoLibraryAddUsageDescription</key>
+              <string>Сохранение снимков объекта и готовых актов проверки в фотоплёнку устройства.</string>
+              <key>NSLocationWhenInUseUsageDescription</key>
+              <string>Геолокация используется для привязки фотофиксации нарушений к координатам строительного объекта и подтверждения присутствия инспектора на площадке.</string>
+              <key>NSMicrophoneUsageDescription</key>
+              <string>Микрофон используется для записи голосовых комментариев к замечаниям при обследовании объекта.</string>
+
+              <key>ITSAppUsesNonExemptEncryption</key>
+              <false/>
+
+              <key>NSAppTransportSecurity</key>
+              <dict>
+                  <key>NSAllowsArbitraryLoads</key>
+                  <false/>
+              </dict>
+          </dict>
+          </plist>
+          EOF
+
+          plutil -lint ios/Resources/Info.plist
+
+      - name: Пишем экран запуска
+        run: |
+          set -e
+          cat > ios/Resources/LaunchScreen.storyboard <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="22505" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+              <device id="retina6_12" orientation="portrait" appearance="light"/>
+              <dependencies>
+                  <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22504"/>
+                  <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+              </dependencies>
+              <scenes>
+                  <scene sceneID="EHf-IW-A2E">
+                      <objects>
+                          <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                              <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                                  <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                  <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                  <subviews>
+                                      <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="SplashLogo" translatesAutoresizingMaskIntoConstraints="NO" id="Lg5-9F-ptr">
+                                          <rect key="frame" x="136.5" y="306" width="120" height="120"/>
+                                          <constraints>
+                                              <constraint firstAttribute="width" constant="120" id="wid-01"/>
+                                              <constraint firstAttribute="height" constant="120" id="hei-01"/>
+                                          </constraints>
+                                      </imageView>
+                                      <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="ИНСПЕКТОР СК" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Lbl-01-aaa">
+                                          <rect key="frame" x="96.5" y="446" width="200" height="29"/>
+                                          <fontDescription key="fontDescription" type="boldSystem" pointSize="24"/>
+                                          <color key="textColor" red="0.12" green="0.23" blue="0.43" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                          <nil key="highlightedColor"/>
+                                      </label>
+                                      <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="строительный контроль" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Lbl-02-bbb">
+                                          <rect key="frame" x="96.5" y="481" width="200" height="17"/>
+                                          <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                          <color key="textColor" red="0.45" green="0.45" blue="0.45" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                          <nil key="highlightedColor"/>
+                                      </label>
+                                  </subviews>
+                                  <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
+                                  <color key="backgroundColor" red="0.96078431372549022" green="0.96078431372549022" blue="0.96078431372549022" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                  <constraints>
+                                      <constraint firstItem="Lg5-9F-ptr" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx-img"/>
+                                      <constraint firstItem="Lg5-9F-ptr" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-60" id="cy-img"/>
+                                      <constraint firstItem="Lbl-01-aaa" firstAttribute="top" secondItem="Lg5-9F-ptr" secondAttribute="bottom" constant="20" id="tp-l1"/>
+                                      <constraint firstItem="Lbl-01-aaa" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx-l1"/>
+                                      <constraint firstItem="Lbl-02-bbb" firstAttribute="top" secondItem="Lbl-01-aaa" secondAttribute="bottom" constant="6" id="tp-l2"/>
+                                      <constraint firstItem="Lbl-02-bbb" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx-l2"/>
+                                  </constraints>
+                              </view>
+                          </viewController>
+                          <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+                      </objects>
+                      <point key="canvasLocation" x="53" y="375"/>
+                  </scene>
+              </scenes>
+              <resources>
+                  <image name="SplashLogo" width="120" height="120"/>
+              </resources>
+          </document>
+          EOF
+
+      - name: Описываем проект
+        run: |
+          set -e
+          cat > ios/project.yml <<'EOF'
+          name: InspectorSK
+          options:
+            bundleIdPrefix: ru.globalstroy
+            deploymentTarget:
+              iOS: "14.0"
+            createIntermediateGroups: true
+            developmentLanguage: ru
+
+          settings:
+            base:
+              MARKETING_VERSION: "1.4"
+              CURRENT_PROJECT_VERSION: "5"
+              SWIFT_VERSION: "5.0"
+              ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+              ALWAYS_SEARCH_USER_PATHS: "NO"
+              CLANG_ENABLE_MODULES: "YES"
+
+          targets:
+            InspectorSK:
+              type: application
+              platform: iOS
+              sources:
+                - path: Sources
+                - path: Resources
+                  excludes:
+                    - "Info.plist"
+              settings:
+                base:
+                  PRODUCT_NAME: InspectorSK
+                  PRODUCT_BUNDLE_IDENTIFIER: ru.globalstroy.inspector
+                  INFOPLIST_FILE: Resources/Info.plist
+                  ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+                  TARGETED_DEVICE_FAMILY: "1,2"
+                  SUPPORTS_MACCATALYST: "NO"
+                  SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+                  GENERATE_INFOPLIST_FILE: "NO"
+                  CODE_SIGN_STYLE: Manual
+                  SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+                configs:
+                  Release:
+                    SWIFT_OPTIMIZATION_LEVEL: "-O"
+                    SWIFT_COMPILATION_MODE: wholemodule
+          EOF
+
+      - name: Ставим генератор и собираем проект
+        working-directory: ios
+        run: |
+          set -e
+          brew install xcodegen
+          xcodegen generate
+          ls -la InspectorSK.xcodeproj
+
+      # --- Проверочная сборка: ключи Apple не нужны ---
+
+      - name: Проверяем сборку без подписи
+        if: inputs.mode == 'check'
+        working-directory: ios
+        run: |
+          set -eo pipefail
+          xcodebuild clean build \
+            -project InspectorSK.xcodeproj \
+            -scheme InspectorSK \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            -quiet
+          echo "Сборка прошла успешно."
+
+      # --- Подписанная сборка для TestFlight ---
+
+      - name: Ставим сертификат разработчика
+        if: inputs.mode == 'testflight'
+        env:
+          CERT_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          set -e
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          KEY_PASS=$(uuidgen)
+
+          security create-keychain -p "$KEY_PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEY_PASS" "$KEYCHAIN"
+
+          echo "$CERT_P12" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 -k "$KEYCHAIN" \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEY_PASS" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain
+
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          echo "$PROFILE" | base64 --decode > "$PROFILE_DIR/app.mobileprovision"
+
+          UUID=$(security cms -D -i "$PROFILE_DIR/app.mobileprovision" | plutil -extract UUID raw -o - -)
+          echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
+          rm -f $RUNNER_TEMP/cert.p12
+
+      - name: Собираем архив
+        if: inputs.mode == 'testflight'
+        working-directory: ios
+        env:
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          set -eo pipefail
+          xcodebuild archive \
+            -project InspectorSK.xcodeproj \
+            -scheme InspectorSK \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/InspectorSK.xcarchive \
+            -destination 'generic/platform=iOS' \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution"
+
+      - name: Готовим файл для App Store
+        if: inputs.mode == 'testflight'
+        env:
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          set -e
+          cat > $RUNNER_TEMP/export.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>ru.globalstroy.inspector</key>
+              <string>$PROFILE_UUID</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/InspectorSK.xcarchive \
+            -exportOptionsPlist $RUNNER_TEMP/export.plist \
+            -exportPath $RUNNER_TEMP/export
+
+      - name: Отправляем в TestFlight
+        if: inputs.mode == 'testflight'
+        env:
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          KEY_P8: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          set -e
+          mkdir -p ~/private_keys
+          echo "$KEY_P8" | base64 --decode > ~/private_keys/AuthKey_$KEY_ID.p8
+
+          xcrun altool --upload-app -f $RUNNER_TEMP/export/InspectorSK.ipa \
+            -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+
+          rm -rf ~/private_keys
+
+      - name: Сохраняем готовый файл
+        if: inputs.mode == 'testflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: InspectorSK-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          retention-days: 14
+
+      - name: Чистим ключи
+        if: always() && inputs.mode == 'testflight'
+        run: |
+          security delete-keychain $RUNNER_TEMP/build.keychain || true
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/app.mobileprovision" || true
