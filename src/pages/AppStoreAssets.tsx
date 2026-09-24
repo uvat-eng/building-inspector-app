@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 
-const SITE = 'https://xn--e1afhkhdkdm.su';
+const SITE = 'https://инспектор.su';
 
 const SHOTS = [
   { file: 'screen-1-cabinet.png', title: 'Кабинет руководителя' },
