@@ -24,7 +24,7 @@ env:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 40
 
     steps:
@@ -33,13 +33,11 @@ jobs:
 
       - name: Выбираем Xcode
         run: |
-          if [ -d /Applications/Xcode_15.4.app ]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app
-          else
-            LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
-            echo "Xcode 15.4 не найден, используем $LATEST"
-            sudo xcode-select -s "$LATEST"
-          fi
+          # Apple принимает только приложения, собранные в Xcode 26 и новее,
+          # поэтому всегда берём самую свежую версию на машине.
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Используем $LATEST"
+          sudo xcode-select -s "$LATEST"
           xcodebuild -version
 
       - name: Создаём структуру проекта
