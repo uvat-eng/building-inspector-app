@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import Icon from '@/components/ui/icon';
 import ProfileCard from '@/components/desk/ProfileCard';
+import DeleteAccountButton from '@/components/desk/DeleteAccountButton';
 import { MENU, SectionId } from '@/data/mock';
 import { useProfile, ROLE_SECTIONS, ROLE_LABEL, ROLE_ICON, Role } from '@/data/profile';
 import { useUsers } from '@/data/users';
@@ -107,6 +108,7 @@ const SideMenu = ({
         Выйти из учётной записи
       </button>
     )}
+    {current && <DeleteAccountButton user={current} />}
   </nav>
   );
 };

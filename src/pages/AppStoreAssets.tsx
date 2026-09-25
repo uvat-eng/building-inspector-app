@@ -61,6 +61,76 @@ const REVIEW_NOTES = `Приложение предназначено для в�
 
 Контакт для связи: uskov_an@mail.ru, 8 3452 90-12-44`;
 
+const REVIEW_REPLY = `Hello,
+
+Thank you for the review. Please find the requested information below.
+
+2. PURPOSE AND TARGET AUDIENCE
+
+"Инспектор СК" (Inspector SK) is an internal productivity tool for employees of Global-Stroyinzhiniring LLC, a construction supervision company operating in Russia.
+
+Problem it solves: construction site inspectors work at remote oil and gas facilities, often with poor or no mobile connectivity. Before this app, inspection records, violation photos and reports were kept on paper and typed into spreadsheets days later. The app lets an inspector record an inspection, attach geotagged photos of violations and issue a compliance notice directly on site; the data syncs to the head office as soon as connectivity is available.
+
+Target audience: construction supervision inspectors, project managers and administrative staff of our company. The app is not intended for the general public. Accounts are created by a company administrator; there is no public sign-up.
+
+3. SETTING UP AND ACCESSING MAIN FEATURES
+
+There is no registration flow. On the login screen enter the full name in the "ФИО" field and the password. Two demo accounts are provided:
+
+Account 1 - Project Manager (full access to all sections)
+Login: Demo Manager
+Password: Demo2026!
+
+Account 2 - Inspector (inspections, reports, photo records)
+Login: Demo Inspector
+Password: Demo2026!
+
+Forced password change is disabled for both accounts. Both accounts have an assigned construction project, so all sections contain real working data.
+
+How to reach the main features after login:
+- Dashboard opens immediately and shows the project summary.
+- "Объекты" (Facilities) - list of construction projects.
+- "Проверки" (Inspections) - tap a project, then "Новая проверка" to create an inspection and attach a photo.
+- "Документы" (Documents) - compliance notices and reports.
+- "Карта" (Map) - facility locations; this is where location permission is requested.
+- Account deletion: open the profile menu in the top right, then "Удалить учётную запись". A confirmation dialog appears and the account and its data are removed.
+
+The app requires an internet connection for the initial login.
+
+4. EXTERNAL SERVICES AND TOOLS
+
+- Hosting and backend: Yandex Cloud (Russia) - serverless functions and PostgreSQL database.
+- File storage: Yandex Object Storage - inspection photos and documents.
+- Maps: OpenStreetMap raster tiles for the facility map.
+- Authentication: our own backend; no third-party identity provider.
+- No payment processors, no in-app purchases, no advertising SDKs, no analytics SDKs, no AI services.
+- No user data is shared with third parties for tracking or advertising.
+
+5. REGIONAL DIFFERENCES
+
+The app functions consistently across all regions. The interface is available in Russian only, because all users are Russian-speaking employees of the company. There is no region-specific content, no geo-gating and no feature differences between countries.
+
+6. REGULATED INDUSTRY AND THIRD-PARTY MATERIAL
+
+The app does not operate in a highly regulated industry in the App Store sense: it does not provide medical, financial, gambling or similar services. It is an internal record-keeping tool for our own construction supervision activity.
+
+All content in the app - facility data, inspection records, compliance notices and photographs - is created by our own employees and owned by our company. No protected third-party material is included. Map tiles are from OpenStreetMap and used in accordance with the Open Database License, with the required attribution shown on the map screen.
+
+REGARDING GUIDELINE 3.2
+
+We are aware that the app is intended for our employees. We chose public App Store distribution rather than the Apple Developer Enterprise Program because our team is small and distributed across remote sites, and the Enterprise Program is not available to us. The app is free, contains no purchases and is harmless to a general user, who simply cannot log in without credentials issued by the company. If you would prefer a different distribution method, please let us know and we will follow your guidance.
+
+SUPPORT
+
+Support page: https://xn--e1afhkhdkdm.su/support
+Privacy policy: https://xn--e1afhkhdkdm.su/privacy
+Email: uskov_an@mail.ru
+
+Please let us know if any further information is required.
+
+Best regards,
+Global-Stroyinzhiniring LLC`;
+
 type Block = { label: string; value: string; hint?: string; rows?: number };
 
 const BLOCKS: Block[] = [
@@ -323,6 +393,37 @@ const AppStoreAssets = () => (
           <p className="mt-1 text-sm text-slate-500">
             Нажмите «Опубликовать» в правом верхнем углу раздела. Без этого анкета
             не сохранится и проверка не запустится.
+          </p>
+        </div>
+      </Section>
+
+      <Section title="Ответ проверяющему (Guideline 2.1)">
+        <p className="mt-3 text-sm text-slate-500">
+          Готовый текст на английском. Скопируйте и отправьте двумя способами:
+          ответом в переписке App Review и в поле «Notes» раздела App Review
+          Information — Apple просит именно так.
+        </p>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold text-slate-800">
+              Reply to App Review
+            </span>
+            <CopyBtn text={REVIEW_REPLY} />
+          </div>
+          <textarea
+            readOnly
+            rows={14}
+            value={REVIEW_REPLY}
+            className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs leading-relaxed text-slate-700"
+          />
+        </div>
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+          <p className="font-semibold">Отдельно нужна видеозапись экрана</p>
+          <p className="mt-1.5">
+            Снимите видео с настоящего iPhone: запуск приложения, вход под
+            Demo Manager, переход по разделам, создание проверки с фотографией и
+            показ кнопки удаления учётной записи. Ролик выложите на любой
+            открытый хостинг и вставьте ссылку в начало ответа.
           </p>
         </div>
       </Section>
