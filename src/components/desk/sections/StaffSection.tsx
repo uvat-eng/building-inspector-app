@@ -70,7 +70,7 @@ const StaffSection = () => {
       toast({ title: 'Укажите фамилию, имя и отчество', variant: 'destructive' });
       return;
     }
-    if ((nRole === 'driver' || nRole === 'mechanic') && !nProject.trim()) {
+    if (nRole === 'driver' && !nProject.trim()) {
       toast({ title: 'Выберите проект', description: 'Путевые листы заполняются по проекту.', variant: 'destructive' });
       return;
     }
@@ -577,7 +577,7 @@ const StaffSection = () => {
             </div>
             )}
 
-            {(nRole === 'driver' || nRole === 'mechanic') && (
+            {nRole === 'driver' && (
               <div className="space-y-1.5">
                 <Label className="text-[0.75em] uppercase tracking-[0.1em] text-muted-foreground">
                   Проект — подставится в путевые листы
