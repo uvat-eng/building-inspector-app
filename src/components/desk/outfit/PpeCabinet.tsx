@@ -144,8 +144,7 @@ const PpeCabinet = () => {
   };
 
   const printSheet = () => {
-    if (!printHtml(buildSheetHtml(items, holderFio, profile.org)))
-      toast({ title: 'Разрешите всплывающие окна', variant: 'destructive' });
+    printHtml(buildSheetHtml(items, holderFio, profile.org), 'Ведомость спецодежды');
   };
 
   return (
@@ -256,7 +255,12 @@ const PpeCabinet = () => {
                     size="sm"
                     variant="outline"
                     className="ml-auto h-8 gap-1.5 rounded-sm"
-                    onClick={() => printHtml(buildWriteoffActHtml(w, profile.org))}
+                    onClick={() =>
+                      printHtml(
+                        buildWriteoffActHtml(w, profile.org),
+                        `Акт списания № ${w.actNo}`,
+                      )
+                    }
                   >
                     <Icon name="Printer" size={14} className="text-accent" />
                     Акт списания № {w.actNo}

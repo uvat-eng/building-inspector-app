@@ -20,7 +20,8 @@ import {
   PhotoFolder,
 } from '@/data/folders';
 import PhotoReportForm, { ReportDraft } from '@/components/desk/photos/PhotoReportForm';
-import { downloadPhotoReport, printPhotoReport } from '@/lib/photoReportDoc';
+import { downloadPhotoReport, buildPhotoReportHtml } from '@/lib/photoReportDoc';
+import DocPreview from '@/components/desk/DocPreview';
 
 interface PhotosSectionProps {
   onBack?: () => void;
@@ -37,6 +38,7 @@ const PhotosSection = ({ onBack }: PhotosSectionProps) => {
   const [openMonth, setOpenMonth] = useState<string | null>(monthKey());
   const [openFolder, setOpenFolder] = useState<string | null>(null);
   const [zoom, setZoom] = useState<PhotoFolder['photos'][number] | null>(null);
+  const [preview, setPreview] = useState<{ html: string; title: string } | null>(null);
 
   const byMonth = useMemo(() => {
     const map = new Map<string, PhotoFolder[]>();
@@ -114,6 +116,13 @@ const PhotosSection = ({ onBack }: PhotosSectionProps) => {
 
   return (
     <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+      {preview && (
+        <DocPreview
+          html={preview.html}
+          title={preview.title}
+          onClose={() => setPreview(null)}
+        />
+      )}
       {onBack && (
         <button
           type="button"
@@ -247,13 +256,12 @@ const PhotosSection = ({ onBack }: PhotosSectionProps) => {
                               size="sm"
                               variant="outline"
                               className="h-9 flex-1 gap-1.5 rounded-sm text-[0.82em] uppercase tracking-[0.06em]"
-                              onClick={() => {
-                                if (!printPhotoReport(docData(f)))
-                                  toast({
-                                    title: 'Разрешите всплывающие окна',
-                                    variant: 'destructive',
-                                  });
-                              }}
+                              onClick={() =>
+                                setPreview({
+                                  html: buildPhotoReportHtml(docData(f)),
+                                  title: `Фотоотчёт · ${f.title}`,
+                                })
+                              }
                             >
                               <Icon name="Printer" size={15} className="text-accent" />
                               Печать

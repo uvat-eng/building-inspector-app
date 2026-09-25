@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import Panel from '@/components/desk/Panel';
 import Empty from '@/components/desk/Empty';
+import PhotoLightbox from '@/components/desk/PhotoLightbox';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,6 +63,7 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
     null,
   );
   const [year, setYear] = useState(new Date().getFullYear());
+  const [photo, setPhoto] = useState<string | null>(null);
 
   const inSub = useMemo(
     () => (sub === null ? items : items.filter((f) => f.subsection === sub)),
@@ -142,6 +144,7 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+      {photo && <PhotoLightbox url={photo} onClose={() => setPhoto(null)} />}
       <div className="flex flex-none flex-wrap items-center gap-2">
         <button
           type="button"
@@ -219,7 +222,7 @@ const FoldersCabinet = ({ object, section, onBack }: FoldersCabinetProps) => {
                   <div key={p.id} className="group relative">
                     <button
                       type="button"
-                      onClick={() => window.open(p.url, '_blank')}
+                      onClick={() => setPhoto(p.url)}
                       className="block aspect-square w-full overflow-hidden rounded-sm border border-border"
                     >
                       <img src={p.url} alt="" className="h-full w-full object-cover" />

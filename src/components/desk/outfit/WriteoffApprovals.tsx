@@ -152,7 +152,9 @@ const WriteoffApprovals = () => {
           size="sm"
           variant="outline"
           className="mt-2.5 h-9 w-full gap-1.5 rounded-sm text-[0.82em] uppercase tracking-[0.06em]"
-          onClick={() => printHtml(buildWriteoffActHtml(w, profile.org))}
+          onClick={() =>
+            printHtml(buildWriteoffActHtml(w, profile.org), `Акт списания № ${w.actNo}`)
+          }
         >
           <Icon name="Printer" size={15} className="text-accent" />
           Акт списания на подпись

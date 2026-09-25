@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import Panel from '@/components/desk/Panel';
 import Icon from '@/components/ui/icon';
+import DocPreview from '@/components/desk/DocPreview';
+import PhotoLightbox from '@/components/desk/PhotoLightbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Order, Contractor } from '@/data/orders';
@@ -23,6 +26,8 @@ const Row = ({ label, value }: { label: string; value?: string }) =>
 
 const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
   const { toast } = useToast();
+  const [preview, setPreview] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null);
   const items = order.body.items ?? [];
 
   const save = () => {
@@ -30,19 +35,19 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
     toast({ title: `Предписание № ${order.number}`, description: 'Файл Word сохранён' });
   };
 
-  const print = () => {
-    const w = window.open('', '_blank');
-    if (!w) {
-      toast({ title: 'Разрешите всплывающие окна', variant: 'destructive' });
-      return;
-    }
-    w.document.write(buildOrderHtml(order, contractor));
-    w.document.close();
-    setTimeout(() => w.print(), 400);
-  };
+  const print = () => setPreview(buildOrderHtml(order, contractor));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+      {preview && (
+        <DocPreview
+          html={preview}
+          title={`Предписание № ${order.number}`}
+          onClose={() => setPreview(null)}
+          onDownload={save}
+        />
+      )}
+      {photo && <PhotoLightbox url={photo} onClose={() => setPhoto(null)} />}
       <button
         type="button"
         onClick={onBack}
@@ -109,7 +114,7 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
                           <button
                             key={k}
                             type="button"
-                            onClick={() => window.open(p, '_blank')}
+                            onClick={() => setPhoto(p)}
                             className="h-16 w-16 overflow-hidden rounded-sm border border-border"
                           >
                             <img src={p} alt="" className="h-full w-full object-cover" />

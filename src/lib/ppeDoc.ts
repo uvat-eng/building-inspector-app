@@ -1,4 +1,5 @@
 import { PpeItem, SEASON_LABEL, Writeoff, fmt } from '@/data/outfit';
+import { openDoc } from '@/data/docPreview';
 
 const shell = (title: string, inner: string) => `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>${title}</title>
@@ -109,11 +110,7 @@ export const buildWriteoffActHtml = (
   );
 };
 
-export const printHtml = (html: string) => {
-  const w = window.open('', '_blank');
-  if (!w) return false;
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => w.print(), 400);
+export const printHtml = (html: string, title = 'Документ') => {
+  openDoc(html, title);
   return true;
 };

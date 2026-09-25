@@ -1,4 +1,5 @@
 import { FolderMeta, FolderPhoto } from '@/data/folders';
+import { openDoc } from '@/data/docPreview';
 
 export interface PhotoReportData {
   meta: FolderMeta;
@@ -110,11 +111,7 @@ export const downloadPhotoReport = (data: PhotoReportData, name = 'Фотоот�
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 };
 
-export const printPhotoReport = (data: PhotoReportData) => {
-  const w = window.open('', '_blank');
-  if (!w) return false;
-  w.document.write(buildPhotoReportHtml(data));
-  w.document.close();
-  setTimeout(() => w.print(), 500);
+export const printPhotoReport = (data: PhotoReportData, title = 'Фотоотчёт') => {
+  openDoc(buildPhotoReportHtml(data), title);
   return true;
 };

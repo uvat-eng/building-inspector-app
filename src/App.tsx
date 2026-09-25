@@ -13,6 +13,7 @@ import AppStoreAssets from "./pages/AppStoreAssets";
 import Support from "./pages/Support";
 import { useEffect } from "react";
 import { startAutoFlush } from "@/data/photoQueue";
+import DocPreviewHost from "@/components/desk/DocPreviewHost";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => {
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <DocPreviewHost />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
