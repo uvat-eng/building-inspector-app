@@ -131,8 +131,15 @@ export const updateUser = async (id: string, patch: Partial<User>, byUserId?: st
 };
 
 export const removeUser = async (id: string) => {
+  const before = cache;
   publish(cache.filter((u) => u.id !== id));
-  await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  try {
+    const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('delete_failed');
+  } catch (e) {
+    publish(before);
+    throw e;
+  }
 };
 
 export const useUsers = () => {

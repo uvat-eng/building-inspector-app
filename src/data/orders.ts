@@ -105,18 +105,40 @@ export const useOrders = (objectId?: string) => {
     return item;
   }, []);
 
+  // Экран меняем сразу, но при сбое возвращаем прежнее состояние —
+  // иначе предписание «исчезнет» у инспектора, оставшись на сервере.
   const update = useCallback(async (id: string, patch: Partial<Order>) => {
-    setItems((p) => p.map((o) => (o.id === id ? { ...o, ...patch } : o)));
-    await fetch(API, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, patch }),
+    let before: Order[] = [];
+    setItems((p) => {
+      before = p;
+      return p.map((o) => (o.id === id ? { ...o, ...patch } : o));
     });
+    try {
+      const res = await fetch(API, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, patch }),
+      });
+      if (!res.ok) throw new Error('update_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   const remove = useCallback(async (id: string) => {
-    setItems((p) => p.filter((o) => o.id !== id));
-    await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    let before: Order[] = [];
+    setItems((p) => {
+      before = p;
+      return p.filter((o) => o.id !== id);
+    });
+    try {
+      const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   return { items, loading, create, update, remove, reload };

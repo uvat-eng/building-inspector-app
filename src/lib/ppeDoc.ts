@@ -67,7 +67,7 @@ export const buildWriteoffActHtml = (
   w: Writeoff,
   org = 'ООО «Глобал-Стройинжиниринг»',
 ) => {
-  const rows = w.items
+  const rows = (w.items ?? [])
     .map(
       (i, k) => `<tr>
       <td class="c">${k + 1}</td>
@@ -79,8 +79,8 @@ export const buildWriteoffActHtml = (
     )
     .join('');
 
-  const photos = w.photos.length
-    ? `<p class="note"><b>Фотофиксация:</b></p>${w.photos
+  const photos = (w.photos ?? []).length
+    ? `<p class="note"><b>Фотофиксация:</b></p>${(w.photos ?? [])
         .map((p) => `<img src="${p}" style="max-width:60mm;margin:0 3mm 3mm 0" />`)
         .join('')}`
     : '';

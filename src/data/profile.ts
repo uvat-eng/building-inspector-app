@@ -73,6 +73,7 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'photos',
     'documents',
     'reports',
+    'tracker',
   ],
   director: [
     'cabinet',
@@ -130,13 +131,14 @@ export const ROLE_SECTIONS: Record<Role, string[]> = {
     'staff',
     'assets',
     'sites',
+    'inspections',
     'defects',
     'photos',
     'documents',
     'reports',
     'tracker',
   ],
-  inspector: ['cabinet', 'objects', 'sites', 'defects', 'documents'],
+  inspector: ['cabinet', 'objects', 'sites', 'inspections', 'defects', 'photos', 'documents'],
   mechanic: ['cabinet', 'objects', 'assets', 'inspections', 'tracker'],
   driver: ['cabinet'],
 };
@@ -228,11 +230,14 @@ export const ALL_LOCATIONS_ROLES: Role[] = [
 
 export const hasAllLocations = (r: Role) => ALL_LOCATIONS_ROLES.includes(r);
 
+/**
+ * Пустой список локаций у рядовой должности — это не «доступ ко всему»,
+ * а забытая отметка. Такому сотруднику локации закрыты до назначения.
+ */
 export const canSeeLocation = (p: Profile, id: string) =>
   isAdminProfile(p) ||
   hasAllLocations(p.role) ||
-  !p.locations?.length ||
-  p.locations.includes(id);
+  !!p.locations?.includes(id);
 
 export const canAddLocation = (r: Role) => CAN_ADD_LOCATION.includes(r);
 

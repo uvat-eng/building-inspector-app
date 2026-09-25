@@ -25,7 +25,7 @@ export const buildActHtml = ({ inspection, defects, objectTitle, contractorName 
         <td>${esc(d.title)}</td>
         <td>${esc(d.normRef || '—')}</td>
         <td style="text-align:center">${esc(d.deadline || '—')}</td>
-        <td style="text-align:center">${d.photos.length ? `фото — ${d.photos.length} шт.` : '—'}</td>
+        <td style="text-align:center">${d.photos?.length ? `фото — ${d.photos.length} шт.` : '—'}</td>
       </tr>`,
         )
         .join('')

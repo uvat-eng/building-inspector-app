@@ -186,8 +186,18 @@ export const useIndReports = (filter: { authorId?: string } = {}) => {
   }, []);
 
   const remove = useCallback(async (id: string) => {
-    setItems((p) => p.filter((r) => r.id !== id));
-    await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    let before: IndReport[] = [];
+    setItems((p) => {
+      before = p;
+      return p.filter((r) => r.id !== id);
+    });
+    try {
+      const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   return { items, loading, reload, create, update, remove };

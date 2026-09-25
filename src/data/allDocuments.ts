@@ -70,8 +70,18 @@ export const useAllDocuments = () => {
   );
 
   const remove = useCallback(async (id: string) => {
-    setItems((prev) => prev.filter((d) => d.id !== id));
-    await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    let before: ProjectDoc[] = [];
+    setItems((prev) => {
+      before = prev;
+      return prev.filter((d) => d.id !== id);
+    });
+    try {
+      const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   return { items, loading, progress, uploadMany, remove, reload };

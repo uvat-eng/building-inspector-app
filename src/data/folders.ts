@@ -122,18 +122,39 @@ export const useAllFolders = (section: FolderSection) => {
     [section],
   );
 
+  // При сбое возвращаем папку на экран — снимки с объекта терять нельзя.
   const remove = useCallback(async (id: string) => {
-    setItems((p) => p.filter((f) => f.id !== id));
-    await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    let before: PhotoFolder[] = [];
+    setItems((p) => {
+      before = p;
+      return p.filter((f) => f.id !== id);
+    });
+    try {
+      const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   const removePhoto = useCallback(async (folderId: string, photoId: string) => {
-    setItems((p) =>
-      p.map((f) =>
+    let before: PhotoFolder[] = [];
+    setItems((p) => {
+      before = p;
+      return p.map((f) =>
         f.id === folderId ? { ...f, photos: f.photos.filter((ph) => ph.id !== photoId) } : f,
-      ),
-    );
-    await fetch(`${API}?photo_id=${encodeURIComponent(photoId)}`, { method: 'DELETE' });
+      );
+    });
+    try {
+      const res = await fetch(`${API}?photo_id=${encodeURIComponent(photoId)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('delete_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   return { items, loading, create, remove, removePhoto, reload };
@@ -186,26 +207,56 @@ export const useFolders = (objectId: string, section: FolderSection) => {
   );
 
   const rename = useCallback(async (id: string, title: string) => {
-    setItems((p) => p.map((f) => (f.id === id ? { ...f, title } : f)));
-    await fetch(API, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, patch: { title } }),
+    let before: PhotoFolder[] = [];
+    setItems((p) => {
+      before = p;
+      return p.map((f) => (f.id === id ? { ...f, title } : f));
     });
+    try {
+      const res = await fetch(API, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, patch: { title } }),
+      });
+      if (!res.ok) throw new Error('rename_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   const remove = useCallback(async (id: string) => {
-    setItems((p) => p.filter((f) => f.id !== id));
-    await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    let before: PhotoFolder[] = [];
+    setItems((p) => {
+      before = p;
+      return p.filter((f) => f.id !== id);
+    });
+    try {
+      const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   const removePhoto = useCallback(async (folderId: string, photoId: string) => {
-    setItems((p) =>
-      p.map((f) =>
+    let before: PhotoFolder[] = [];
+    setItems((p) => {
+      before = p;
+      return p.map((f) =>
         f.id === folderId ? { ...f, photos: f.photos.filter((ph) => ph.id !== photoId) } : f,
-      ),
-    );
-    await fetch(`${API}?photo_id=${encodeURIComponent(photoId)}`, { method: 'DELETE' });
+      );
+    });
+    try {
+      const res = await fetch(`${API}?photo_id=${encodeURIComponent(photoId)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('delete_failed');
+    } catch (e) {
+      setItems(before);
+      throw e;
+    }
   }, []);
 
   return { items, loading, create, rename, remove, removePhoto, reload };

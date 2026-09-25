@@ -75,6 +75,15 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     localStorage.setItem(SECTION_KEY, section);
   }, [section]);
 
+  // Раздел мог остаться от прошлого сотрудника или быть закрыт для должности —
+  // тогда экран будет пустым. Переводим на первый доступный.
+  useEffect(() => {
+    if (!current || isAdmin) return;
+    const allowed = ROLE_SECTIONS[profile.role] ?? [];
+    if (!allowed.length || allowed.includes(section)) return;
+    setSection((allowed[0] as SectionId) ?? 'cabinet');
+  }, [current, isAdmin, profile.role, section]);
+
   useEffect(() => {
     autoCloseMonth();
   }, []);

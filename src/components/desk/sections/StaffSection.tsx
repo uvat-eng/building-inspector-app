@@ -82,8 +82,12 @@ const StaffSection = () => {
       });
       return;
     }
-    if (nRole === 'inspector' && nLocs.length === 0) {
-      toast({ title: 'Назначьте хотя бы одну локацию', variant: 'destructive' });
+    if (!hasAllLocations(nRole) && nLocs.length === 0) {
+      toast({
+        title: 'Назначьте хотя бы одну локацию',
+        description: 'Без отметки сотрудник получит доступ ко всем проектам компании.',
+        variant: 'destructive',
+      });
       return;
     }
     setBusy(true);
@@ -414,9 +418,17 @@ const StaffSection = () => {
               <Button
                 variant="ghost"
                 className="h-8 gap-1.5 rounded-sm text-[0.9em] text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => {
-                  removeUser(u.id);
-                  toast({ title: 'Учётная запись удалена' });
+                onClick={async () => {
+                  try {
+                    await removeUser(u.id);
+                    toast({ title: 'Учётная запись удалена' });
+                  } catch {
+                    toast({
+                      title: 'Не удалось удалить',
+                      description: 'Нет связи с сервером — запись осталась на месте.',
+                      variant: 'destructive',
+                    });
+                  }
                 }}
               >
                 <Icon name="Trash2" size={14} />

@@ -139,7 +139,10 @@ export const flushQueue = async (force = false) => {
       await tx('readwrite', (s) => s.put({ ...p, sent: true, url }));
       sent += 1;
     } catch {
-      break;
+      // Связь пропала — остальные снимки ждут следующей попытки.
+      if (!navigator.onLine) break;
+      // Сбой на одном снимке не должен останавливать отправку остальных.
+      continue;
     }
   }
   window.dispatchEvent(new Event(EVENT));
