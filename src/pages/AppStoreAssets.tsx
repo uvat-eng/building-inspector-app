@@ -4,10 +4,10 @@ import Icon from '@/components/ui/icon';
 const SITE = 'https://инспектор.su';
 
 const SHOTS = [
-  { file: 'screen-1-cabinet.png', title: 'Кабинет руководителя' },
+  { file: 'screen-1-cabinet.png', title: 'Мой кабинет' },
   { file: 'screen-2-documents.png', title: 'Акты и документы' },
-  { file: 'screen-3-map.png', title: 'Карта объектов' },
-  { file: 'screen-4-tracker.png', title: 'Контроль перемещений' },
+  { file: 'screen-3-map.png', title: 'Главная — карта объектов' },
+  { file: 'screen-4-tracker.png', title: 'Трекеры' },
   { file: 'screen-5-inspections.png', title: 'Проверки и выезды' },
   { file: 'screen-6-reports.png', title: 'Отчёты и статистика' },
 ];
@@ -21,19 +21,25 @@ const DESCRIPTION = `«Инспектор СК» — рабочий инстру
 
 ВОЗМОЖНОСТИ
 
-Кабинет руководителя. Сводка по проектам, объектам и инспекторам на вахте. Количество открытых предписаний видно сразу при входе.
+Главная. Сводка по проектам и карта объектов. Количество открытых предписаний видно сразу при входе.
 
-Объекты и локации. Список проектов по регионам с разбивкой по людям, технике и вагонам — план и факт рядом.
+Мой кабинет. Рабочее место под должность: у инспектора — выезды и акты, у руководителя — сводка по всем проектам.
+
+Объекты. Список площадок по регионам с разбивкой по людям, технике и вагонам — план и факт рядом.
+
+Проверки и выезды. Планирование осмотров, фиксация нарушений, предписания и контроль сроков устранения.
+
+Замечания. Выявленные нарушения со сроками и статусами устранения.
+
+Фотоотчёты. Снимки с объектов, сгруппированные по месяцам.
 
 Акты и документы. Переписка, протоколы и предписания по месяцам. Пункты, ответы и статусы выполнения хранятся вместе.
 
-Карта объектов. Расположение площадок с привязкой к проектам.
-
-Контроль перемещений. Маршруты выездов в рабочее время, пробег и время в движении.
-
-Проверки и выезды. Планирование инспекций, фиксация нарушений, контроль сроков устранения.
+Трекеры. Маршруты выездов в рабочее время, пробег и время в движении.
 
 Отчёты. Статистика по объектам и подрядчикам за период.
+
+Персонал, техника и имущество. Учётные записи сотрудников, автопарк, вагоны и приборы.
 
 ДОСТУП
 
@@ -56,6 +62,10 @@ const REVIEW_NOTES = `Приложение предназначено для в�
 Пароль: Demo2026!
 
 Смена пароля при первом входе для этих записей отключена. Обе записи открывают рабочие данные по объектам в Якутии.
+
+Разделы открываются из бокового меню: на планшете оно всегда слева, на телефоне — по кнопке меню слева вверху. После входа открывается раздел «Главная» со сводкой и картой объектов. Проверка создаётся так: раздел «Проверки и выезды» → кнопка «Новый осмотр».
+
+Удаление учётной записи: боковое меню → в самом низу кнопка «Удалить учётную запись» → подтверждение в диалоге. Запись и личные данные удаляются, сеанс завершается. Ранее выпущенные акты и предписания остаются у организации, как требуют правила строительного контроля.
 
 Геолокация используется для фиксации рабочих перемещений инспекторов между строительными объектами. Данные собираются только когда приложение открыто и только после явного согласия сотрудника. Политика конфиденциальности: ${SITE}/privacy
 
@@ -91,13 +101,21 @@ Password: Demo2026!
 
 Forced password change is disabled for both accounts. Both accounts have an assigned construction project, so all sections contain real working data.
 
+Navigation: all sections are opened from the side menu. On iPad the menu is always visible on the left; on iPhone it is opened with the menu button in the top left of the header. Section titles below are given exactly as they appear in the app.
+
 How to reach the main features after login:
-- Dashboard opens immediately and shows the project summary.
-- "Объекты" (Facilities) - list of construction projects.
-- "Проверки" (Inspections) - tap a project, then "Новая проверка" to create an inspection and attach a photo.
-- "Документы" (Documents) - compliance notices and reports.
-- "Карта" (Map) - facility locations; this is where location permission is requested.
-- Account deletion: open the profile menu in the top right, then "Удалить учётную запись". A confirmation dialog appears and the account and its data are removed.
+- "Главная" (Home) opens immediately: a summary of projects with a map of the facilities.
+- "Объекты" (Facilities) - list of construction projects and their details.
+- "Проверки и выезды" (Inspections and site visits) - open this section and tap "Новый осмотр" (New inspection) to create an inspection, add findings and attach photographs.
+- "Замечания" (Findings) - the list of recorded violations.
+- "Фотоотчёты" (Photo reports) - photo records grouped by month.
+- "Акты и документы" (Statements and documents) - compliance notices, reports and correspondence.
+- "Трекеры" (Movement tracking) - work routes of inspectors; the location permission is requested here and on the home screen map.
+- "Отчёты" (Reports) - statistics per facility and contractor.
+The set of visible sections depends on the employee's position: an inspector sees inspections and reports, a manager sees every section.
+
+ACCOUNT DELETION
+Open the side menu (always visible on iPad, menu button in the top left on iPhone). The button "Удалить учётную запись" (Delete account) is at the very bottom of that menu. A confirmation dialog appears; after confirming, the user account and its personal data are deleted, the session ends and the app returns to the login screen. Inspection statements and compliance notices remain the property of the company, as required by Russian construction supervision rules; they contain no personal data of the deleted user beyond the author's name on already issued official documents.
 
 The app requires an internet connection for the initial login.
 
@@ -111,6 +129,13 @@ The app requires an internet connection for the initial login.
 - Artificial intelligence: the app contains no AI or machine learning features. There is no chatbot, no generative model, no image recognition, no automatic decision making and no integration with OpenAI, Google, Yandex or any other AI provider. All inspection findings, compliance notices and reports are written by the inspector; the app only stores, formats and prints what the employee entered.
 - No payment processors, no in-app purchases, no advertising SDKs, no analytics SDKs, no tracking SDKs.
 - No user data is shared with third parties for tracking or advertising.
+
+ADDITIONAL FEATURES, FOR COMPLETENESS
+- File export: inspection statements, compliance notices, timesheets and registers can be saved as Word or Excel files and printed. Documents are generated on the device from data the employees entered themselves; nothing is uploaded to a third-party converter.
+- File upload: employees attach project documentation (drawings, permits, scanned statements) to a facility. Files are stored in our own Yandex Object Storage. There is no public gallery and no content shared outside the company.
+- Sending a document: a generated document can be sent by the user's own mail app (standard mailto link) or forwarded as plain text through Telegram or WhatsApp using their public web share links. The app has no messaging of its own, no chat between users and no message storage; it simply hands the text to the app chosen by the employee, and the system share sheet stays under the user's control.
+- Phone calls: contact cards of colleagues and an emergency contact contain standard tel: links. Site inspectors work at remote facilities, so a one-tap call matters for safety. The app never dials without the user tapping the number.
+- User-generated content: the only content created in the app is the employee's own work records - inspection findings, photographs of construction defects and official notices. There is no social feed, no comments, no public profiles and no content visible to anyone outside the company, so no content moderation mechanism is required.
 
 PERMISSIONS REQUESTED
 - Location (when in use): to record which facility the inspector is at during a site visit. Requested on the map and inspection screens.
