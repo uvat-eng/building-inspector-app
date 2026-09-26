@@ -59,6 +59,10 @@ const REVIEW_NOTES = `Приложение предназначено для в�
 
 Геолокация используется для фиксации рабочих перемещений инспекторов между строительными объектами. Данные собираются только когда приложение открыто и только после явного согласия сотрудника. Политика конфиденциальности: ${SITE}/privacy
 
+Микрофон используется только для необязательной голосовой диктовки замечаний — инспектор надиктовывает текст, когда неудобно печатать в перчатках. Распознавание выполняет встроенный в систему механизм (Web Speech API), собственных или сторонних речевых сервисов приложение не использует. Аудиозапись не сохраняется и никуда не передаётся — сохраняется только полученный текст.
+
+Сторонние сервисы искусственного интеллекта в приложении не используются: нет чат-ботов, генеративных моделей, распознавания изображений и автоматического принятия решений. Все замечания, предписания и отчёты формирует сам сотрудник.
+
 Контакт для связи: uskov_an@mail.ru, 8 3452 90-12-44`;
 
 const REVIEW_REPLY = `Hello,
@@ -103,8 +107,16 @@ The app requires an internet connection for the initial login.
 - File storage: Yandex Object Storage - inspection photos and documents.
 - Maps: OpenStreetMap raster tiles for the facility map.
 - Authentication: our own backend; no third-party identity provider.
-- No payment processors, no in-app purchases, no advertising SDKs, no analytics SDKs, no AI services.
+- Speech to text: the standard Web Speech API built into the operating system (SpeechRecognition / webkitSpeechRecognition). An inspector may dictate a violation description instead of typing it with gloves on. We do not bundle any speech SDK and we do not send audio to our own servers: the browser engine handles recognition, which on iOS means Apple's own on-device or server-side speech service under Apple's privacy policy. Only the resulting text is stored, never the audio. The feature is optional - every field can be typed by hand - and the microphone is used only while the user holds the dictation screen open.
+- Artificial intelligence: the app contains no AI or machine learning features. There is no chatbot, no generative model, no image recognition, no automatic decision making and no integration with OpenAI, Google, Yandex or any other AI provider. All inspection findings, compliance notices and reports are written by the inspector; the app only stores, formats and prints what the employee entered.
+- No payment processors, no in-app purchases, no advertising SDKs, no analytics SDKs, no tracking SDKs.
 - No user data is shared with third parties for tracking or advertising.
+
+PERMISSIONS REQUESTED
+- Location (when in use): to record which facility the inspector is at during a site visit. Requested on the map and inspection screens.
+- Camera and photo library: to attach photographs of construction violations to an inspection record.
+- Microphone: only for the optional voice dictation of violation text described above.
+Each permission is requested at the moment the related feature is first used, with an explanation shown beforehand.
 
 5. REGIONAL DIFFERENCES
 
@@ -131,6 +143,22 @@ Please let us know if any further information is required.
 Best regards,
 Global-Stroyinzhiniring LLC`;
 
+/** Тексты запросов доступа. Apple отклоняет сборку, если их нет в Info.plist. */
+const PERMISSION_STRINGS = `NSLocationWhenInUseUsageDescription
+Приложение отмечает, на каком объекте находится инспектор во время выезда. Данные видит только руководство компании.
+
+NSCameraUsageDescription
+Камера нужна для фотофиксации выявленных замечаний на строительном объекте.
+
+NSPhotoLibraryUsageDescription
+Доступ к фотографиям нужен, чтобы приложить ранее сделанные снимки объекта к акту осмотра.
+
+NSMicrophoneUsageDescription
+Микрофон нужен для голосовой диктовки текста замечания, когда неудобно печатать вручную. Аудиозапись не сохраняется.
+
+NSSpeechRecognitionUsageDescription
+Распознавание речи переводит надиктованное замечание в текст акта. Запись голоса не сохраняется и не передаётся.`;
+
 type Block = { label: string; value: string; hint?: string; rows?: number };
 
 const BLOCKS: Block[] = [
@@ -140,6 +168,12 @@ const BLOCKS: Block[] = [
   { label: 'Описание', value: DESCRIPTION, hint: 'до 4000 символов', rows: 14 },
   { label: 'Что нового', value: 'Первая версия приложения.', hint: 'для версии 1.4' },
   { label: 'Заметка для проверяющего', value: REVIEW_NOTES, hint: 'App Review Information', rows: 10 },
+  {
+    label: 'Тексты запросов доступа',
+    value: PERMISSION_STRINGS,
+    hint: 'Info.plist — обязательны, иначе отклонят',
+    rows: 12,
+  },
 ];
 
 const CopyBtn = ({ text }: { text: string }) => {
