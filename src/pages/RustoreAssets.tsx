@@ -1,4 +1,6 @@
+import { Navigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import { isApple } from '@/lib/platform';
 
 interface Shot {
   file: string;
@@ -14,7 +16,12 @@ const SHOTS: Shot[] = [
   { file: 'screen-6-reports.png', title: 'Отчёты и статистика' },
 ];
 
-const RustoreAssets = () => (
+// Служебная страница материалов для другого магазина.
+// На технике Apple не открываем — правила App Store запрещают такие упоминания.
+const RustoreAssets = () =>
+  isApple() ? (
+    <Navigate to="/" replace />
+  ) : (
   <div className="min-h-screen bg-slate-50 px-4 py-8">
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
@@ -103,6 +110,6 @@ const RustoreAssets = () => (
       </div>
     </div>
   </div>
-);
+  );
 
 export default RustoreAssets;

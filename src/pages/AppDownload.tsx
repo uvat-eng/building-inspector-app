@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
+import AppleGuide from '@/components/AppleGuide';
+import { isApple } from '@/lib/platform';
 
 const APK = 'https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a';
 
@@ -28,14 +30,20 @@ const STEPS = [
 ];
 
 const AppDownload = () => {
-  const [ver, setVer] = useState('1.2');
+  const [ver, setVer] = useState('1.4');
+  const [apple] = useState(isApple);
 
   useEffect(() => {
+    if (apple) return;
     fetch(`${APK}?info=1&t=${Date.now()}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => d?.versionName && setVer(String(d.versionName)))
       .catch(() => undefined);
-  }, []);
+  }, [apple]);
+
+  // На технике Apple установочный файл не предлагаем — правила App Store
+  // запрещают сторонние способы установки. Показываем добавление на экран «Домой».
+  if (apple) return <AppleGuide />;
 
   return (
     <div className="min-h-screen bg-background px-5 py-10">

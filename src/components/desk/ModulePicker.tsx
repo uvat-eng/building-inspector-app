@@ -4,16 +4,15 @@ import Icon from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { MODULES, ModuleId } from '@/data/modules';
 import { useToast } from '@/hooks/use-toast';
+import { canOfferInstall } from '@/lib/platform';
 
 // Внутри установленного приложения кнопку скачивания не показываем.
 const isInsideApp = () =>
   typeof navigator !== 'undefined' && / wv\)|; wv/.test(navigator.userAgent);
 
-// На Android-смартфоне кнопку делаем крупной и заметной.
-const isAndroidPhone = () =>
-  typeof navigator !== 'undefined' &&
-  /Android/i.test(navigator.userAgent) &&
-  !isInsideApp();
+// На смартфоне кнопку делаем крупной и заметной.
+const isPhone = () =>
+  typeof navigator !== 'undefined' && /Mobile/i.test(navigator.userAgent) && !isInsideApp();
 
 interface Props {
   onPick: (id: ModuleId) => void;
@@ -21,8 +20,10 @@ interface Props {
 }
 
 const ModulePicker = ({ onPick, onAdmin }: Props) => {
-  const [insideApp] = useState(isInsideApp);
-  const [phone] = useState(isAndroidPhone);
+  // На технике Apple предложение скачать установочный файл скрыто:
+  // App Store запрещает упоминать сторонние способы установки.
+  const [showInstall] = useState(canOfferInstall);
+  const [phone] = useState(isPhone);
   const { toast } = useToast();
 
   const choose = (id: ModuleId, ready: boolean) => {
@@ -133,7 +134,7 @@ const ModulePicker = ({ onPick, onAdmin }: Props) => {
             </button>
           )}
 
-          {!insideApp && (
+          {showInstall && (
             <a
               href="/app"
               className={cn(

@@ -5,6 +5,7 @@ import SideMenu from '@/components/desk/SideMenu';
 import TrackerCabinet from '@/components/desk/tracker/TrackerCabinet';
 import TrackerProvider from '@/components/desk/tracker/TrackerProvider';
 import { autoCloseMonth } from '@/data/tracker';
+import { canOfferInstall } from '@/lib/platform';
 import ObjectsSection from '@/components/desk/sections/ObjectsSection';
 import SitesSection from '@/components/desk/sections/SitesSection';
 import ObjectPage from '@/components/desk/ObjectPage';
@@ -58,6 +59,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const [section, setSection] = useState<SectionId>(
     () => (localStorage.getItem(SECTION_KEY) as SectionId) || 'objects',
   );
+  const [showInstall] = useState(canOfferInstall);
   const [menuOpen, setMenuOpen] = useState(false);
   const [objectId, setObjectId] = useState<string | null>(null);
   const [objectEdit, setObjectEdit] = useState(false);
@@ -348,38 +350,38 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
         </div>
       </main>
 
-      <footer className="flex-none border-t border-border bg-card px-4 py-4 sm:px-[22px]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <img src="/icon-192.png" alt="" className="h-9 w-9 flex-none rounded-sm" />
-            <div className="leading-tight">
-              <p className="font-head text-[0.86em] uppercase tracking-[0.03em] text-foreground">
-                Мобильное приложение
-              </p>
-              <p className="text-[0.76em] text-muted-foreground">
-                Android 7 и новее · версия 1.2
-              </p>
+      {showInstall && (
+        <footer className="flex-none border-t border-border bg-card px-4 py-4 sm:px-[22px]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <img src="/icon-192.png" alt="" className="h-9 w-9 flex-none rounded-sm" />
+              <div className="leading-tight">
+                <p className="font-head text-[0.86em] uppercase tracking-[0.03em] text-foreground">
+                  Мобильное приложение
+                </p>
+                <p className="text-[0.76em] text-muted-foreground">Версия 1.4</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a"
+                download="stroykontrol.apk"
+                className="flex items-center gap-1.5 rounded-sm bg-accent px-3.5 py-2 text-[0.8em] font-head uppercase tracking-[0.05em] text-accent-foreground transition-colors hover:bg-accent/90"
+              >
+                <Icon name="Download" size={14} />
+                Скачать приложение
+              </a>
+              <a
+                href="/app"
+                className="flex items-center gap-1.5 rounded-sm border border-border px-3.5 py-2 text-[0.8em] uppercase tracking-[0.05em] transition-colors hover:border-accent hover:text-accent"
+              >
+                <Icon name="QrCode" size={14} />
+                QR-код
+              </a>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href="https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a"
-              download="stroykontrol.apk"
-              className="flex items-center gap-1.5 rounded-sm bg-accent px-3.5 py-2 text-[0.8em] font-head uppercase tracking-[0.05em] text-accent-foreground transition-colors hover:bg-accent/90"
-            >
-              <Icon name="Download" size={14} />
-              Скачать приложение
-            </a>
-            <a
-              href="/app"
-              className="flex items-center gap-1.5 rounded-sm border border-border px-3.5 py-2 text-[0.8em] uppercase tracking-[0.05em] transition-colors hover:border-accent hover:text-accent"
-            >
-              <Icon name="QrCode" size={14} />
-              QR-код
-            </a>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       <Dialog open={!!current && !current.password} onOpenChange={() => undefined}>
         <DialogContent
