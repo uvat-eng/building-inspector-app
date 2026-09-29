@@ -21,9 +21,9 @@ const DESCRIPTION = `«Инспектор СК» — рабочий инстру
 
 ВОЗМОЖНОСТИ
 
-Главная. Сводка по проектам и карта объектов. Количество открытых предписаний видно сразу при входе.
+Мой кабинет. Рабочее место под должность, открывается сразу после входа: у инспектора — выезды и акты, у руководителя — сводка по всем проектам.
 
-Мой кабинет. Рабочее место под должность: у инспектора — выезды и акты, у руководителя — сводка по всем проектам.
+Главная. Сводка по проектам и карта объектов с количеством открытых предписаний.
 
 Объекты. Список площадок по регионам с разбивкой по людям, технике и вагонам — план и факт рядом.
 
@@ -63,7 +63,7 @@ const REVIEW_NOTES = `Приложение предназначено для в�
 
 Смена пароля при первом входе для этих записей отключена. Обе записи открывают рабочие данные по объектам в Якутии.
 
-Разделы открываются из бокового меню: на планшете оно всегда слева, на телефоне — по кнопке меню слева вверху. После входа открывается раздел «Главная» со сводкой и картой объектов. Проверка создаётся так: раздел «Проверки и выезды» → кнопка «Новый осмотр».
+Разделы открываются из бокового меню: на планшете оно всегда слева, на телефоне — по кнопке меню слева вверху. После входа открывается «Мой кабинет» — рабочее место под должность сотрудника. Проверка создаётся так: раздел «Проверки и выезды» → кнопка «Новый осмотр».
 
 Удаление учётной записи: боковое меню → в самом низу кнопка «Удалить учётную запись» → подтверждение в диалоге. Запись и личные данные удаляются, сеанс завершается. Ранее выпущенные акты и предписания остаются у организации, как требуют правила строительного контроля.
 
@@ -104,7 +104,8 @@ Forced password change is disabled for both accounts. Both accounts have an assi
 Navigation: all sections are opened from the side menu. On iPad the menu is always visible on the left; on iPhone it is opened with the menu button in the top left of the header. Section titles below are given exactly as they appear in the app.
 
 How to reach the main features after login:
-- "Главная" (Home) opens immediately: a summary of projects with a map of the facilities.
+- "Мой кабинет" (My workplace) opens immediately - the employee's own dashboard for their position. It is the root of the navigation: the back button always returns one step and finally to this screen.
+- "Главная" (Home) - a summary of projects with a map of the facilities.
 - "Объекты" (Facilities) - list of construction projects and their details.
 - "Проверки и выезды" (Inspections and site visits) - open this section and tap "Новый осмотр" (New inspection) to create an inspection, add findings and attach photographs.
 - "Замечания" (Findings) - the list of recorded violations.
