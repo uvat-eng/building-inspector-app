@@ -47,7 +47,7 @@ const REPLY = `Здравствуйте!
 
 Оно присутствовало в ранней версии 1.3: приложение проверяло обновления и предлагало установить новую версию самостоятельно. Мы полностью отказались от этого механизма — обновления распространяются только через RuStore.
 
-На модерацию направлена сборка версии 1.4 (versionCode 5). Полный перечень разрешений в ней:
+На модерацию направлена сборка версии 1.5 (versionCode 6). Полный перечень разрешений в ней:
 
 1. INTERNET — вход в учётную запись и обмен данными с сервером компании.
 2. ACCESS_NETWORK_STATE — проверка связи: на объектах интернет пропадает, приложение ставит фотографии в очередь и досылает их при появлении сети.
@@ -82,13 +82,35 @@ const CheckBlock = () => {
   return (
     <>
       <h2 className="mt-9 border-b-2 border-primary pb-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+        Файл для загрузки в RuStore
+      </h2>
+      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="font-semibold text-slate-800">stroykontrol-1.5.apk</span>
+          <span className="text-sm text-slate-500">версия 1.5 · код версии 6 · 101 КБ</span>
+        </div>
+        <div className="mt-2 text-sm leading-relaxed text-slate-500">
+          Подписан тем же сертификатом, что и прошлые версии, — обновление встанет поверх
+          установленного приложения.
+        </div>
+        <a
+          href="/rustore/stroykontrol-1.5.apk"
+          download
+          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"
+        >
+          <Icon name="Download" size={17} />
+          Скачать APK для RuStore
+        </a>
+      </div>
+
+      <h2 className="mt-9 border-b-2 border-primary pb-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
         Разрешения в сборке
       </h2>
 
       <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
         <b className="mb-1 block">Замечание модератора закрыто</b>
-        Разрешение REQUEST_INSTALL_PACKAGES убрано из версии 1.4. Проверьте, что в RuStore
-        загружен именно этот файл, а не старая версия 1.3 — замечание относилось к ней.
+        Разрешение REQUEST_INSTALL_PACKAGES в сборке отсутствует — проверено разбором готового
+        файла. В версии 1.5 также добавлен микрофон для голосовой диктовки замечаний.
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
