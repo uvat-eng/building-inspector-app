@@ -14,7 +14,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
-import { Inspection, useInspections, suggestNorms } from '@/data/inspections';
+import { Inspection, useInspections } from '@/data/inspections';
+import { orderPayload, orderErrorText } from '@/lib/makeOrder';
 import { useContractor, useOrders, Order } from '@/data/orders';
 import OrderView from '@/components/desk/inspection/OrderView';
 import { downloadRegistry } from '@/lib/registryXls';
@@ -28,8 +29,6 @@ interface InspectionsCabinetProps {
 }
 
 type View = 'menu' | 'new' | 'act' | 'list';
-
-const INSPECTIONS_API = 'https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039';
 
 const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinetProps) => {
   const { toast } = useToast();
@@ -82,81 +81,26 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
   const makeOrder = async (insp: Inspection) => {
     setBusy(true);
     try {
-      const res = await fetch(
-        `https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039?id=${insp.id}`,
+      const { data, count } = await orderPayload(
+        insp,
+        object.title,
+        profile.fio,
+        contractor?.name ?? '',
+        object,
       );
-      const { defects } = (await res.json()) as {
-        defects: {
-          id: string;
-          pos: number;
-          title: string;
-          normRef?: string;
-          deadline?: string;
-          photos: string[];
-        }[];
-      };
-
-      const empty = defects.filter((d) => !d.normRef?.trim());
-      if (empty.length) {
-        try {
-          const found = await suggestNorms(
-            empty.map((d) => d.title),
-            true,
-          );
-          await Promise.all(
-            empty.map(async (d, k) => {
-              const m = found[k];
-              if (!m?.ref) return;
-              d.normRef = `${m.ref} — ${m.name}`;
-              await fetch(`${INSPECTIONS_API}?action=defect`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'defect', id: d.id, normRef: d.normRef }),
-              });
-            }),
-          );
-        } catch {
-          /* без ссылок предписание всё равно оформим */
-        }
-      }
-      const order = await createOrder({
-        objectId: object.id,
-        inspectionId: insp.id,
-        issuedTo: insp.subcontractor || insp.generalContractor || contractor?.name || '',
-        inspector: insp.inspector || profile.fio,
-        deadline:
-          defects
-            .map((d) => d.deadline || '')
-            .filter(Boolean)
-            .sort(
-              (a, b) =>
-                new Date(a.split('.').reverse().join('-')).getTime() -
-                new Date(b.split('.').reverse().join('-')).getTime(),
-            )[0] ?? '',
-        body: {
-          workType: insp.workType,
-          docRef: insp.docRef,
-          contractorRep: insp.contractorRep,
-          generalContractor: insp.generalContractor,
-          subcontractor: insp.subcontractor,
-          objectTitle: object.title,
-          items: defects.map((d) => ({
-            pos: d.pos,
-            title: d.title,
-            normRef: d.normRef ?? '',
-            deadline: d.deadline ?? '',
-            photos: d.photos,
-          })),
-        },
-      });
+      const order = await createOrder({ ...data, objectId: object.id });
       toast({
         title: `Предписание № ${order.number} создано`,
-        description: `Пунктов: ${defects.length} · открываем`,
+        description: `Пунктов: ${count} · открываем`,
       });
       setAsk(null);
       setMadeOrder(order);
-    } catch {
-      toast({ title: 'Не удалось оформить предписание', variant: 'destructive' });
+    } catch (e) {
+      toast({
+        title: 'Не удалось оформить предписание',
+        description: orderErrorText(e),
+        variant: 'destructive',
+      });
     } finally {
       setBusy(false);
     }

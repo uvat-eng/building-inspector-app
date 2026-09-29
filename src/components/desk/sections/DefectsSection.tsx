@@ -21,7 +21,7 @@ import {
   useAllDefects,
 } from '@/data/inspections';
 import { MONTHS } from '@/data/timesheet';
-import { orderPayload } from '@/lib/makeOrder';
+import { orderPayload, orderErrorText } from '@/lib/makeOrder';
 import DictateDialog from '@/components/desk/defects/DictateDialog';
 import OrderQuickView from '@/components/desk/inspection/OrderQuickView';
 import { Order } from '@/data/orders';
@@ -44,7 +44,7 @@ const DefectsSection = () => {
   const { profile } = useProfile();
   const { list: objects } = useObjects();
   const { items: inspections, loading, reload } = useAllInspections();
-  const { items: allDefects } = useAllDefects();
+  const { items: allDefects, reload: reloadDefects } = useAllDefects();
   const { create: createOrder } = useOrders();
 
   const [dictate, setDictate] = useState(false);
@@ -137,8 +137,12 @@ const DefectsSection = () => {
         title: `Предписание № ${order.number} создано`,
         description: `${count} пунктов · открываем`,
       });
-    } catch {
-      toast({ title: 'Не удалось оформить предписание', variant: 'destructive' });
+    } catch (e) {
+      toast({
+        title: 'Не удалось оформить предписание',
+        description: orderErrorText(e),
+        variant: 'destructive',
+      });
     } finally {
       setBusy(false);
     }
@@ -156,6 +160,7 @@ const DefectsSection = () => {
         onBack={() => {
           setEditAct(null);
           reload();
+          reloadDefects();
         }}
         onFinish={(i) => updateInspection(i.id, { status: 'done' })}
         onOrder={(i) => makeOrder(i)}
@@ -301,7 +306,7 @@ const DefectsSection = () => {
                             </Button>
                             <Button
                               size="sm"
-                              disabled={busy || items.length === 0}
+                              disabled={busy || (items.length || insp.defectCount || 0) === 0}
                               onClick={() => makeOrder(insp)}
                               className={cn(
                                 'h-9 flex-1 gap-2 rounded-sm font-head text-[0.85em] uppercase tracking-[0.06em]',

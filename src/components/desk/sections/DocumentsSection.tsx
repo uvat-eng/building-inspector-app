@@ -9,7 +9,7 @@ import { useAllInspections, updateInspection, Inspection } from '@/data/inspecti
 import { useOrders, Order } from '@/data/orders';
 import ActEditor from '@/components/desk/inspection/ActEditor';
 import OrderQuickView from '@/components/desk/inspection/OrderQuickView';
-import { orderPayload } from '@/lib/makeOrder';
+import { orderPayload, orderErrorText } from '@/lib/makeOrder';
 import { useToast } from '@/hooks/use-toast';
 import { useAllFolders, monthLabel } from '@/data/folders';
 import { useAllSignedDocs, SECTION_META } from '@/data/signed';
@@ -152,8 +152,12 @@ const DocumentsSection = () => {
       setOpenAct(null);
       setOpenOrder(order);
       toast({ title: `Предписание № ${order.number} создано`, description: 'Открываем' });
-    } catch {
-      toast({ title: 'Не удалось оформить предписание', variant: 'destructive' });
+    } catch (e) {
+      toast({
+        title: 'Не удалось оформить предписание',
+        description: orderErrorText(e),
+        variant: 'destructive',
+      });
     }
   };
 

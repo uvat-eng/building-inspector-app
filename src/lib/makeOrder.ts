@@ -13,6 +13,16 @@ interface DefectLite {
   photos: string[];
 }
 
+const ERRORS: Record<string, string> = {
+  no_defects: 'В акте нет замечаний — добавьте хотя бы одно.',
+  no_object: 'У акта не указан объект. Откройте акт и выберите объект.',
+  act_load_failed: 'Не удалось загрузить замечания акта. Проверьте связь.',
+  create_failed: 'Сервер отклонил предписание. Попробуйте ещё раз.',
+};
+
+export const orderErrorText = (e: unknown) =>
+  ERRORS[(e as Error)?.message] ?? 'Проверьте связь и попробуйте ещё раз.';
+
 export const orderPayload = async (
   insp: Inspection,
   objectTitle: string,
@@ -21,7 +31,11 @@ export const orderPayload = async (
   object?: ProjectObject | null,
 ) => {
   const res = await fetch(`${INSPECTIONS_API}?id=${encodeURIComponent(insp.id)}`);
+  if (!res.ok) throw new Error('act_load_failed');
   const { defects } = (await res.json()) as { defects: DefectLite[] };
+
+  if (!defects?.length) throw new Error('no_defects');
+  if (!insp.objectId) throw new Error('no_object');
 
   const empty = defects.filter((d) => !d.normRef?.trim());
   if (empty.length) {
