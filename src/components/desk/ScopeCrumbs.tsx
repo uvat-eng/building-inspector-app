@@ -21,7 +21,6 @@ const initials = (fio: string) => {
 };
 
 interface ScopeCrumbsProps {
-  onLeaveModule: () => void;
   onLeaveScope: () => void;
   onCabinet: () => void;
   onLogout?: () => void;
@@ -30,12 +29,7 @@ interface ScopeCrumbsProps {
 const trigger =
   'flex flex-none items-center gap-1.5 rounded-sm px-2 py-1 font-head text-[0.92em] font-bold uppercase tracking-[0.04em] transition-colors hover:bg-secondary sm:text-[1.02em]';
 
-const ScopeCrumbs = ({
-  onLeaveModule,
-  onLeaveScope,
-  onCabinet,
-  onLogout,
-}: ScopeCrumbsProps) => {
+const ScopeCrumbs = ({ onLeaveScope, onCabinet, onLogout }: ScopeCrumbsProps) => {
   const { scope, save } = useScope();
   const { list: locations } = useLocations();
   const { list: objects } = useObjects();
@@ -59,15 +53,16 @@ const ScopeCrumbs = ({
 
   return (
     <div className="flex flex-none items-center gap-0.5 overflow-x-auto border-b border-border bg-card px-3 py-2 sm:px-[18px]">
-      <button
-        type="button"
-        onClick={onLeaveModule}
-        className={cn(trigger, 'text-muted-foreground hover:text-accent')}
+      {/* Название модуля — просто подпись. Уйти к выбору роли можно
+          только через выход из учётной записи. */}
+      <span
+        className={cn(trigger, 'cursor-default text-muted-foreground hover:bg-transparent')}
+        title="Строительный контроль"
       >
         <Icon name="ShieldCheck" size={15} />
         <span className="hidden sm:inline">Строительный контроль</span>
         <span className="sm:hidden">СК</span>
-      </button>
+      </span>
 
       <Icon name="ChevronRight" size={13} className="flex-none text-muted-foreground/50" />
 

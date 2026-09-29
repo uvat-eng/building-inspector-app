@@ -49,6 +49,17 @@ import CabinetPicker from '@/components/desk/director/CabinetPicker';
 
 const SECTION_KEY = 'gsi-section-v1';
 const SCOPE_ENTERED = 'gsi-scope-entered-v1';
+const HISTORY_KEY = 'gsi-history-v1';
+const OBJECT_KEY = 'gsi-open-object-v1';
+
+const readHistory = (): SectionId[] => {
+  try {
+    const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]');
+    return Array.isArray(raw) ? (raw as SectionId[]) : [];
+  } catch {
+    return [];
+  }
+};
 
 interface DeskProps {
   onLeaveScope: () => void;
@@ -57,11 +68,13 @@ interface DeskProps {
 
 const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const [section, setSection] = useState<SectionId>(
-    () => (localStorage.getItem(SECTION_KEY) as SectionId) || 'objects',
+    () => (localStorage.getItem(SECTION_KEY) as SectionId) || 'cabinet',
   );
   const [showInstall] = useState(canOfferInstall);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [objectId, setObjectId] = useState<string | null>(null);
+  const [objectId, setObjectId] = useState<string | null>(
+    () => localStorage.getItem(OBJECT_KEY) || null,
+  );
   const [objectEdit, setObjectEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [cabinetRole, setCabinetRole] = useState<Role | null>(null);
@@ -71,7 +84,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   const { impersonation, stop: stopImpersonate } = useImpersonation();
   const { current, reload: reloadUsers } = useUsers();
   const { toast } = useToast();
-  const { scope } = useScope();
+
 
   useEffect(() => {
     localStorage.setItem(SECTION_KEY, section);
@@ -90,7 +103,18 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     autoCloseMonth();
   }, []);
 
-  const [history, setHistory] = useState<SectionId[]>([]);
+  const [history, setHistory] = useState<SectionId[]>(readHistory);
+
+  // Путь возврата храним на устройстве: телефон может выгрузить приложение,
+  // пока сотрудник открывает скачанный документ. После возврата цепочка цела.
+  useEffect(() => {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }, [history]);
+
+  useEffect(() => {
+    if (objectId) localStorage.setItem(OBJECT_KEY, objectId);
+    else localStorage.removeItem(OBJECT_KEY);
+  }, [objectId]);
   const [leaveTo, setLeaveTo] = useState<SectionId | null>(null);
   const leaveOk = useRef(false);
 
@@ -129,6 +153,8 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     setSession(null);
     clearProfile();
     localStorage.removeItem(SECTION_KEY);
+    localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(OBJECT_KEY);
     localStorage.removeItem(SCOPE_ENTERED);
     // Кеши — копии серверных данных. Чистим, чтобы следующий сотрудник
     // не увидел чужое; при входе они загрузятся заново.
@@ -145,7 +171,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     setObjectEdit(false);
     setCabinetRole(null);
     setHistory([]);
-    setSection('objects');
+    setSection('cabinet');
     toast({
       title: 'Вы вышли из учётной записи',
       description: 'Все рабочие данные сохранены на сервере',
@@ -182,6 +208,9 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     setObjectEdit(false);
   };
 
+  // Кабинет сотрудника — корень навигации. Из него уходим в разделы,
+  // назад всегда возвращает на шаг назад и в итоге в кабинет.
+  // Дальше кабинета назад не пускаем: сменить роль можно только выйдя из записи.
   const goBack = () => {
     if (objectId) {
       closeObject();
@@ -189,7 +218,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
     }
     setHistory((h) => {
       if (!h.length) {
-        setSection('objects');
+        if (section !== 'cabinet') setSection('cabinet');
         return h;
       }
       setSection(h[h.length - 1]);
@@ -198,51 +227,30 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
   };
 
   useBackGuard(!!objectId, closeObject);
-  useBackGuard(!objectId && section !== 'objects', goBack);
+  useBackGuard(!objectId && section !== 'cabinet', goBack);
 
-  const canGoBack = !objectId && section !== 'objects' && section !== 'cabinet';
+  const canGoBack = !objectId && section !== 'cabinet';
   const backLabel = history.length
-    ? `Назад · ${MENU.find((m) => m.id === history[history.length - 1])?.label ?? 'Главная'}`
-    : 'На главную';
+    ? `Назад · ${MENU.find((m) => m.id === history[history.length - 1])?.label ?? 'Мой кабинет'}`
+    : 'В мой кабинет';
 
 
+
+  // Из кабинета «Выйти» — это выход из учётной записи.
+  // Другого пути к выбору роли нет: так требует порядок работы.
+  const exitCabinet = () => setLogoutAsk(true);
 
   const content = {
     cabinet: profile.role === 'driver' ? (
-      <DriverCabinet
-        onExit={() => {
-          leaveOk.current = true;
-          select('objects');
-        }}
-      />
+      <DriverCabinet onExit={exitCabinet} />
     ) : profile.role === 'mechanic' ? (
-      <MechanicCabinet
-        onExit={() => {
-          leaveOk.current = true;
-          select('objects');
-        }}
-      />
+      <MechanicCabinet onExit={exitCabinet} />
     ) : profile.role === 'engineer' ? (
-      <ChiefCabinet
-        onExit={() => {
-          leaveOk.current = true;
-          select('objects');
-        }}
-      />
+      <ChiefCabinet onExit={exitCabinet} />
     ) : ['admin', 'pm', 'coordinator', 'director', 'manager'].includes(profile.role) ? (
-      <ManagerCabinet
-        onExit={() => {
-          leaveOk.current = true;
-          select('objects');
-        }}
-      />
+      <ManagerCabinet onExit={exitCabinet} />
     ) : (
-      <InspectorCabinet
-        onExit={() => {
-          leaveOk.current = true;
-          select('objects');
-        }}
-      />
+      <InspectorCabinet onExit={exitCabinet} />
     ),
     staff: <StaffSection />,
     tracker: <TrackerCabinet />,
@@ -272,7 +280,6 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
 
       <div className="animate-rise [animation-delay:0.07s]">
         <ScopeCrumbs
-          onLeaveModule={onLeaveModule}
           onLeaveScope={onLeaveScope}
           onCabinet={() => select('cabinet')}
           onLogout={current ? () => setLogoutAsk(true) : undefined}

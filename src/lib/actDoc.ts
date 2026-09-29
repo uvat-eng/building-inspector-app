@@ -82,6 +82,10 @@ export const downloadAct = (data: ActData) => {
   const a = document.createElement('a');
   a.href = url;
   a.download = `Акт осмотра ${data.inspection.number.replace(/[/\\:*?"<>|]/g, '-')}.doc`;
+  // Открываем файл отдельно от приложения: иначе телефон уводит текущий экран
+  // на скачивание, и при возврате приложение стартует заново.
+  a.target = '_blank';
+  a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   a.remove();
