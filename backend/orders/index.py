@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+import boto3
 import psycopg2
 import psycopg2.extras
 
@@ -20,6 +21,28 @@ def esc(v):
 
 def resp(code, body):
     return {'statusCode': code, 'headers': CORS, 'isBase64Encoded': False, 'body': json.dumps(body)}
+
+
+def s3_client():
+    return boto3.client(
+        's3',
+        endpoint_url='https://bucket.poehali.dev',
+        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+    )
+
+
+def save_doc(order_id: str, content: str) -> str:
+    """Кладёт готовый Word-файл предписания на сервер и отдаёт ссылку на него.
+
+    Нужно для телефона: внутри приложения файл, собранный в памяти браузера,
+    не скачивается — нужна обычная ссылка.
+    """
+    key = f'orders/{order_id}/order-{uuid.uuid4().hex[:8]}.doc'
+    s3_client().put_object(
+        Bucket='files', Key=key, Body=content.encode('utf-8'), ContentType='application/msword'
+    )
+    return f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
 
 
 def to_order(r):
@@ -119,6 +142,21 @@ def handler(event: dict, context) -> dict:
                 return resp(200, {'ok': True})
 
             return resp(405, {'error': 'method_not_allowed'})
+
+        if method == 'POST' and (params.get('action') or body.get('action')) == 'doc':
+            oid = body.get('id', '')
+            content = body.get('content', '')
+            if not oid or not content:
+                return resp(400, {'error': 'id_and_content_required'})
+            url = save_doc(oid, content)
+            cur.execute(
+                f"UPDATE orders SET file_url = '{esc(url)}' WHERE id = '{esc(oid)}' RETURNING *"
+            )
+            row = cur.fetchone()
+            conn.commit()
+            if not row:
+                return resp(404, {'error': 'order_not_found'})
+            return resp(200, {'url': url, 'item': to_order(row)})
 
         if method == 'GET':
             object_id = params.get('object_id', '')

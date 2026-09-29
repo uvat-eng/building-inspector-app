@@ -19,6 +19,8 @@ import {
 import { cn } from '@/lib/utils';
 import { usePhotoQueue, flushQueue, isWifi } from '@/data/photoQueue';
 import { downloadAct, buildActHtml } from '@/lib/actDoc';
+import { isAndroidApp } from '@/lib/platform';
+import { openDocUrl } from '@/lib/saveDoc';
 
 interface ActEditorProps {
   inspection: Inspection;
@@ -152,15 +154,21 @@ const ActEditor = ({
   const saveAct = async () => {
     setSaving(true);
     const data = { inspection, defects, objectTitle, contractorName };
-    downloadAct(data);
+    const html = buildActHtml(data);
     try {
-      await uploadAct(inspection.id, buildActHtml(data));
+      // На телефоне файл из памяти не скачивается — открываем ссылку на сервере.
+      const { url } = await uploadAct(inspection.id, html);
       onFinish(inspection);
+      if (isAndroidApp()) openDocUrl(url);
+      else downloadAct(data);
       toast({
         title: `Акт № ${inspection.number} сохранён`,
-        description: 'Файл скачан и добавлен в реестр объекта',
+        description: isAndroidApp()
+          ? 'Файл открыт — сохраните его на телефон'
+          : 'Файл скачан и добавлен в реестр объекта',
       });
     } catch {
+      downloadAct(data);
       onFinish(inspection);
       toast({
         title: 'Акт скачан, но не попал в реестр',

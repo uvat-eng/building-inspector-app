@@ -5,8 +5,9 @@ import DocPreview from '@/components/desk/DocPreview';
 import PhotoLightbox from '@/components/desk/PhotoLightbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Order, Contractor } from '@/data/orders';
-import { downloadOrder, buildOrderHtml } from '@/lib/orderDoc';
+import { Order, Contractor, uploadOrderDoc } from '@/data/orders';
+import { buildOrderHtml } from '@/lib/orderDoc';
+import { saveDoc } from '@/lib/saveDoc';
 
 interface OrderViewProps {
   order: Order;
@@ -30,9 +31,24 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
   const [photo, setPhoto] = useState<string | null>(null);
   const items = order.body.items ?? [];
 
-  const save = () => {
-    downloadOrder(order, contractor);
-    toast({ title: `Предписание № ${order.number}`, description: 'Файл Word сохранён' });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const { opened } = await saveDoc(
+        buildOrderHtml(order, contractor),
+        `Предписание ${order.number}`,
+        (html) => uploadOrderDoc(order.id, html),
+      );
+      toast({
+        title: `Предписание № ${order.number}`,
+        description: opened ? 'Файл открыт — сохраните его на телефон' : 'Файл Word сохранён',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const print = () => setPreview(buildOrderHtml(order, contractor));
@@ -132,10 +148,15 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
         <div className="flex flex-none flex-col gap-2 sm:flex-row">
           <Button
             onClick={save}
+            disabled={saving}
             className="flex-1 gap-2 rounded-sm bg-accent font-head uppercase tracking-[0.06em] text-accent-foreground hover:bg-accent/90"
           >
-            <Icon name="FileDown" size={16} />
-            Скачать Word
+            <Icon
+              name={saving ? 'Loader2' : 'FileDown'}
+              size={16}
+              className={saving ? 'animate-spin' : ''}
+            />
+            {saving ? 'Готовим файл…' : 'Скачать Word'}
           </Button>
           <Button
             variant="outline"

@@ -4,8 +4,9 @@ import Icon from '@/components/ui/icon';
 import Tag from '@/components/desk/Tag';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
-import { useOrders, useContractor, Order } from '@/data/orders';
-import { downloadOrder, downloadOrdersDigest } from '@/lib/orderDoc';
+import { useOrders, useContractor, Order, uploadOrderDoc } from '@/data/orders';
+import { buildOrderHtml, downloadOrdersDigest } from '@/lib/orderDoc';
+import { saveDoc } from '@/lib/saveDoc';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import OrderView from '@/components/desk/inspection/OrderView';
 
@@ -24,9 +25,16 @@ const OrdersCabinet = ({ object, onBack }: OrdersCabinetProps) => {
   );
   const open = items.find((o) => o.id === openId) ?? null;
 
-  const save = (o: Order) => {
-    downloadOrder(o, contractor);
-    toast({ title: `Предписание № ${o.number} сохранено`, description: 'Файл Word' });
+  const save = async (o: Order) => {
+    const { opened } = await saveDoc(
+      buildOrderHtml(o, contractor),
+      `Предписание ${o.number}`,
+      (html) => uploadOrderDoc(o.id, html),
+    );
+    toast({
+      title: `Предписание № ${o.number} сохранено`,
+      description: opened ? 'Файл открыт — сохраните его на телефон' : 'Файл Word',
+    });
   };
 
   if (open) {

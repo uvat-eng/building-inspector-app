@@ -73,6 +73,18 @@ export const EMPTY_CONTRACTOR: Contractor = {
   works: '',
 };
 
+/** Кладёт готовый Word-файл предписания на сервер и возвращает ссылку на него. */
+export const uploadOrderDoc = async (id: string, content: string) => {
+  const res = await fetch(`${API}?action=doc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'doc', id, content }),
+  });
+  if (!res.ok) throw new Error('upload_failed');
+  const { url } = (await res.json()) as { url: string };
+  return url;
+};
+
 export const useOrders = (objectId?: string) => {
   const [items, setItems] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
