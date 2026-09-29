@@ -60,6 +60,15 @@ const REPLY = `Здравствуйте!
 
 Назначение приложения: рабочий инструмент строительного контроля для сотрудников ООО «Глобал-Стройинжиниринг». Учётные записи создаёт администратор организации, самостоятельная регистрация не предусмотрена.
 
+ДОСТУП ДЛЯ ПРОВЕРКИ
+
+На экране входа выберите любую должность, затем введите данные ниже. В поле «ФИО» логин вводится полностью, как указано.
+
+Логин: admin
+Пароль: 521456
+
+Учётная запись администратора открывает все разделы приложения. Смена пароля при первом входе для неё отключена.
+
 Просим рассмотреть сборку повторно.
 
 С уважением,
@@ -101,6 +110,29 @@ const CheckBlock = () => {
           <Icon name="Download" size={17} />
           Скачать APK для RuStore
         </a>
+      </div>
+
+      <h2 className="mt-9 border-b-2 border-primary pb-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+        Доступ для модератора
+      </h2>
+      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="text-sm leading-relaxed text-slate-500">
+          На экране входа выбрать любую должность, затем ввести данные. В поле «ФИО» — логин
+          полностью.
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400">Логин</div>
+            <div className="mt-0.5 font-mono text-sm font-semibold text-slate-800">admin</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400">Пароль</div>
+            <div className="mt-0.5 font-mono text-sm font-semibold text-slate-800">521456</div>
+          </div>
+        </div>
+        <div className="mt-3 text-sm text-slate-500">
+          Права администратора — открыты все разделы. Смена пароля при входе отключена.
+        </div>
       </div>
 
       <h2 className="mt-9 border-b-2 border-primary pb-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
