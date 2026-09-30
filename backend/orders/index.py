@@ -156,25 +156,38 @@ def handler(event: dict, context) -> dict:
 
         if method == 'GET' and params.get('action') == 'file':
             oid = params.get('id', '')
-            cur.execute(f"SELECT number, file_url FROM orders WHERE id = '{esc(oid)}'")
+            cur.execute(f"SELECT * FROM orders WHERE id = '{esc(oid)}'")
             row = cur.fetchone()
-            if not row or not row['file_url']:
-                return resp(404, {'error': 'file_not_found'})
-            key = row['file_url'].split('/bucket/', 1)[-1]
-            obj = s3_client().get_object(Bucket='files', Key=key)
+            if not row:
+                return resp(404, {'error': 'order_not_found'})
+
+            order = to_order(row)
+            cur.execute(
+                "SELECT * FROM object_contractors WHERE object_id = "
+                f"'{esc(order.get('objectId') or '')}' AND kind = 'general' LIMIT 1"
+            )
+            found = cur.fetchone()
+            contractor = to_contractor(found) if found else {}
+
+            # Собираем настоящий Word: HTML с расширением .doc телефон считает
+            # битым файлом и открывать отказывается.
+            import docx_order
+
+            blob = docx_order.build_order_docx(order, contractor)
             num = str(row['number'] or oid).replace('/', '-')
-            disp = "attachment; filename*=UTF-8''" + quote(f'Предписание {num}.doc')
-            # Файл отдаём сами: на CDN пометка attachment не доходит, и телефон
-            # показывает документ страницей вместо сохранения.
+            disp = "attachment; filename*=UTF-8''" + quote(f'Предписание {num}.docx')
             return {
                 'statusCode': 200,
                 'headers': {
                     'Access-Control-Allow-Origin': '*',
-                    'Content-Type': 'application/msword',
+                    'Content-Type': (
+                        'application/vnd.openxmlformats-officedocument'
+                        '.wordprocessingml.document'
+                    ),
                     'Content-Disposition': disp,
                 },
                 'isBase64Encoded': True,
-                'body': base64.b64encode(obj['Body'].read()).decode(),
+                'body': base64.b64encode(blob).decode(),
             }
 
         if method == 'POST' and (params.get('action') or body.get('action')) == 'doc':

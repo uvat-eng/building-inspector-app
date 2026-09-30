@@ -73,11 +73,15 @@ export const EMPTY_CONTRACTOR: Contractor = {
   works: '',
 };
 
+/** Ссылка на настоящий Word-файл предписания — его собирает сервер. */
+export const orderFileUrl = (id: string) =>
+  `${API}?action=file&id=${encodeURIComponent(id)}`;
+
 /**
- * Кладёт готовый Word-файл предписания на сервер и возвращает ссылку на него.
+ * Отмечает предписание как выпущенное и возвращает ссылку на файл Word.
  *
- * Ссылка ведёт на сервер, а не на хранилище: только так телефон получает
- * пометку «сохранить файл» и не показывает документ страницей.
+ * Документ собирает сервер: файл, собранный на сайте, — это HTML с
+ * расширением .doc, и телефон считает его битым.
  */
 export const uploadOrderDoc = async (id: string, content: string) => {
   const res = await fetch(`${API}?action=doc`, {
@@ -87,7 +91,14 @@ export const uploadOrderDoc = async (id: string, content: string) => {
   });
   if (!res.ok) throw new Error('upload_failed');
   await res.json();
-  return `${API}?action=file&id=${encodeURIComponent(id)}`;
+  return orderFileUrl(id);
+};
+
+/** Скачивает готовый Word предписания с сервера. */
+export const fetchOrderDoc = async (id: string) => {
+  const res = await fetch(orderFileUrl(id));
+  if (!res.ok) throw new Error('doc_failed');
+  return res.blob();
 };
 
 export const useOrders = (objectId?: string) => {

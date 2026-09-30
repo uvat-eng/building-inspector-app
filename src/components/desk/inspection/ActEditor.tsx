@@ -14,13 +14,13 @@ import {
   SEVERITY,
   deadlineFor,
   uploadAct,
+  fetchActDoc,
   teachNorm,
 } from '@/data/inspections';
 import { cn } from '@/lib/utils';
 import { usePhotoQueue, flushQueue, isWifi } from '@/data/photoQueue';
 import { downloadAct, buildActHtml } from '@/lib/actDoc';
-import { needsServerDoc } from '@/lib/platform';
-import { openDocUrl } from '@/lib/saveDoc';
+import { saveFile } from '@/lib/saveDoc';
 
 interface ActEditorProps {
   inspection: Inspection;
@@ -154,16 +154,16 @@ const ActEditor = ({
   const saveAct = async () => {
     setSaving(true);
     const data = { inspection, defects, objectTitle, contractorName };
-    const onPhone = needsServerDoc();
     try {
-      // На телефоне файл из памяти не скачивается — забираем его с сервера.
-      const { url } = await uploadAct(inspection.id, buildActHtml(data));
+      await uploadAct(inspection.id, buildActHtml(data));
       onFinish(inspection);
-      if (onPhone) openDocUrl(url);
-      else downloadAct(data);
+      // Настоящий Word собирает сервер: файл, собранный на сайте, телефон
+      // считает битым и открывать отказывается.
+      const blob = await fetchActDoc(inspection.id);
+      const opened = await saveFile(blob, `Акт осмотра ${inspection.number}.docx`, blob.type);
       toast({
         title: `Акт № ${inspection.number} сохранён`,
-        description: onPhone
+        description: opened
           ? 'Файл готов — телефон предложит сохранить или открыть его'
           : 'Файл скачан и добавлен в реестр объекта',
       });

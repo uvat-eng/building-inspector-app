@@ -101,25 +101,42 @@ def handler(event: dict, context) -> dict:
     try:
         if method == 'GET' and action == 'file':
             insp_id = params.get('id', '')
-            cur.execute(f"SELECT number, act_url FROM inspections WHERE id = '{esc(insp_id)}'")
+            cur.execute(f"SELECT * FROM inspections WHERE id = '{esc(insp_id)}'")
             row = cur.fetchone()
-            if not row or not row['act_url']:
-                return resp(404, {'error': 'file_not_found'})
-            key = row['act_url'].split('/bucket/', 1)[-1]
-            obj = s3_client().get_object(Bucket='files', Key=key)
+            if not row:
+                return resp(404, {'error': 'inspection_not_found'})
+
+            insp = to_insp(row)
+            cur.execute(
+                'SELECT * FROM inspection_defects WHERE inspection_id = '
+                f"'{esc(insp_id)}' ORDER BY pos"
+            )
+            defects = [to_defect(r) for r in cur.fetchall()]
+
+            cur.execute(f"SELECT title FROM objects WHERE id = '{esc(insp.get('objectId') or '')}'")
+            obj_row = cur.fetchone()
+
+            # Собираем настоящий Word: HTML с расширением .doc телефон считает
+            # битым файлом и открывать отказывается.
+            import docx_act
+
+            blob = docx_act.build_act_docx(
+                insp, defects, (obj_row or {}).get('title') or ''
+            )
             num = str(row['number'] or insp_id).replace('/', '-')
-            disp = "attachment; filename*=UTF-8''" + quote(f'Акт осмотра {num}.doc')
-            # Файл отдаём сами: на CDN пометка «сохранить» теряется, и телефон
-            # показывает документ страницей вместо загрузки.
+            disp = "attachment; filename*=UTF-8''" + quote(f'Акт осмотра {num}.docx')
             return {
                 'statusCode': 200,
                 'headers': {
                     'Access-Control-Allow-Origin': '*',
-                    'Content-Type': 'application/msword',
+                    'Content-Type': (
+                        'application/vnd.openxmlformats-officedocument'
+                        '.wordprocessingml.document'
+                    ),
                     'Content-Disposition': disp,
                 },
                 'isBase64Encoded': True,
-                'body': base64.b64encode(obj['Body'].read()).decode(),
+                'body': base64.b64encode(blob).decode(),
             }
 
         if method == 'GET' and action == 'all_defects':

@@ -101,13 +101,15 @@ export const openDocUrl = async (url: string, fileName?: string) => {
 /**
  * Сохраняет документ и, если задано, кладёт копию на сервер для реестра.
  *
- * Файл пользователю всегда отдаёт saveFile — из памяти браузера. Ссылку на
- * сервер телефону не подсовываем: Safari её игнорировал, и файл выходил пустым.
+ * fetchReal — забрать с сервера настоящий файл Word (.docx). Если он задан,
+ * отдаём пользователю именно его: документ, собранный на сайте, — это HTML с
+ * расширением .doc, и телефон считает такой файл битым.
  */
 export const saveDoc = async (
   html: string,
   name: string,
   upload?: (html: string) => Promise<string>,
+  fetchReal?: () => Promise<Blob>,
 ) => {
   let url: string | undefined;
 
@@ -117,6 +119,16 @@ export const saveDoc = async (
       url = await upload(html);
     } catch {
       url = undefined;
+    }
+  }
+
+  if (fetchReal) {
+    try {
+      const blob = await fetchReal();
+      const opened = await saveFile(blob, `${name}.docx`, blob.type);
+      return { opened, url };
+    } catch {
+      // Сервер недоступен — отдаём то, что собрали на месте.
     }
   }
 

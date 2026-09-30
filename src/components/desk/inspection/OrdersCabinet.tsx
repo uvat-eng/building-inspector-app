@@ -4,7 +4,7 @@ import Icon from '@/components/ui/icon';
 import Tag from '@/components/desk/Tag';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
-import { useOrders, useContractor, Order, uploadOrderDoc } from '@/data/orders';
+import { useOrders, useContractor, Order, uploadOrderDoc, fetchOrderDoc } from '@/data/orders';
 import { buildOrderHtml, downloadOrdersDigest } from '@/lib/orderDoc';
 import { saveDoc } from '@/lib/saveDoc';
 import { usePersistedState } from '@/hooks/usePersistedState';
@@ -30,6 +30,8 @@ const OrdersCabinet = ({ object, onBack }: OrdersCabinetProps) => {
       buildOrderHtml(o, contractor),
       `Предписание ${o.number}`,
       (html) => uploadOrderDoc(o.id, html),
+      // Настоящий Word собирает сервер — телефон открывает только такой файл.
+      () => fetchOrderDoc(o.id),
     );
     toast({
       title: `Предписание № ${o.number} сохранено`,

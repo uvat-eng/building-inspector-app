@@ -20,9 +20,16 @@ export interface Inspection {
   createdAt: string;
 }
 
-/** Ссылка на скачивание акта: отдаётся сервером с пометкой «сохранить файл». */
+/** Ссылка на настоящий Word-файл акта — его собирает сервер. */
 export const actFileUrl = (inspectionId: string) =>
   `${API}?action=file&id=${encodeURIComponent(inspectionId)}`;
+
+/** Скачивает готовый Word акта с сервера. */
+export const fetchActDoc = async (inspectionId: string) => {
+  const res = await fetch(actFileUrl(inspectionId));
+  if (!res.ok) throw new Error('doc_failed');
+  return res.blob();
+};
 
 export const uploadAct = async (inspectionId: string, html: string) => {
   const res = await fetch(API, {

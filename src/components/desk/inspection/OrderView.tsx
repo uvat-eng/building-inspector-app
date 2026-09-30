@@ -5,7 +5,7 @@ import DocPreview from '@/components/desk/DocPreview';
 import PhotoLightbox from '@/components/desk/PhotoLightbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Order, Contractor, uploadOrderDoc } from '@/data/orders';
+import { Order, Contractor, uploadOrderDoc, fetchOrderDoc } from '@/data/orders';
 import { buildOrderHtml } from '@/lib/orderDoc';
 import { saveDoc } from '@/lib/saveDoc';
 
@@ -41,6 +41,8 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
         buildOrderHtml(order, contractor),
         `Предписание ${order.number}`,
         (html) => uploadOrderDoc(order.id, html),
+        // Настоящий Word собирает сервер — телефон открывает только такой файл.
+        () => fetchOrderDoc(order.id),
       );
       toast({
         title: `Предписание № ${order.number}`,
