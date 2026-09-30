@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { saveFile } from '@/lib/saveDoc';
 
 const API = 'https://functions.poehali.dev/2e05053b-09c0-417d-977e-345974ee080d';
 
@@ -198,14 +199,8 @@ export const downloadReviewDocx = async (review: DocReview) => {
     .join(' — ')
     .slice(0, 120);
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${name}.docx`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile(blob, `${name}.docx`, blob.type);
 };
 
 export const removeReview = async (id: string) => {

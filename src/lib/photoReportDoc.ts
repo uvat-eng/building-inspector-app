@@ -1,5 +1,6 @@
 import { FolderMeta, FolderPhoto } from '@/data/folders';
 import { openDoc } from '@/data/docPreview';
+import { saveFile } from '@/lib/saveDoc';
 
 export interface PhotoReportData {
   meta: FolderMeta;
@@ -101,14 +102,8 @@ export const buildPhotoReportHtml = ({ meta, photos }: PhotoReportData) => {
 };
 
 export const downloadPhotoReport = (data: PhotoReportData, name = 'Фотоотчёт') => {
-  const blob = new Blob(['\ufeff', buildPhotoReportHtml(data)], {
-    type: 'application/msword;charset=utf-8',
-  });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${name.replace(/[/\\:*?"<>|]/g, '-')}.doc`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile('\ufeff' + buildPhotoReportHtml(data), `${name}.doc`);
 };
 
 export const printPhotoReport = (data: PhotoReportData, title = 'Фотоотчёт') => {

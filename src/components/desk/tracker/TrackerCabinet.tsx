@@ -19,6 +19,7 @@ import {
   useOnline,
   useTrackDays,
 } from '@/data/tracker';
+import { saveFile } from '@/lib/saveDoc';
 
 type Tab = 'online' | 'archive' | 'month';
 
@@ -45,14 +46,8 @@ const csv = (rows: MonthRow[], ym: string) => {
         `${r.days};${r.km.toFixed(1)};${r.moveMin};${r.idleMin}`,
     )
     .join('\n');
-  const blob = new Blob(['\ufeff' + head + '\n' + body], {
-    type: 'text/csv;charset=utf-8',
-  });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `Трекер_свод_${ym}.csv`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile('\ufeff' + head + '\n' + body, `Трекер_свод_${ym}.csv`);
 };
 
 const TrackerCabinet = () => {

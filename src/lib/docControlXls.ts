@@ -6,6 +6,7 @@ import {
   isDocFixed,
   kindLabel,
 } from '@/data/doccontrol';
+import { saveFile } from '@/lib/saveDoc';
 
 const esc = (s?: string | number) =>
   String(s ?? '')
@@ -44,15 +45,8 @@ ${sheets
 <body>${sheets.map((s) => s.html).join('<br style="page-break-before:always"/>')}</body></html>`;
 
 const save = (html: string, name: string) => {
-  const blob = new Blob([`\ufeff${html}`], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${name.replace(/[/\\:*?"<>|]/g, '-')}.xls`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile(`\ufeff${html}`, `${name}.xls`);
 };
 
 const reportHtml = (checks: DocCheck[]) => `<h2>Отчёт по проверке ИТД на ${ruDate(

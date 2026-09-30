@@ -124,11 +124,8 @@ const DocsCabinet = ({ object, onBack, only, sections, title: pageTitle, hint }:
 
   const saveDoc = async (doc: ProjectDoc) => {
     if (offlineIds.has(doc.id) && (await downloadOffline(doc.id))) return;
-    const a = document.createElement('a');
-    a.href = doc.fileUrl;
-    a.download = doc.fileName;
-    a.target = '_blank';
-    a.click();
+    // Через рамку: новое окно на iPhone подменяет собой приложение.
+    openDocUrl(doc.fileUrl, doc.fileName);
   };
 
   const clearMemory = async () => {

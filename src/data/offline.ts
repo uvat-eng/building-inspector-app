@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { saveFile } from '@/lib/saveDoc';
 
 const DB_NAME = 'gsi-offline';
 const STORE = 'docs';
@@ -88,12 +89,8 @@ export const openOffline = async (id: string) => {
 export const downloadOffline = async (id: string) => {
   const rec = await getOffline(id);
   if (!rec) return false;
-  const url = URL.createObjectURL(rec.blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = rec.fileName;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  await saveFile(rec.blob, rec.fileName, rec.blob.type);
   return true;
 };
 

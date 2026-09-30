@@ -1,4 +1,5 @@
 import { Inspection, InspectionDefect } from '@/data/inspections';
+import { saveFile } from '@/lib/saveDoc';
 
 const esc = (s: string) =>
   String(s ?? '')
@@ -75,19 +76,6 @@ export const buildActHtml = ({ inspection, defects, objectTitle, contractorName 
 };
 
 export const downloadAct = (data: ActData) => {
-  const blob = new Blob([`\ufeff${buildActHtml(data)}`], {
-    type: 'application/msword;charset=utf-8',
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Акт осмотра ${data.inspection.number.replace(/[/\\:*?"<>|]/g, '-')}.doc`;
-  // Открываем файл отдельно от приложения: иначе телефон уводит текущий экран
-  // на скачивание, и при возврате приложение стартует заново.
-  a.target = '_blank';
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile(`\ufeff${buildActHtml(data)}`, `Акт осмотра ${data.inspection.number}.doc`);
 };

@@ -5,6 +5,7 @@ import {
   isFixed,
   journalStat,
 } from '@/data/journal';
+import { saveFile } from '@/lib/saveDoc';
 
 const esc = (s?: string) =>
   String(s ?? '')
@@ -173,13 +174,6 @@ export const journalFileName = (inspector: string) =>
 
 export const downloadJournal = (entries: JournalEntry[], inspector: string, project?: string) => {
   const html = buildJournalHtml(entries, inspector, project);
-  const blob = new Blob([`\ufeff${html}`], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${journalFileName(inspector).replace(/[/\\:*?"<>|]/g, '-')}.xls`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile(`\ufeff${html}`, `${journalFileName(inspector)}.xls`);
 };

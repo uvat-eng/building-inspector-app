@@ -1,4 +1,5 @@
 import { Waybill } from '@/data/waybills';
+import { saveFile } from '@/lib/saveDoc';
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -102,14 +103,8 @@ ${row('Особые отметки', w.notes)}
 </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
 <style>${STYLE}</style></head><body>${html}</body></html>`;
 
-  const blob = new Blob(['\ufeff' + book], {
-    type: 'application/vnd.ms-excel;charset=utf-8',
-  });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `Путевой_лист_${w.number || 'без номера'}_${w.wbDate || ''}.xls`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile('\ufeff' + book, `Путевой_лист_${w.number || 'без номера'}_${w.wbDate || ''}.xls`);
 };
 
 export const downloadWaybillsSummary = (list: Waybill[], title: string) => {
@@ -146,12 +141,6 @@ ${rows || '<tr><td colspan="11" class="c">нет данных</td></tr>'}
 </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
 <style>${STYLE}</style></head><body>${html}</body></html>`;
 
-  const blob = new Blob(['\ufeff' + book], {
-    type: 'application/vnd.ms-excel;charset=utf-8',
-  });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `Свод_путевых_${title.replace(/\s+/g, '_')}.xls`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile('\ufeff' + book, `Свод_путевых_${title.replace(/\s+/g, '_')}.xls`);
 };

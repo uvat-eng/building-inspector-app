@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { saveFile } from '@/lib/saveDoc';
 
 export interface ShareDoc {
   fileName: string;
@@ -28,13 +29,8 @@ interface ShareMenuProps {
 }
 
 const download = (name: string, content: string, mime: string) => {
-  const blob = new Blob([`\uFEFF${content}`], { type: `${mime};charset=utf-8` });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile(`\uFEFF${content}`, name, mime);
 };
 
 const ShareMenu = ({ open, onOpenChange, doc }: ShareMenuProps) => {

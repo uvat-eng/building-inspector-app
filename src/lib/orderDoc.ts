@@ -1,4 +1,5 @@
 import { Order, Contractor } from '@/data/orders';
+import { saveFile } from '@/lib/saveDoc';
 
 const esc = (s?: string) =>
   String(s ?? '')
@@ -158,15 +159,8 @@ export const buildOrderHtml = (order: Order, contractor?: Contractor | null) =>
 <body>${orderBodyHtml(order, contractor)}</body></html>`;
 
 const saveDoc = (html: string, name: string) => {
-  const blob = new Blob([`\ufeff${html}`], { type: 'application/msword;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${name.replace(/[/\\:*?"<>|]/g, '-')}.doc`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile(`\ufeff${html}`, `${name}.doc`);
 };
 
 export const downloadOrder = (order: Order, contractor?: Contractor | null) =>

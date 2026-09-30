@@ -2,6 +2,7 @@ import { AssetRow } from '@/components/desk/chief/AssetTimesheet';
 import { AssetSheetKind, dayKey, statusInfo } from '@/data/assetsheet';
 import { MONTHS, fmtHours } from '@/data/timesheet';
 import { KIND_LABEL } from '@/data/vehicles';
+import { saveFile } from '@/lib/saveDoc';
 
 const esc = (s?: string | number) =>
   String(s ?? '')
@@ -129,13 +130,6 @@ export const buildAssetSheetHtml = (rows: AssetRow[], o: AssetSheetOpts) => {
 
 export const downloadAssetSheet = (rows: AssetRow[], o: AssetSheetOpts) => {
   const html = buildAssetSheetHtml(rows, o);
-  const blob = new Blob([`\ufeff${html}`], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${o.title} ${MONTHS[o.month]} ${o.year}.xls`.replace(/[/\\:*?"<>|]/g, '-');
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile(`\ufeff${html}`, `${o.title} ${MONTHS[o.month]} ${o.year}.xls`);
 };

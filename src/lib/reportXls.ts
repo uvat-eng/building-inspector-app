@@ -8,6 +8,7 @@ import {
   byContractor,
   statsOf,
 } from '@/data/reports';
+import { saveFile } from '@/lib/saveDoc';
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -39,12 +40,8 @@ const book = (sheet: string, html: string) => `<!DOCTYPE html>
 <style>${STYLE}</style></head><body>${html}</body></html>`;
 
 const download = (html: string, name: string) => {
-  const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+  void saveFile('\ufeff' + html, name);
 };
 
 const rowCells = (r: ReportRow, num: string) => `

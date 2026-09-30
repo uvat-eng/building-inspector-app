@@ -5,7 +5,6 @@ import Icon from '@/components/ui/icon';
 import Tag from '@/components/desk/Tag';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { useProfile } from '@/data/profile';
 import { useObjects } from '@/data/store';
 import DocUploadForm, { UploadMeta } from '@/components/desk/objectdocs/DocUploadForm';

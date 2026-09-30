@@ -9,6 +9,7 @@ import { useLocations, locTitle, locIcon } from '@/data/locations';
 import { InspectorRollup } from '@/data/rollup';
 import { MARKS, MONTHS, fmtHours } from '@/data/timesheet';
 import { useToast } from '@/hooks/use-toast';
+import { saveFile } from '@/lib/saveDoc';
 
 interface Props {
   items: InspectorRollup[];
@@ -87,12 +88,8 @@ const BrigadeTimesheet = ({ items, month, year }: Props) => {
     const csv = rows
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';'))
       .join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Сводка_персонала_${MONTHS[month]}_${year}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    // saveFile: компьютер скачивает файл, телефон отдаёт в меню «Поделиться».
+    void saveFile('\uFEFF' + csv, `Сводка_персонала_${MONTHS[month]}_${year}.csv`);
     toast({ title: 'Сводка выгружена', description: 'Файл открывается в Excel.' });
   };
 
