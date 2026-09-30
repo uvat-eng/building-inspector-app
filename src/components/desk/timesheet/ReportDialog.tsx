@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Profile } from '@/data/profile';
+import printDoc from '@/lib/printDoc';
 import { MONTHS, TimeEntry, entryHours, fmtHours, shiftOf } from '@/data/timesheet';
 
 interface ReportDialogProps {
@@ -32,7 +33,29 @@ const ReportDialog = ({
   nightDays,
   totalHours,
   onShare,
-}: ReportDialogProps) => (
+}: ReportDialogProps) => {
+  /**
+   * Печать табеля.
+   *
+   * Печатаем отдельную копию таблицы: печать всей страницы на телефоне
+   * не открывает меню принтера — кнопка просто молчит.
+   */
+  const printSheet = () => {
+    const table = document.getElementById('timesheet-print');
+    if (!table) return;
+    const css =
+      '@page{size:A4 landscape;margin:1cm}' +
+      'body{font-family:-apple-system,system-ui,Arial,sans-serif;font-size:10pt;color:#000}' +
+      'table{border-collapse:collapse;width:100%}' +
+      'td,th{border:1px solid #000;padding:3pt 4pt;font-size:8.5pt}';
+    printDoc(
+      `<html><head><meta charset="utf-8"><style>${css}</style></head>` +
+        `<body>${table.innerHTML}</body></html>`,
+      `Табель ${MONTHS[month]} ${year}`,
+    );
+  };
+
+  return (
   <Dialog open={report} onOpenChange={setReport}>
     <DialogContent className="max-w-2xl rounded-sm">
       <DialogHeader>
@@ -117,7 +140,7 @@ const ReportDialog = ({
 
       <div className="flex gap-2">
         <Button
-          onClick={() => window.print()}
+          onClick={printSheet}
           variant="outline"
           className="flex-1 gap-2 rounded-sm font-head uppercase tracking-[0.06em]"
         >
@@ -135,6 +158,7 @@ const ReportDialog = ({
       </div>
     </DialogContent>
   </Dialog>
-);
+  );
+};
 
 export default ReportDialog;

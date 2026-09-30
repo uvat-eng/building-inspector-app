@@ -1,9 +1,11 @@
 /**
  * Печать документов.
  *
- * В браузере печатает отдельная скрытая рамка: печать страницы или уже
- * показанной рамки на телефоне не открывает меню принтера — кнопка молчит.
- * Внутри приложения документ передаём ему, и меню печати показывает система.
+ * Печатаем содержимое прямо на текущей странице: на время печати прячем
+ * интерфейс и показываем только документ. Отдельная рамка или новое окно
+ * на телефоне не работают — Safari печать в них не запускает, и кнопка
+ * просто молчит. Внутри приложения документ отдаём ему: меню принтера
+ * показывает сама система.
  */
 
 type PrintBridge = { postMessage: (v: unknown) => void };
@@ -38,48 +40,75 @@ const printNative = (html: string, title: string) => {
   return false;
 };
 
-/** Печать через отдельную рамку — обычный браузер. */
-const printInFrame = (html: string) => {
-  const frame = document.createElement('iframe');
-  frame.setAttribute('aria-hidden', 'true');
-  frame.style.position = 'fixed';
-  frame.style.right = '0';
-  frame.style.bottom = '0';
-  frame.style.width = '0';
-  frame.style.height = '0';
-  frame.style.border = '0';
-  frame.srcdoc = html;
-  document.body.appendChild(frame);
+const ROOT_ID = 'gsi-print-root';
+const STYLE_ID = 'gsi-print-style';
 
-  const run = () => {
-    const win = frame.contentWindow;
-    if (!win) {
-      frame.remove();
-      return;
-    }
-    try {
-      win.focus();
-      win.print();
-    } catch {
-      // Печать недоступна — рамку убираем, экран не ломаем.
-    }
-    setTimeout(() => frame.remove(), 60000);
+/** Разбирает готовый документ на стили и содержимое. */
+const parseDoc = (html: string) => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const css = Array.from(doc.querySelectorAll('style'))
+    .map((s) => s.textContent ?? '')
+    .join('\n');
+  return { css, body: doc.body?.innerHTML ?? html };
+};
+
+/** Убирает временные узлы после печати. */
+const cleanup = () => {
+  document.getElementById(ROOT_ID)?.remove();
+  document.getElementById(STYLE_ID)?.remove();
+  document.documentElement.classList.remove('gsi-printing');
+};
+
+/**
+ * Печать содержимым текущей страницы.
+ *
+ * На время печати прячем интерфейс и показываем только документ — это
+ * единственный способ, который работает и в Safari на iPhone.
+ */
+const printInPage = (html: string, title: string) => {
+  cleanup();
+  const { css, body } = parseDoc(html);
+
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent =
+    `#${ROOT_ID}{display:none}` +
+    '@media print{' +
+    `html.gsi-printing body>*:not(#${ROOT_ID}){display:none!important}` +
+    `#${ROOT_ID}{display:block!important;position:static!important;` +
+    'width:100%!important;max-width:none!important;background:#fff!important;' +
+    'color:#000!important}' +
+    css +
+    '}';
+  document.head.appendChild(style);
+
+  const root = document.createElement('div');
+  root.id = ROOT_ID;
+  root.innerHTML = body;
+  document.body.appendChild(root);
+  document.documentElement.classList.add('gsi-printing');
+
+  const prevTitle = document.title;
+  document.title = title;
+
+  const after = () => {
+    document.title = prevTitle;
+    cleanup();
+    window.removeEventListener('afterprint', after);
   };
+  window.addEventListener('afterprint', after);
 
-  // Ждём загрузку картинок и шрифтов, иначе уйдёт пустой лист.
-  frame.onload = () => setTimeout(run, 400);
-  setTimeout(() => {
-    if (frame.parentNode && !frame.dataset.done) {
-      frame.dataset.done = '1';
-      run();
-    }
-  }, 2500);
+  // Даём странице перерисоваться, иначе уйдёт пустой лист.
+  window.setTimeout(() => {
+    window.print();
+    window.setTimeout(after, 1500);
+  }, 150);
 };
 
 /** Печатает готовый документ способом, доступным на этом устройстве. */
 export const printDoc = (html: string, title = 'Документ') => {
   if (printNative(html, title)) return;
-  printInFrame(html);
+  printInPage(html, title);
 };
 
 export default printDoc;

@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Order, Contractor, uploadOrderDoc, fetchOrderDoc } from '@/data/orders';
 import { buildOrderHtml } from '@/lib/orderDoc';
 import { saveDoc } from '@/lib/saveDoc';
+import printDoc from '@/lib/printDoc';
 
 interface OrderViewProps {
   order: Order;
@@ -53,7 +54,11 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
     }
   };
 
-  const print = () => setPreview(buildOrderHtml(order, contractor));
+  // Сразу открываем меню принтера: лишний экран просмотра на телефоне
+  // только мешает — до кнопки печати в нём ещё надо добраться.
+  const print = () => printDoc(buildOrderHtml(order, contractor), `Предписание № ${order.number}`);
+
+  const showPreview = () => setPreview(buildOrderHtml(order, contractor));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
@@ -159,6 +164,14 @@ const OrderView = ({ order, contractor, onBack }: OrderViewProps) => {
               className={saving ? 'animate-spin' : ''}
             />
             {saving ? 'Готовим файл…' : 'Скачать Word'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={showPreview}
+            className="flex-1 gap-2 rounded-sm font-head uppercase tracking-[0.06em]"
+          >
+            <Icon name="Eye" size={16} />
+            Просмотр
           </Button>
           <Button
             variant="outline"
