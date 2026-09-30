@@ -73,7 +73,12 @@ export const EMPTY_CONTRACTOR: Contractor = {
   works: '',
 };
 
-/** Кладёт готовый Word-файл предписания на сервер и возвращает ссылку на него. */
+/**
+ * Кладёт готовый Word-файл предписания на сервер и возвращает ссылку на него.
+ *
+ * Ссылка ведёт на сервер, а не на хранилище: только так телефон получает
+ * пометку «сохранить файл» и не показывает документ страницей.
+ */
 export const uploadOrderDoc = async (id: string, content: string) => {
   const res = await fetch(`${API}?action=doc`, {
     method: 'POST',
@@ -81,8 +86,8 @@ export const uploadOrderDoc = async (id: string, content: string) => {
     body: JSON.stringify({ action: 'doc', id, content }),
   });
   if (!res.ok) throw new Error('upload_failed');
-  const { url } = (await res.json()) as { url: string };
-  return url;
+  await res.json();
+  return `${API}?action=file&id=${encodeURIComponent(id)}`;
 };
 
 export const useOrders = (objectId?: string) => {

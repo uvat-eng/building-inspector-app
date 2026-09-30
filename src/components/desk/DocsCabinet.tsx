@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { openDocUrl } from '@/lib/saveDoc';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
@@ -118,7 +119,7 @@ const DocsCabinet = ({ object, onBack, only, sections, title: pageTitle, hint }:
 
   const openDoc = async (doc: ProjectDoc) => {
     if (offlineIds.has(doc.id) && (await openOffline(doc.id))) return;
-    window.open(doc.fileUrl, '_blank');
+    openDocUrl(doc.fileUrl);
   };
 
   const saveDoc = async (doc: ProjectDoc) => {

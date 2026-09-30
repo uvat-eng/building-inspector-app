@@ -20,6 +20,10 @@ export interface Inspection {
   createdAt: string;
 }
 
+/** Ссылка на скачивание акта: отдаётся сервером с пометкой «сохранить файл». */
+export const actFileUrl = (inspectionId: string) =>
+  `${API}?action=file&id=${encodeURIComponent(inspectionId)}`;
+
 export const uploadAct = async (inspectionId: string, html: string) => {
   const res = await fetch(API, {
     method: 'POST',
@@ -27,7 +31,10 @@ export const uploadAct = async (inspectionId: string, html: string) => {
     body: JSON.stringify({ action: 'act', inspectionId, content: html }),
   });
   if (!res.ok) throw new Error('upload_failed');
-  return (await res.json()) as { url: string; item: Inspection };
+  const data = (await res.json()) as { url: string; item: Inspection };
+  // Телефон должен получить файл через сервер, иначе документ откроется
+  // страницей вместо сохранения.
+  return { ...data, url: actFileUrl(inspectionId) };
 };
 
 export interface InspectionDefect {

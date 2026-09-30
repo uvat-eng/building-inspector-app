@@ -10,6 +10,7 @@ import { useOrders, Order } from '@/data/orders';
 import ActEditor from '@/components/desk/inspection/ActEditor';
 import OrderQuickView from '@/components/desk/inspection/OrderQuickView';
 import { orderPayload, orderErrorText } from '@/lib/makeOrder';
+import { openDocUrl } from '@/lib/saveDoc';
 import { useToast } from '@/hooks/use-toast';
 import { useAllFolders, monthLabel } from '@/data/folders';
 import { useAllSignedDocs, SECTION_META } from '@/data/signed';
@@ -225,7 +226,7 @@ const DocumentsSection = () => {
                   : d.order
                     ? () => setOpenOrder(d.order ?? null)
                     : d.url
-                      ? () => window.open(d.url, '_blank')
+                      ? () => openDocUrl(d.url as string)
                       : undefined
               }
               right={<Tag tone={d.tone}>{d.tag}</Tag>}

@@ -73,8 +73,15 @@ export const openOffline = async (id: string) => {
   const rec = await getOffline(id);
   if (!rec) return false;
   const url = URL.createObjectURL(rec.blob);
-  window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  // Через скрытую рамку: отдельное окно на телефоне подменяет рабочий экран.
+  const frame = document.createElement('iframe');
+  frame.style.display = 'none';
+  frame.src = url;
+  document.body.appendChild(frame);
+  setTimeout(() => {
+    frame.remove();
+    URL.revokeObjectURL(url);
+  }, 60000);
   return true;
 };
 

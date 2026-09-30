@@ -3,6 +3,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from urllib.parse import quote
 import boto3
 import psycopg2
 import psycopg2.extras
@@ -98,6 +99,29 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
+        if method == 'GET' and action == 'file':
+            insp_id = params.get('id', '')
+            cur.execute(f"SELECT number, act_url FROM inspections WHERE id = '{esc(insp_id)}'")
+            row = cur.fetchone()
+            if not row or not row['act_url']:
+                return resp(404, {'error': 'file_not_found'})
+            key = row['act_url'].split('/bucket/', 1)[-1]
+            obj = s3_client().get_object(Bucket='files', Key=key)
+            num = str(row['number'] or insp_id).replace('/', '-')
+            disp = "attachment; filename*=UTF-8''" + quote(f'Акт осмотра {num}.doc')
+            # Файл отдаём сами: на CDN пометка «сохранить» теряется, и телефон
+            # показывает документ страницей вместо загрузки.
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Content-Type': 'application/msword',
+                    'Content-Disposition': disp,
+                },
+                'isBase64Encoded': True,
+                'body': base64.b64encode(obj['Body'].read()).decode(),
+            }
+
         if method == 'GET' and action == 'all_defects':
             cur.execute(
                 'SELECT d.*, i.number AS insp_number, i.object_id, i.work_type, '
@@ -189,8 +213,18 @@ def handler(event: dict, context) -> dict:
                 return resp(400, {'error': 'inspection_and_content_required'})
             raw = content.encode('utf-8')
             key = f'inspections/{insp_id}/act-{uuid.uuid4().hex[:8]}.doc'
+            cur.execute(f"SELECT number FROM inspections WHERE id = '{esc(insp_id)}'")
+            found = cur.fetchone()
+            num = (found['number'] if found else insp_id).replace('/', '-')
+            # Пометка attachment: телефон предлагает сохранить файл,
+            # а не показывает его содержимое страницей.
+            disp = "attachment; filename*=UTF-8''" + quote(f'Акт осмотра {num}.doc')
             s3_client().put_object(
-                Bucket='files', Key=key, Body=raw, ContentType='application/msword'
+                Bucket='files',
+                Key=key,
+                Body=raw,
+                ContentType='application/msword',
+                ContentDisposition=disp,
             )
             url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
             cur.execute(

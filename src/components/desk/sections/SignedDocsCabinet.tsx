@@ -4,6 +4,7 @@ import Empty from '@/components/desk/Empty';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { openDocUrl } from '@/lib/saveDoc';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
 import { compressPhoto } from '@/data/photoQueue';
@@ -194,7 +195,7 @@ const SignedDocsCabinet = ({ object, section, onBack }: Props) => {
                     <div key={d.id} className="flex flex-col gap-2 bg-card p-2.5">
                       <button
                         type="button"
-                        onClick={() => window.open(d.fileUrl, '_blank')}
+                        onClick={() => openDocUrl(d.fileUrl)}
                         className="relative aspect-[4/3] overflow-hidden rounded-sm border border-border bg-secondary"
                       >
                         {d.mime.startsWith('image/') ? (

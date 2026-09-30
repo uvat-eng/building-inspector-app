@@ -14,8 +14,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ProjectObject } from '@/data/store';
 import { useProfile } from '@/data/profile';
-import { Inspection, useInspections } from '@/data/inspections';
+import { Inspection, useInspections, actFileUrl } from '@/data/inspections';
 import { orderPayload, orderErrorText } from '@/lib/makeOrder';
+import { openDocUrl } from '@/lib/saveDoc';
 import { useContractor, useOrders, Order } from '@/data/orders';
 import OrderView from '@/components/desk/inspection/OrderView';
 import { downloadRegistry } from '@/lib/registryXls';
@@ -352,7 +353,7 @@ const InspectionsCabinet = ({ object, onBack, onOrdersOpen }: InspectionsCabinet
             {ask?.actUrl && (
               <Button
                 variant="outline"
-                onClick={() => window.open(ask.actUrl, '_blank')}
+                onClick={() => openDocUrl(actFileUrl(ask.id))}
                 className="gap-2 rounded-sm font-head uppercase tracking-[0.06em]"
               >
                 <Icon name="Download" size={16} />

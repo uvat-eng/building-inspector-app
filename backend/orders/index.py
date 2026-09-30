@@ -1,7 +1,9 @@
+import base64
 import json
 import os
 import uuid
 from datetime import datetime
+from urllib.parse import quote
 import boto3
 import psycopg2
 import psycopg2.extras
@@ -32,15 +34,23 @@ def s3_client():
     )
 
 
-def save_doc(order_id: str, content: str) -> str:
+def save_doc(order_id: str, content: str, number: str = '') -> str:
     """Кладёт готовый Word-файл предписания на сервер и отдаёт ссылку на него.
 
-    Нужно для телефона: внутри приложения файл, собранный в памяти браузера,
-    не скачивается — нужна обычная ссылка.
+    Нужно для телефона: файл, собранный в памяти браузера, там не скачивается.
+    Пометка attachment заставляет телефон предложить сохранить документ, а не
+    показывать его содержимое страницей.
     """
     key = f'orders/{order_id}/order-{uuid.uuid4().hex[:8]}.doc'
+    safe = (number or order_id).replace('/', '-').replace('\\', '-').replace('"', '')
+    name = f'Предписание {safe}.doc'
+    quoted = quote(name)
     s3_client().put_object(
-        Bucket='files', Key=key, Body=content.encode('utf-8'), ContentType='application/msword'
+        Bucket='files',
+        Key=key,
+        Body=content.encode('utf-8'),
+        ContentType='application/msword',
+        ContentDisposition=f"attachment; filename*=UTF-8''{quoted}",
     )
     return f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
 
@@ -143,12 +153,39 @@ def handler(event: dict, context) -> dict:
 
             return resp(405, {'error': 'method_not_allowed'})
 
+        if method == 'GET' and params.get('action') == 'file':
+            oid = params.get('id', '')
+            cur.execute(f"SELECT number, file_url FROM orders WHERE id = '{esc(oid)}'")
+            row = cur.fetchone()
+            if not row or not row['file_url']:
+                return resp(404, {'error': 'file_not_found'})
+            key = row['file_url'].split('/bucket/', 1)[-1]
+            obj = s3_client().get_object(Bucket='files', Key=key)
+            num = str(row['number'] or oid).replace('/', '-')
+            disp = "attachment; filename*=UTF-8''" + quote(f'Предписание {num}.doc')
+            # Файл отдаём сами: на CDN пометка attachment не доходит, и телефон
+            # показывает документ страницей вместо сохранения.
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Content-Type': 'application/msword',
+                    'Content-Disposition': disp,
+                },
+                'isBase64Encoded': True,
+                'body': base64.b64encode(obj['Body'].read()).decode(),
+            }
+
         if method == 'POST' and (params.get('action') or body.get('action')) == 'doc':
             oid = body.get('id', '')
             content = body.get('content', '')
             if not oid or not content:
                 return resp(400, {'error': 'id_and_content_required'})
-            url = save_doc(oid, content)
+            cur.execute(f"SELECT number FROM orders WHERE id = '{esc(oid)}'")
+            found = cur.fetchone()
+            if not found:
+                return resp(404, {'error': 'order_not_found'})
+            url = save_doc(oid, content, found['number'])
             cur.execute(
                 f"UPDATE orders SET file_url = '{esc(url)}' WHERE id = '{esc(oid)}' RETURNING *"
             )
