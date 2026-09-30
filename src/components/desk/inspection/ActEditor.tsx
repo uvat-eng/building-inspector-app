@@ -19,8 +19,8 @@ import {
 import { cn } from '@/lib/utils';
 import { usePhotoQueue, flushQueue, isWifi } from '@/data/photoQueue';
 import { downloadAct, buildActHtml } from '@/lib/actDoc';
-import { isAndroidApp } from '@/lib/platform';
-import { openDocUrl } from '@/lib/saveDoc';
+import { needsServerDoc } from '@/lib/platform';
+import { openBlankTab, showInTab } from '@/lib/saveDoc';
 
 interface ActEditorProps {
   inspection: Inspection;
@@ -154,20 +154,22 @@ const ActEditor = ({
   const saveAct = async () => {
     setSaving(true);
     const data = { inspection, defects, objectTitle, contractorName };
-    const html = buildActHtml(data);
+    // Заранее открытая вкладка нужна iPhone: право открыть её даётся только
+    // в момент нажатия и теряется, пока файл уходит на сервер.
+    const tab = needsServerDoc() ? openBlankTab() : null;
     try {
-      // На телефоне файл из памяти не скачивается — открываем ссылку на сервере.
-      const { url } = await uploadAct(inspection.id, html);
+      const { url } = await uploadAct(inspection.id, buildActHtml(data));
       onFinish(inspection);
-      if (isAndroidApp()) openDocUrl(url);
+      if (tab) showInTab(tab, url);
       else downloadAct(data);
       toast({
         title: `Акт № ${inspection.number} сохранён`,
-        description: isAndroidApp()
+        description: tab
           ? 'Файл открыт — сохраните его на телефон'
           : 'Файл скачан и добавлен в реестр объекта',
       });
     } catch {
+      tab?.close();
       downloadAct(data);
       onFinish(inspection);
       toast({
