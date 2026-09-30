@@ -1,36 +1,96 @@
 /**
- * Сохранение Word-документов.
+ * Сохранение и открытие документов.
  *
- * На компьютере файл собирается прямо в браузере и сразу скачивается.
- * На телефоне так нельзя: файл из памяти браузера ни iPhone, ни приложение
- * на Android скачать не могут — кнопка нажимается, но ничего не происходит.
- * Поэтому там документ уходит на сервер и забирается по ссылке.
+ * На компьютере файл просто скачивается. На телефоне так нельзя: файл из
+ * памяти браузера ни iPhone, ни приложение на Android скачать не могут —
+ * кнопка нажимается, но ничего не происходит. Поэтому телефону отдаём файл
+ * через системное меню «Поделиться»: оттуда его сохраняют в «Файлы», открывают
+ * в Word или сразу отправляют подрядчику.
  */
 import { needsServerDoc } from '@/lib/platform';
 
 const safeName = (name: string) => name.replace(/[/\\:*?"<>|]/g, '-');
 
-/** Скачивание файла из памяти браузера — только для компьютера. */
-const saveLocally = (html: string, name: string) => {
-  const blob = new Blob([`\ufeff${html}`], { type: 'application/msword;charset=utf-8' });
+/** Тип файла по расширению — по нему телефон выбирает, чем открыть документ. */
+const MIME: Record<string, string> = {
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv',
+  pdf: 'application/pdf',
+  html: 'text/html',
+};
+
+/** Обычное скачивание файла — компьютер и запасной путь для телефона. */
+const downloadBlob = (blob: Blob, name: string) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${safeName(name)}.doc`;
+  a.download = name;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
 
 /**
- * Открывает готовый файл, не уводя пользователя с текущего экрана.
+ * Сохраняет любой файл: Word, Excel, PDF, таблицу.
  *
- * Запрос уходит из скрытой рамки: телефон подхватывает файл и сам предлагает
- * сохранить или открыть его, а рабочий экран остаётся на месте. Отдельную
- * вкладку не открываем — на iPhone она подменяет собой всё приложение.
+ * Возвращает true, если файл ушёл в меню «Поделиться» (только телефон).
  */
-export const openDocUrl = (url: string) => {
+export const saveFile = async (data: BlobPart, fileName: string, mime?: string) => {
+  const name = safeName(fileName);
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  const type = mime ?? MIME[ext] ?? 'application/octet-stream';
+  const blob = data instanceof Blob ? data : new Blob([data], { type });
+
+  if (needsServerDoc()) {
+    const nav = navigator as Navigator & {
+      canShare?: (d: { files?: File[] }) => boolean;
+      share?: (d: { files?: File[]; title?: string }) => Promise<void>;
+    };
+    if (nav.share && nav.canShare) {
+      const file = new File([blob], name, { type });
+      if (nav.canShare({ files: [file] })) {
+        try {
+          await nav.share({ files: [file], title: name });
+          return true;
+        } catch {
+          // Меню закрыли или устройство не поддержало — скачиваем как обычно.
+        }
+      }
+    }
+  }
+
+  downloadBlob(blob, name);
+  return false;
+};
+
+/**
+ * Открывает файл, уже лежащий на сервере, не уводя с текущего экрана.
+ *
+ * Телефону сначала предлагаем меню «Поделиться» — так документ можно сохранить
+ * или открыть в Word. Отдельную вкладку не открываем: на iPhone она подменяет
+ * собой всё приложение.
+ */
+export const openDocUrl = async (url: string, fileName?: string) => {
+  if (needsServerDoc()) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const blob = await res.blob();
+        const fromServer = res.headers.get('Content-Disposition') ?? '';
+        const found = /filename\*=UTF-8''([^;]+)/.exec(fromServer);
+        const name = fileName ?? (found ? decodeURIComponent(found[1]) : 'Документ.doc');
+        await saveFile(blob, name, blob.type);
+        return;
+      }
+    } catch {
+      // Нет связи — пробуем открыть ссылку напрямую.
+    }
+  }
+
   const frame = document.createElement('iframe');
   frame.style.display = 'none';
   frame.src = url;
@@ -39,28 +99,29 @@ export const openDocUrl = (url: string) => {
 };
 
 /**
- * Сохраняет документ понятным для текущего устройства способом.
+ * Сохраняет документ и, если задано, кладёт копию на сервер для реестра.
  *
- * upload — как положить файл на сервер; вызывается только на телефоне.
- * Если сервер недоступен, файл всё равно скачается из памяти.
+ * Файл пользователю всегда отдаёт saveFile — из памяти браузера. Ссылку на
+ * сервер телефону не подсовываем: Safari её игнорировал, и файл выходил пустым.
  */
 export const saveDoc = async (
   html: string,
   name: string,
   upload?: (html: string) => Promise<string>,
 ) => {
-  if (!needsServerDoc() || !upload) {
-    saveLocally(html, name);
-    return { opened: false };
+  let url: string | undefined;
+
+  if (upload) {
+    // Копия на сервере нужна реестру. Нет связи — документ всё равно отдадим.
+    try {
+      url = await upload(html);
+    } catch {
+      url = undefined;
+    }
   }
-  try {
-    const url = await upload(html);
-    openDocUrl(url);
-    return { opened: true, url };
-  } catch {
-    saveLocally(html, name);
-    return { opened: false };
-  }
+
+  const opened = await saveFile(`\ufeff${html}`, `${name}.doc`);
+  return { opened, url };
 };
 
 export default saveDoc;

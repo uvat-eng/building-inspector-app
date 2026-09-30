@@ -48,7 +48,8 @@ def save_doc(order_id: str, content: str, number: str = '') -> str:
     s3_client().put_object(
         Bucket='files',
         Key=key,
-        Body=content.encode('utf-8'),
+        # BOM обязателен: без него Word открывает документ кракозябрами.
+        Body=content.encode('utf-8-sig'),
         ContentType='application/msword',
         ContentDisposition=f"attachment; filename*=UTF-8''{quoted}",
     )

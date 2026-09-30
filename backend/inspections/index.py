@@ -211,7 +211,8 @@ def handler(event: dict, context) -> dict:
             content = body.get('content', '')
             if not insp_id or not content:
                 return resp(400, {'error': 'inspection_and_content_required'})
-            raw = content.encode('utf-8')
+            # BOM обязателен: без него Word открывает документ кракозябрами.
+            raw = content.encode('utf-8-sig')
             key = f'inspections/{insp_id}/act-{uuid.uuid4().hex[:8]}.doc'
             cur.execute(f"SELECT number FROM inspections WHERE id = '{esc(insp_id)}'")
             found = cur.fetchone()

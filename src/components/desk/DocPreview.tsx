@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Icon from '@/components/ui/icon';
+import printDoc from '@/lib/printDoc';
 
 interface DocPreviewProps {
   /** Готовый HTML документа. */
@@ -21,14 +22,6 @@ const DocPreview = ({ html, title, onClose, onDownload }: DocPreviewProps) => {
   const frame = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    const doc = frame.current?.contentWindow?.document;
-    if (!doc) return;
-    doc.open();
-    doc.write(html);
-    doc.close();
-  }, [html]);
-
-  useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', esc);
     const prev = document.body.style.overflow;
@@ -39,12 +32,9 @@ const DocPreview = ({ html, title, onClose, onDownload }: DocPreviewProps) => {
     };
   }, [onClose]);
 
-  const print = () => {
-    const w = frame.current?.contentWindow;
-    if (!w) return;
-    w.focus();
-    w.print();
-  };
+  // Печатаем отдельную копию документа: печать показанной рамки на телефоне
+  // не открывает меню принтера — кнопка просто молчит.
+  const print = () => printDoc(html, title);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-foreground/60 backdrop-blur-sm">
@@ -99,6 +89,7 @@ const DocPreview = ({ html, title, onClose, onDownload }: DocPreviewProps) => {
         <iframe
           ref={frame}
           title={title}
+          srcDoc={html}
           className="mx-auto block h-full w-full max-w-[900px] rounded-sm border-0 bg-white shadow-lg"
         />
       </div>
