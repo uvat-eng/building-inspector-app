@@ -1,6 +1,7 @@
 import { Inspection, suggestNorms } from '@/data/inspections';
 import { Order } from '@/data/orders';
 import { ProjectObject } from '@/data/store';
+import { orgName } from '@/lib/company';
 
 const INSPECTIONS_API = 'https://functions.poehali.dev/26fd0e42-bb64-4022-acb0-097508981039';
 
@@ -85,7 +86,7 @@ export const orderPayload = async (
       subcontractor: insp.subcontractor,
       objectTitle,
       objectCode: object?.objectCode || '',
-      inspectionOrg: 'ООО «ГЛОБАЛ-Стройинжиниринг»',
+      inspectionOrg: orgName(true),
       contractNo: object?.contractNo || '',
       contractDate: object?.contractDate || '',
       assignDocNo: object?.assignDocNo || '',

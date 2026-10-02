@@ -8,6 +8,7 @@
  * в Word или сразу отправляют подрядчику.
  */
 import { needsServerDoc } from '@/lib/platform';
+import { withCompany } from '@/lib/company';
 
 const safeName = (name: string) => name.replace(/[/\\:*?"<>|]/g, '-');
 
@@ -93,7 +94,7 @@ export const openDocUrl = async (url: string, fileName?: string) => {
 
   const frame = document.createElement('iframe');
   frame.style.display = 'none';
-  frame.src = url;
+  frame.src = withCompany(url);
   document.body.appendChild(frame);
   setTimeout(() => frame.remove(), 60000);
 };

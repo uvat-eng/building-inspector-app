@@ -14,12 +14,13 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
+import tenant
+
 MONTHS = [
     'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
     'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
 ]
 
-DEFAULT_ORG = 'ООО «ГЛОБАЛ-Стройинжиниринг»'
 
 
 def ru_long(value):
@@ -164,7 +165,7 @@ def build_order_docx(order, contractor=None):
     body = order.get('body') or {}
     items = body.get('items') or []
     contractor = contractor or {}
-    org = body.get('inspectionOrg') or DEFAULT_ORG
+    org = body.get('inspectionOrg') or tenant.org_name()
     issued_to = order.get('issuedTo') or contractor.get('name') or ''
     number = order.get('number') or ''
 

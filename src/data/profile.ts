@@ -1,3 +1,4 @@
+import { orgName } from '@/lib/company';
 import { useCallback, useEffect, useState } from 'react';
 
 export type Role =
@@ -246,7 +247,7 @@ const DEFAULT: Profile = {
   role: 'inspector',
   baseRole: undefined,
   group: '',
-  org: 'ООО «Глобал-Стройинжиниринг»',
+  org: '',
   locations: [],
   specialties: [],
 };
@@ -254,12 +255,15 @@ const DEFAULT: Profile = {
 const KEY = 'gsi-profile-v1';
 const EVENT = 'gsi-profile-changed';
 
+/** Организация берётся из выбранной компании, если в учётной записи не указана. */
+const withOrg = (p: Profile): Profile => (p.org ? p : { ...p, org: orgName() });
+
 const read = (): Profile => {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...DEFAULT, ...(JSON.parse(raw) as Profile) } : DEFAULT;
+    return withOrg(raw ? { ...DEFAULT, ...(JSON.parse(raw) as Profile) } : DEFAULT);
   } catch {
-    return DEFAULT;
+    return withOrg(DEFAULT);
   }
 };
 

@@ -1,7 +1,6 @@
 {
+  "companies": "https://functions.poehali.dev/929fb8bf-f4dc-4095-95d2-7bf0835b77c8",
   "docaudit": "https://functions.poehali.dev/2e05053b-09c0-417d-977e-345974ee080d",
-  "report": "https://functions.poehali.dev/ef1de2d0-baac-455e-9a2d-87fd1f438b6b",
-  "apk": "https://functions.poehali.dev/a8d47fc7-787b-4a3b-99d4-95bdd915c07a",
   "tracker": "https://functions.poehali.dev/f49d9e5b-f86c-445b-9ad4-7e0fec543294",
   "waybills": "https://functions.poehali.dev/9ef8566d-cc0c-4c8d-ab06-da2fc32de951",
   "fleet": "https://functions.poehali.dev/9022e72d-518c-4632-8607-444c1079934b",
@@ -27,6 +26,5 @@
   "settings": "https://functions.poehali.dev/85ad61a8-9c07-4682-bc53-d03d5acfef15",
   "timesheet": "https://functions.poehali.dev/02136fbd-3016-43a0-8cb2-91ae5a7afa63",
   "users": "https://functions.poehali.dev/cd923bff-c036-4154-8040-f9ae72a2260f",
-  "objects": "https://functions.poehali.dev/78133056-3e64-4567-9c70-8387ccbfb929",
-  "companies": "https://functions.poehali.dev/929fb8bf-f4dc-4095-95d2-7bf0835b77c8"
+  "objects": "https://functions.poehali.dev/78133056-3e64-4567-9c70-8387ccbfb929"
 }

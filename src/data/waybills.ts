@@ -1,3 +1,4 @@
+import { isMainCompany, orgName } from '@/lib/company';
 import { useCallback, useEffect, useState } from 'react';
 
 const API = 'https://functions.poehali.dev/9ef8566d-cc0c-4c8d-ab06-da2fc32de951';
@@ -116,8 +117,10 @@ export const PART_TONE: Record<PartRequest['status'], string> = {
   declined: 'border-border text-muted-foreground',
 };
 
-export const ORG_DEFAULT =
-  'ООО "ГЛОБАЛ-Стройинжиниринг", ИНН 7203181210, ОГРН 1067203344823';
+const MAIN_ORG_REQ = 'ООО "ГЛОБАЛ-Стройинжиниринг", ИНН 7203181210, ОГРН 1067203344823';
+
+/** Реквизиты организации в путевом листе: у других компаний — только название. */
+export const orgRequisites = () => (isMainCompany() ? MAIN_ORG_REQ : orgName());
 
 export const useWaybills = () => {
   const [waybills, setWaybills] = useState<Waybill[]>([]);

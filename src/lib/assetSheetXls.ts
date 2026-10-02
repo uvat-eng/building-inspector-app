@@ -3,6 +3,7 @@ import { AssetSheetKind, dayKey, statusInfo } from '@/data/assetsheet';
 import { MONTHS, fmtHours } from '@/data/timesheet';
 import { KIND_LABEL } from '@/data/vehicles';
 import { saveFile } from '@/lib/saveDoc';
+import { orgName } from '@/lib/company';
 
 const esc = (s?: string | number) =>
   String(s ?? '')
@@ -42,7 +43,7 @@ export const buildAssetSheetHtml = (rows: AssetRow[], o: AssetSheetOpts) => {
   };
 
   const head = `<h2>${esc(o.title)} · ${MONTHS[o.month]} ${o.year}</h2>
-  <p>ООО «Глобал-Стройинжиниринг»${o.project ? ` · ${esc(o.project)}` : ''}</p>
+  <p>${esc(orgName())}${o.project ? ` · ${esc(o.project)}` : ''}</p>
   <p>Ответственный: ${esc(o.chief)} · составлено ${new Date().toLocaleDateString('ru')}</p>
   <p>Обозначения: Р — работа (часы), П — простой, ТО — техобслуживание, РМ — ремонт,
    «—» — не задействован</p>`;

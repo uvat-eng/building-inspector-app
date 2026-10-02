@@ -1,5 +1,6 @@
 import { Order, Contractor } from '@/data/orders';
 import { saveFile } from '@/lib/saveDoc';
+import { orgName } from '@/lib/company';
 
 const esc = (s?: string) =>
   String(s ?? '')
@@ -67,7 +68,7 @@ export const orderBodyHtml = (order: Order, contractor?: Contractor | null) => {
     nums.length === 0 ? '—' : nums.length === 1 ? `№1` : `№1 — №${nums.length}`;
 
   return `
-  <p class="head">${esc(b.inspectionOrg || 'ООО «ГЛОБАЛ-Стройинжиниринг»')}</p>
+  <p class="head">${esc(b.inspectionOrg || orgName(true))}</p>
   <p class="head">Объект строительства: «${esc(b.objectTitle || '')}»</p>
   <p class="head">Шифр объекта: ${line(b.objectCode, 20)}</p>
   <p style="margin-top:8pt">${ruLong(order.createdAt)}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Время ${esc(b.time || '__:__')}</p>
@@ -81,7 +82,7 @@ export const orderBodyHtml = (order: Order, contractor?: Contractor | null) => {
   <p class="hint">(№ договора подряда и дата заключения договора)</p>
 
   <p style="margin-top:6pt">Мною, представителем независимого строительного контроля:
-  Инспектор СК ${esc(b.inspectionOrg || 'ООО «ГЛОБАЛ-Стройинжиниринг»')} ${line(order.inspector, 26)}</p>
+  Инспектор СК ${esc(b.inspectionOrg || orgName(true))} ${line(order.inspector, 26)}</p>
   <p class="hint">(фамилия И.О. ответственного представителя организации, осуществляющей строительный контроль)</p>
   <p>На основании документа № ${line(b.assignDocNo, 10)} от ${line(b.assignDocDate, 14)}</p>
   <p class="hint">(№ и дата распорядительного документа о назначении специалиста НСК на объект)</p>
@@ -201,7 +202,7 @@ export const buildOrdersDigestHtml = (
 <head><meta charset="utf-8"><title>Сводный реестр предписаний</title>
 <style>${ORDER_CSS}</style></head>
 <body>
-  <p class="head center">ООО «ГЛОБАЛ-Стройинжиниринг»</p>
+  <p class="head center">${esc(orgName(true))}</p>
   <h1>Сводный реестр предписаний</h1>
   <p class="center">${esc(opts.title || 'По всем объектам')} · на ${ruDate(new Date().toISOString())}</p>
 

@@ -13,6 +13,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+import tenant
+
 ACCENT = RGBColor(0x1F, 0x3A, 0x6E)
 GREY = RGBColor(0x66, 0x66, 0x66)
 RED = RGBColor(0xB3, 0x26, 0x1E)
@@ -155,7 +157,7 @@ def build_act_docx(insp, defects, object_title='', contractor=None):
     defects = defects or []
     contractor = contractor or {}
 
-    para(doc, 'ООО «ГЛОБАЛ-Стройинжиниринг»', size=11, bold=True,
+    para(doc, tenant.org_name(), size=11, bold=True,
          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
     para(doc, 'Служба строительного контроля', size=9.5, italic=True, color=GREY,
          align=WD_ALIGN_PARAGRAPH.CENTER, space_after=12)

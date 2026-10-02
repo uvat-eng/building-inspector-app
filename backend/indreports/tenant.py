@@ -120,3 +120,25 @@ def demo_limit_response(table: str):
         'isBase64Encoded': False,
         'body': '{"error": "demo_limit", "table": "%s", "limit": %d}' % (table, DEMO_LIMITS[table]),
     }
+
+
+MAIN_ORG = 'ООО «ГЛОБАЛ-Стройинжиниринг»'
+
+
+def org_name() -> str:
+    """Название организации для документов текущей компании."""
+    company = current()
+    if company == DEFAULT_COMPANY:
+        return MAIN_ORG
+    try:
+        conn = _orig_connect(os.environ['DATABASE_URL'])
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM companies WHERE id = '%s'" % company.replace("'", "''"))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return row[0] if row and row[0] else ''
+    except Exception:
+        return ''
+
+# rev 2

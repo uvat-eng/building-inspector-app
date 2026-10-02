@@ -7,6 +7,7 @@ import {
   kindLabel,
 } from '@/data/doccontrol';
 import { saveFile } from '@/lib/saveDoc';
+import { orgName } from '@/lib/company';
 
 const esc = (s?: string | number) =>
   String(s ?? '')
@@ -104,7 +105,7 @@ const reportHtml = (checks: DocCheck[]) => `<h2>Отчёт по проверке
     .join('')}
 </table>`;
 
-const journalHtml = (defects: DocDefect[]) => `<h2>Журнал замечаний СК ООО «ГЛОБАЛ-Стройинжиниринг»
+const journalHtml = (defects: DocDefect[]) => `<h2>Журнал замечаний СК ${esc(orgName(true))}
  по проверке исполнительной документации</h2>
 <table>
   <tr>

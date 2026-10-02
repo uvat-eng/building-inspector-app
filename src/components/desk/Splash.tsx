@@ -160,7 +160,7 @@ const Splash = ({ onDone }: SplashProps) => {
           className="mt-7 text-center font-head text-[26px] uppercase leading-tight text-foreground sm:text-[34px]"
           style={{ animation: 'gsi-title 1.1s 3.2s ease-out both' }}
         >
-          Глобал-Стройинжиниринг
+          Инспектор СК
         </h1>
         <span
           className="mt-2 block h-[3px] rounded-full bg-accent"

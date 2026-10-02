@@ -1,5 +1,6 @@
 import { PpeItem, SEASON_LABEL, Writeoff, fmt } from '@/data/outfit';
 import { openDoc } from '@/data/docPreview';
+import { orgName } from '@/lib/company';
 
 const shell = (title: string, inner: string) => `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>${title}</title>
@@ -22,7 +23,7 @@ const shell = (title: string, inner: string) => `<!doctype html>
 export const buildSheetHtml = (
   items: PpeItem[],
   holderFio: string,
-  org = 'ООО «Глобал-Стройинжиниринг»',
+  org = orgName(),
 ) => {
   const rows = items
     .map(
@@ -65,7 +66,7 @@ export const buildSheetHtml = (
 
 export const buildWriteoffActHtml = (
   w: Writeoff,
-  org = 'ООО «Глобал-Стройинжиниринг»',
+  org = orgName(),
 ) => {
   const rows = (w.items ?? [])
     .map(

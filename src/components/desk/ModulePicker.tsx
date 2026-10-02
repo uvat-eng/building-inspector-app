@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { MODULES, ModuleId } from '@/data/modules';
 import { useToast } from '@/hooks/use-toast';
 import { canOfferInstall } from '@/lib/platform';
+import { useCompany, isMainCompany } from '@/lib/company';
 
 // Внутри установленного приложения кнопку скачивания не показываем.
 const isInsideApp = () =>
@@ -17,9 +18,12 @@ const isPhone = () =>
 interface Props {
   onPick: (id: ModuleId) => void;
   onAdmin?: () => void;
+  onChangeCompany?: () => void;
 }
 
-const ModulePicker = ({ onPick, onAdmin }: Props) => {
+const ModulePicker = ({ onPick, onAdmin, onChangeCompany }: Props) => {
+  const company = useCompany();
+  const main = isMainCompany(company);
   // На технике Apple предложение скачать установочный файл скрыто:
   // App Store запрещает упоминать сторонние способы установки.
   const [showInstall] = useState(canOfferInstall);
@@ -46,7 +50,7 @@ const ModulePicker = ({ onPick, onAdmin }: Props) => {
           <div className="text-center">
             <img
               src="/emblem.png"
-              alt="Эмблема компании"
+              alt="Инспектор СК"
               className="mx-auto h-20 w-20 object-contain sm:h-24 sm:w-24"
             />
             <p className="mt-4 font-head text-[17px] uppercase leading-[1.15] tracking-[0.03em] text-muted-foreground sm:text-[23px]">
@@ -170,20 +174,33 @@ const ModulePicker = ({ onPick, onAdmin }: Props) => {
             </a>
           )}
 
-          <p className="mt-6 text-center text-[0.76em] text-muted-foreground">
-            ООО «Глобал-Стройинжиниринг» · Тюмень
-          </p>
+          {company && (
+            <p className="mt-6 text-center text-[0.76em] text-muted-foreground">{company.name}</p>
+          )}
 
-          <div className="mt-4 flex justify-center pb-2">
-            <img
-              src="/logo.png"
-              alt="ООО «Глобал-Стройинжиниринг»"
-              className="h-14 w-auto object-contain opacity-90"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          </div>
+          {main && (
+            <div className="mt-4 flex justify-center pb-2">
+              <img
+                src="/logo.png"
+                alt="ООО «Глобал-Стройинжиниринг»"
+                className="h-14 w-auto object-contain opacity-90"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+
+          {onChangeCompany && (
+            <button
+              type="button"
+              onClick={onChangeCompany}
+              className="mx-auto mt-3 flex items-center gap-1.5 text-[0.78em] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-accent"
+            >
+              <Icon name="Building" size={14} />
+              Сменить компанию
+            </button>
+          )}
         </div>
       </main>
     </div>

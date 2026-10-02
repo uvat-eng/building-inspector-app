@@ -2,6 +2,7 @@ import { PersonMonth } from '@/components/desk/chief/TeamTimesheet';
 import { MONTHS, fmtHours } from '@/data/timesheet';
 import { ROLE_LABEL } from '@/data/profile';
 import { saveFile } from '@/lib/saveDoc';
+import { orgName } from '@/lib/company';
 
 const esc = (s?: string | number) =>
   String(s ?? '')
@@ -32,7 +33,7 @@ export const buildTeamSheetHtml = (rows: PersonMonth[], o: SheetOpts) => {
   const days = Array.from({ length: o.daysInMonth }, (_, i) => i + 1);
 
   const head = `<h2>${esc(o.title)} · ${MONTHS[o.month]} ${o.year}</h2>
-  <p>ООО «Глобал-Стройинжиниринг»${o.project ? ` · ${esc(o.project)}` : ''}</p>
+  <p>${esc(orgName())}${o.project ? ` · ${esc(o.project)}` : ''}</p>
   <p>Ответственный: ${esc(o.chief)} · составлено ${new Date().toLocaleDateString('ru')}</p>`;
 
   const table = `<table>

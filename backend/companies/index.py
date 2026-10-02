@@ -148,6 +148,12 @@ def handler(event: dict, context) -> dict:
                 item['accessCode'] = row['access_code']
             return resp(200, {'item': item})
 
+        if method == 'POST' and action in ('create', 'join'):
+            # Разделение данных между компаниями ещё не готово: пока оно не
+            # проверено, новые компании не создаются и вход по коду закрыт —
+            # иначе они увидят данные основной компании.
+            return resp(503, {'error': 'temporarily_closed'})
+
         if method == 'POST' and action == 'join':
             code = re.sub(r'[^A-Z0-9]', '', str(body.get('code', '')).upper())
             if len(code) < 4:
@@ -157,9 +163,6 @@ def handler(event: dict, context) -> dict:
             if not row:
                 return resp(404, {'error': 'not_found'})
             return resp(200, {'item': with_token(row)})
-
-        if method == 'POST' and action == 'create' and os.environ.get('COMPANIES_OPEN') != '1':
-            return resp(503, {'error': 'temporarily_closed'})
 
         if method == 'POST' and action == 'create':
             name = ' '.join(str(body.get('name', '')).split())[:120]

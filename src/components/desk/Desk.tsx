@@ -46,6 +46,9 @@ import useBackGuard from '@/hooks/use-back-guard';
 import { useImpersonation, dropImpersonation } from '@/data/impersonate';
 import { flushQueue, usePhotoQueue } from '@/data/photoQueue';
 import CabinetPicker from '@/components/desk/director/CabinetPicker';
+import CompanyPicker from '@/components/desk/CompanyPicker';
+import DemoBanner from '@/components/desk/DemoBanner';
+import { useCompany, leaveCompany, fetchMainCompany, switchCompany } from '@/lib/company';
 
 const SECTION_KEY = 'gsi-section-v1';
 const SCOPE_ENTERED = 'gsi-scope-entered-v1';
@@ -274,6 +277,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
       <div className="animate-rise">
         <Topbar />
       </div>
+      <DemoBanner />
       <div className="animate-rise [animation-delay:0.05s]">
         <DeskHeader onLogin={() => setLoginOpen(true)} onMenu={() => setMenuOpen(true)} />
       </div>
@@ -534,6 +538,7 @@ const Desk = ({ onLeaveScope, onLeaveModule }: DeskProps) => {
 };
 
 const DeskRoot = () => {
+  const company = useCompany();
   const { module, pick } = useModule();
   const { current } = useUsers();
   const { profile, save: saveProfile } = useProfile();
@@ -572,10 +577,48 @@ const DeskRoot = () => {
     pick(null);
   };
 
+  if (!company && current) {
+    // Сотрудник уже входил до появления выбора компании — это основная
+    // компания. Подставляем её сами, без лишнего экрана.
+    fetchMainCompany()
+      .then((c) => c && switchCompany(c))
+      .catch(() => undefined);
+    return null;
+  }
+
+  if (!company)
+    return (
+      <CompanyPicker
+        onReady={(c, user) => {
+          if (!user) return;
+          // Создатель компании сразу входит руководителем — без повторного ввода.
+          setSession(user.id);
+          saveProfile({
+            fio: user.fio,
+            role: user.role,
+            baseRole: user.role,
+            group: '',
+            locations: user.locations,
+            specialties: [],
+            objects: [],
+            chief: '',
+            userId: user.id,
+            org: c.name,
+          });
+          pick('sk');
+          if (user.locations[0]) enterScope(user.locations[0], '');
+        }}
+      />
+    );
+
   if (!module)
     return (
       <>
-        <ModulePicker onPick={pick} onAdmin={() => setAdminLogin(true)} />
+        <ModulePicker
+          onPick={pick}
+          onAdmin={() => setAdminLogin(true)}
+          onChangeCompany={current ? undefined : leaveCompany}
+        />
         <LoginDialog
           open={adminLogin}
           onOpenChange={setAdminLogin}

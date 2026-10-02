@@ -15,11 +15,11 @@
       "expectedStatus": 401
     },
     {
-      "name": "Неверный код компании",
+      "name": "Вход по коду временно закрыт",
       "method": "POST",
       "path": "/",
       "body": {"action": "join", "code": "ZZZZZZ"},
-      "expectedStatus": 404
+      "expectedStatus": 503
     },
     {
       "name": "Создание компаний временно закрыто",

@@ -28,9 +28,20 @@ def norm_phrase(text):
     return ' '.join(sorted(set(keep)))[:250]
 
 
+def own_company():
+    """Архив предписаний и накопленные правки — собственность основной компании.
+
+    Другие компании ими не пользуются: там тексты чужих замечаний, объекты
+    и фамилии инженеров. Им доступны только общий справочник норм и ИИ.
+    """
+    return tenant.current() == tenant.DEFAULT_COMPANY
+
+
 def cache_get(texts):
     """Ранее накопленные ответы: правки инженеров важнее ответов ИИ."""
     found = {}
+    if not own_company():
+        return found
     phrases = {t: norm_phrase(t) for t in texts}
     keys = [p for p in phrases.values() if p]
     if not keys:
@@ -66,7 +77,7 @@ def cache_put(pairs, manual=False, author=''):
     """Пополняем базу. Ручные правки инженеров не затираются ответами ИИ."""
     rows = [(norm_phrase(t), m) for t, m in pairs if m and m.get('ref')]
     rows = [(p, m) for p, m in rows if p]
-    if not rows:
+    if not rows or not own_company():
         return
     keep = (
         'ON CONFLICT (phrase) DO UPDATE SET ref = EXCLUDED.ref, name = EXCLUDED.name, '
@@ -452,6 +463,9 @@ def handler(event: dict, context) -> dict:
         )
         return resp(200, {'ok': True, 'phrase': norm_phrase(text)})
 
+    if body.get('action') in ('handbook', 'archive') and not own_company():
+        return resp(200, {'total': 0, 'found': 0, 'page': 1, 'size': 50, 'kinds': [], 'items': []})
+
     if body.get('action') == 'handbook':
         return resp(200, archive.handbook(
             kind=str(body.get('kind') or ''),
@@ -471,6 +485,10 @@ def handler(event: dict, context) -> dict:
                 'items': archive.search(text, limit=int(body.get('limit') or 8)),
             },
         )
+
+    if body.get('action') == 'stats' and not own_company():
+        return resp(200, {'learned': 0, 'reuses': 0, 'manual': 0,
+                          'builtin': len(RULES), 'archive': 0})
 
     if body.get('action') == 'stats':
         try:
@@ -512,7 +530,7 @@ def handler(event: dict, context) -> dict:
 
     arch_cands = {}
     for i, r in enumerate(results):
-        if r is not None:
+        if r is not None or not own_company():
             continue
         cands = archive.search(items[i], limit=5)
         if not archive.worth_ai(cands):

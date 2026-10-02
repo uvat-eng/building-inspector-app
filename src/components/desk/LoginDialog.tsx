@@ -13,6 +13,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { useProfile, Role, ROLE_LABEL, ROLE_NOTE } from '@/data/profile';
 import { loginUser, registerUser, setSession, fetchUsers, User } from '@/data/users';
+import { orgName } from '@/lib/company';
 
 interface LoginDialogProps {
   open: boolean;
@@ -136,7 +137,7 @@ const LoginDialog = ({
         password: pass,
         role: adminMode ? 'admin' : (expectRole ?? 'pm'),
         group: '',
-        org: 'ООО «Глобал-Стройинжиниринг»',
+        org: orgName(),
         phone: '',
         locations: [],
         specialties: [],

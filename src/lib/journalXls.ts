@@ -6,6 +6,7 @@ import {
   journalStat,
 } from '@/data/journal';
 import { saveFile } from '@/lib/saveDoc';
+import { orgName } from '@/lib/company';
 
 const esc = (s?: string) =>
   String(s ?? '')
@@ -35,7 +36,7 @@ const sheetHtml = (title: string, inspector: string, project: string, list: Jour
   const s = journalStat(list);
   const contractor = list[0]?.contractor ?? '';
 
-  return `<h2>Индивидуальный журнал замечаний ИСК ООО «Глобал-Стройинжиниринг» —
+  return `<h2>Индивидуальный журнал замечаний ИСК ${esc(orgName())} —
     ${esc(inspector)} на ${ruDate(new Date().toISOString())}</h2>
   <table>
     <tr>

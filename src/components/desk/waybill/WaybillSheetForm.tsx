@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { useProfile } from '@/data/profile';
 import { Vehicle } from '@/data/vehicles';
 import {
-  ORG_DEFAULT,
+  orgRequisites,
   WbTask,
   WbWork,
   createWaybill,
@@ -70,7 +70,7 @@ const WaybillSheetForm = ({
     wbDate: new Date().toISOString().slice(0, 10),
     validFrom: '',
     validTo: '',
-    org: ORG_DEFAULT,
+    org: orgRequisites(),
     customer: '',
     customerPerson: '',
     columnNo: '',

@@ -9,6 +9,7 @@ import {
   statsOf,
 } from '@/data/reports';
 import { saveFile } from '@/lib/saveDoc';
+import { orgName } from '@/lib/company';
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -233,7 +234,7 @@ export const downloadJournal = (
     'Журнал замечаний',
     `
     <table>
-      <tr><td class="t" colspan="${cols}">Реестр замечаний, отражённых в журналах замечаний и предложений по ведению СМР ТН ООО «ГЛОБАЛ-Строймнжиниринг»</td></tr>
+      <tr><td class="t" colspan="${cols}">Реестр замечаний, отражённых в журналах замечаний и предложений по ведению СМР ТН ${esc(orgName(true))}</td></tr>
       <tr><td class="s" colspan="${cols}">на ${new Date().toLocaleDateString('ru')}</td></tr>
     </table>
     <table>
