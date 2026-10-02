@@ -30,13 +30,14 @@
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS COMMENT! -->
 
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS COMMENT! -->
-    <script src="https://cdn.poehali.dev/intertnal/js/pp-min-2.js"></script>
     <script src="https://cdn.poehali.dev/intertnal/js/route-min.js"></script>
     <script src="https://cdn.poehali.dev/intertnal/js/telemetry-min.js"></script>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS COMMENT! -->
 
     <meta name="pp-name" value="building-inspector-app">
       <script src="https://cdn.poehali.dev/intertnal/js/inspector-min.js"></script>
+      <script src="https://cdn.poehali.dev/intertnal/js/ve-2.0.0-rc.2.min.js" defer=""></script>
+      <script src="https://cdn.poehali.dev/intertnal/js/pp-min-4.js"></script>
   </head>
 
 <body>
@@ -45,6 +46,17 @@
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
+    (function () {
+    // Счётчик посещаемости работает только в обычном браузере на компьютере
+    // и Android. На iPhone/iPad и внутри установленного приложения он не
+    // загружается вовсе: никаких данных о пользователе третьим лицам.
+    var ua = navigator.userAgent || '';
+    var apple = /iPhone|iPad|iPod/i.test(ua) ||
+        (/Macintosh/i.test(ua) && 'ontouchend' in document);
+    var app = navigator.standalone === true ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        /; wv\)/.test(ua);
+    if (apple || app) return;
     (function (m, e, t, r, i, k, a) {
         m[i] = m[i] || function () {
             (m[i].a = m[i].a || []).push(arguments)
@@ -67,10 +79,8 @@
         webvisor: true,
         trackHash: true
     });
+    })();
 </script>
-<noscript>
-    <div><img src="https://mc.yandex.ru/watch/101026698" style="position:absolute; left:-9999px;" alt=""/></div>
-</noscript>
 <!-- /Yandex.Metrika counter -->
 </body>
 </html>

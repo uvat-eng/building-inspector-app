@@ -169,6 +169,36 @@ Please let us know if any further information is required.
 Best regards,
 Global-Stroyinzhiniring LLC`;
 
+/** Ответ на отказ от 1 октября 2026 (Guideline 5.1.2(i) и 3.2). */
+const REJECTION_REPLY_OCT = `Hello,
+
+Thank you for the review. We have addressed both issues.
+
+Guideline 5.1.2(i) – Data Use and Sharing
+The app does not track users. It contains no advertising, no third-party analytics SDKs and no data brokers, and it does not access the advertising identifier (IDFA). Location is collected only while the app is in use, solely to show the company management at which construction site an employee is working. It is stored on our own servers, is never linked with third-party data and is never shared for advertising purposes.
+The App Privacy information in App Store Connect contained an error: "Used to Track You" was selected by mistake. We have updated it — all data types (including Precise Location) are now marked "App Functionality", "Linked to the user" and "Not used for tracking". Therefore App Tracking Transparency is not required.
+
+Guideline 3.2 – Business
+The app is intended for employees of Global-Stroyinzhiniring LLC only. We have requested Unlisted App Distribution, so the app will not appear in App Store search and will be available only via a direct link. We will select this distribution method as soon as the request is approved.
+
+Demo account for review: login "Demo Manager" (entered in the "ФИО" field on the sign-in screen), password as stated in the App Review Information.
+
+Best regards,
+Global-Stroyinzhiniring LLC`;
+
+/** Обоснование для заявки на скрытое распространение (Unlisted App). */
+const UNLISTED_REQUEST = `Business problem the app solves:
+Инспектор СК (Inspector SK) is a work tool for the construction supervision service of Global-Stroyinzhiniring LLC (Russia). Engineers record site inspections, defect reports with photos and orders to contractors; managers track objects, timesheets, vehicle waybills and driver checklists. It replaces paper forms and spreadsheets.
+
+Why unlisted instead of Apple Business Manager:
+Our users are employees and partner contractors who use personal iPhones and iPads that are not managed by our company (no MDM, no Managed Apple IDs). A direct link is the simplest way for them to install the app.
+
+1. Is the app restricted to users who are part of a single company? Yes — employees and partner contractors of Global-Stroyinzhiniring LLC. Accounts are created only by the company administrator; there is no public sign-up.
+2. Is the app designed for a limited group of companies? Yes, for a single company. Other companies cannot become clients.
+3. Features intended for the general public: none.
+4. Countries / regions: Russia.
+Estimated number of users: 30–100.`;
+
 /** Тексты запросов доступа. Apple отклоняет сборку, если их нет в Info.plist. */
 const PERMISSION_STRINGS = `NSLocationWhenInUseUsageDescription
 Приложение отмечает, на каком объекте находится инспектор во время выезда. Данные видит только руководство компании.
@@ -455,6 +485,58 @@ const AppStoreAssets = () => (
             не сохранится и проверка не запустится.
           </p>
         </div>
+      </Section>
+
+      <Section title="Отказ от 1 октября · 5.1.2(i) и 3.2">
+        <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-600">
+          <p>
+            <span className="font-semibold text-slate-800">Шаг 1 · Анкета конфиденциальности.</span>{' '}
+            App Store Connect → приложение → «Конфиденциальность приложения» →
+            «Геопозиция → Точная геопозиция» и все остальные типы данных: снимите
+            отметку «Используется для отслеживания». Должно быть «Нет» везде.
+            Нажмите «Опубликовать». Это может сделать только владелец аккаунта
+            или администратор.
+          </p>
+          <p>
+            <span className="font-semibold text-slate-800">Шаг 2 · Заявка на скрытое распространение.</span>{' '}
+            Владелец аккаунта разработчика заходит на{' '}
+            <a
+              className="text-blue-600 underline"
+              href="https://developer.apple.com/contact/request/unlisted-app/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              developer.apple.com/contact/request/unlisted-app
+            </a>{' '}
+            и заполняет форму текстом ниже. Номер приложения (Apple ID) — в App
+            Store Connect, раздел «Информация о приложении». Внимание: после
+            одобрения приложение навсегда станет скрытым — в поиске App Store его
+            не будет, установка только по прямой ссылке.
+          </p>
+          <p>
+            <span className="font-semibold text-slate-800">Шаг 3 · Ответ проверяющему.</span>{' '}
+            Отправьте текст ниже ответом в переписке App Review и продублируйте в
+            поле «Notes». После одобрения заявки ссылку для установки найдёте в
+            «Цены и доступность → Способы распространения».
+          </p>
+        </div>
+        {[
+          { title: 'Форма Unlisted App Request', text: UNLISTED_REQUEST, rows: 16 },
+          { title: 'Reply to App Review', text: REJECTION_REPLY_OCT, rows: 18 },
+        ].map((b) => (
+          <div key={b.title} className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-slate-800">{b.title}</span>
+              <CopyBtn text={b.text} />
+            </div>
+            <textarea
+              readOnly
+              rows={b.rows}
+              value={b.text}
+              className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs leading-relaxed text-slate-700"
+            />
+          </div>
+        ))}
       </Section>
 
       <Section title="Ответ проверяющему (Guideline 2.1)">
