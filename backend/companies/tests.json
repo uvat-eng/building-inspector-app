@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "Основная компания",
+      "method": "GET",
+      "path": "/?action=featured",
+      "expectedStatus": 200,
+      "expectedBody": {"item": {"id": "gsi", "plan": "full"}},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Поддельный пропуск отклоняется",
+      "method": "GET",
+      "path": "/?action=status&token=gsi.000000000000000000000000",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Неверный код компании",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "join", "code": "ZZZZZZ"},
+      "expectedStatus": 404
+    },
+    {
+      "name": "Создание компаний временно закрыто",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "create", "name": "", "fio": "Иванов Иван", "password": "1234"},
+      "expectedStatus": 503
+    }
+  ]
+}

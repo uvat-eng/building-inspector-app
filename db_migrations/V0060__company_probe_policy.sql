@@ -1,0 +1,2 @@
+ALTER TABLE t_p27863069_building_inspector_a.asset_timesheet FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON t_p27863069_building_inspector_a.asset_timesheet USING (company_id = COALESCE(NULLIF(current_setting('app.company', true), ''), 'gsi')) WITH CHECK (company_id = COALESCE(NULLIF(current_setting('app.company', true), ''), 'gsi'));

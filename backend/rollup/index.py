@@ -1,3 +1,4 @@
+import tenant
 import json
 import os
 from datetime import date, datetime, timedelta
@@ -338,3 +339,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

@@ -1,3 +1,4 @@
+import tenant
 import json
 import os
 import uuid
@@ -129,6 +130,8 @@ def handler(event: dict, context) -> dict:
                 return resp(400, {'error': 'plate_and_model_required'})
             if asset_type != 'vehicle' and not model:
                 return resp(400, {'error': 'model_required'})
+            if tenant.demo_blocked(cur, 'vehicles'):
+                return tenant.demo_limit_response('vehicles')
             vid = uuid.uuid4().hex[:12]
             cur.execute(
                 'INSERT INTO vehicles (id, asset_type, plate, model, kind, driver, location_id, '
@@ -212,3 +215,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

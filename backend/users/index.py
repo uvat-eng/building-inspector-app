@@ -1,3 +1,4 @@
+import tenant
 import json
 import os
 import uuid
@@ -118,6 +119,8 @@ def handler(event: dict, context) -> dict:
 
             cur.execute("SELECT COUNT(*) AS n FROM users")
             total = int(cur.fetchone()['n'])
+            if total > 0 and tenant.demo_blocked(cur, 'users'):
+                return tenant.demo_limit_response('users')
 
             role = body.get('role', 'inspector')
 
@@ -227,3 +230,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

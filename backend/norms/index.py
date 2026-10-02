@@ -1,3 +1,4 @@
+import tenant
 import json
 import os
 import re
@@ -578,3 +579,6 @@ def handler(event: dict, context) -> dict:
     if body.get('debug'):
         out['debug'] = debug
     return resp(200, out)
+
+
+handler = tenant.wrap(handler)

@@ -1,3 +1,4 @@
+import tenant
 import json
 import os
 import psycopg2
@@ -70,3 +71,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

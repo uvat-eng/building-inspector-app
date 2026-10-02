@@ -1,3 +1,4 @@
+import tenant
 import base64
 import json
 import os
@@ -276,6 +277,8 @@ def handler(event: dict, context) -> dict:
             object_id = body.get('objectId', '')
             if not object_id:
                 return resp(400, {'error': 'object_required'})
+            if tenant.demo_blocked(cur, 'inspections'):
+                return tenant.demo_limit_response('inspections')
             insp_id = uuid.uuid4().hex[:12]
             number = next_number(cur, 'inspections', object_id)
             cur.execute(
@@ -370,3 +373,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

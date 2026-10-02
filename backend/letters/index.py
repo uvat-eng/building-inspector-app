@@ -1,3 +1,4 @@
+import tenant
 import base64
 import json
 import os
@@ -267,3 +268,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

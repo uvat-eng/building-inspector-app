@@ -1,3 +1,4 @@
+import tenant
 import json
 import math
 import os
@@ -152,7 +153,7 @@ def build_month(cur, ym):
     cur.execute(
         'INSERT INTO track_month (id, ym, rows, created_at) VALUES ('
         f"'{esc(mid)}', '{esc(ym)}', '{esc(json.dumps(rows, ensure_ascii=False))}'::jsonb, now()) "
-        'ON CONFLICT (ym) DO UPDATE SET rows = EXCLUDED.rows, created_at = now()'
+        'ON CONFLICT (company_id, ym) DO UPDATE SET rows = EXCLUDED.rows, created_at = now()'
     )
     return rows
 
@@ -311,3 +312,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

@@ -1,3 +1,4 @@
+import tenant
 import json
 import os
 import psycopg2
@@ -44,7 +45,7 @@ def handler(event: dict, context) -> dict:
                     continue
                 cur.execute(
                     f"INSERT INTO settings (key, value) VALUES ('{esc(key)}', '{esc(value)}') "
-                    'ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()'
+                    'ON CONFLICT (company_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()'
                 )
                 saved[key] = value
             conn.commit()
@@ -54,3 +55,6 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+
+
+handler = tenant.wrap(handler)

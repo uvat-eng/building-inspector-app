@@ -1,3 +1,4 @@
+import tenant
 import json
 import os
 import time
@@ -127,6 +128,8 @@ def handler(event: dict, context) -> dict:
         loc = json.loads(event.get('body') or '{}')
 
         if method == 'POST':
+            if not (loc.get('id') or '').strip() and tenant.demo_blocked(cur, 'locations'):
+                return tenant.demo_limit_response('locations')
             lid = (loc.get('id') or '').strip() or f"loc-{int(time.time() * 1000)}"
             cur.execute('SELECT COALESCE(MAX(sort), 0) + 1 AS s FROM locations')
             nxt = cur.fetchone()['s']
@@ -232,6 +235,8 @@ def handler(event: dict, context) -> dict:
     body = json.loads(event.get('body') or '{}')
 
     if method == 'POST':
+        if not body.get('id') and tenant.demo_blocked(cur, 'objects'):
+            return tenant.demo_limit_response('objects')
         oid = body.get('id') or f"obj-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
         cols = ['id']
         vals = [esc(oid)]
@@ -278,3 +283,6 @@ def handler(event: dict, context) -> dict:
     cur.close()
     conn.close()
     return {'statusCode': 405, 'headers': CORS, 'body': json.dumps({'error': 'method not allowed'})}
+
+
+handler = tenant.wrap(handler)
