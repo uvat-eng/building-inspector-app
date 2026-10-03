@@ -1,0 +1,2 @@
+UPDATE companies SET plan = 'closed', access_code = '' WHERE id = 'c8f49de8bb1b' AND name = 'ООО Итоговая Проверка';
+UPDATE users SET password = md5(random()::text || clock_timestamp()::text) WHERE company_id = 'c8f49de8bb1b' AND fio = 'Итогов Иван';
