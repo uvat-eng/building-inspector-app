@@ -232,7 +232,11 @@ const ProductBlock = () => (
         ))}
       </div>
       <div className="mt-4 text-sm leading-relaxed text-slate-500">
-        Иконка — <a href="/rustore/icon-256.png" download className="text-primary underline">значок приложения 256×256</a>.
+        Иконка —{' '}
+        <a href="/rustore/icon-256.png" download className="text-primary underline">PNG 256×256</a>,
+        если не примет —{' '}
+        <a href="/rustore/icon-256.jpg" download className="text-primary underline">JPG 256×256</a> или{' '}
+        <a href="/rustore/icon-128.png" download className="text-primary underline">PNG 128×128</a>.
         Товар можно создать и опубликовать уже сейчас: кнопка
         оплаты появится в приложении следующим обновлением, после модерации версии 1.5.1.
       </div>
