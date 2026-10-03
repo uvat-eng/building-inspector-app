@@ -81,7 +81,7 @@ const REVIEW_NOTES = `«Инспектор СК» — приложение дл�
 /** Ответ проверяющему на письмо от 1 октября 2026 (Guideline 5.1.2(i) и 3.2). */
 const REJECTION_REPLY_OCT = `Hello,
 
-Thank you for your review. We have resolved both issues in version 1.4 (build 6) and request public distribution on the App Store.
+Thank you for your review of version 1.0 (5), submission fe3508b7-0e40-490c-8ef6-3b6af14e7e00. We have resolved both issues in the new version 1.4 (build 6) and request public distribution on the App Store.
 
 GUIDELINE 3.2 – BUSINESS
 
@@ -107,7 +107,7 @@ The app does not track users. It has no advertising, no third-party analytics or
 "Used to Track You" had been selected in App Privacy by mistake. We have corrected it: all data types, including Precise Location, are now marked "App Functionality" and "Not Used to Track You". App Tracking Transparency is therefore not required.
 
 Thank you,
-Global-Stroyinzhiniring LLC`;
+Inspector SK team`;
 
 /** Встроенная покупка — что завести в App Store Connect. */
 const IAP_SETUP = `Тип: Non-Consumable (непотребляемая, разовая)
@@ -486,7 +486,9 @@ const AppStoreAssets = () => (
             «Публичный» (Public). Если там стоит другое — переключить.
           </li>
           <li>
-            <b className="text-slate-800">7. Версия 1.4.</b> Заменить в карточке
+            <b className="text-slate-800">7. Версия 1.4.</b> Вкладка «App Store» → слева
+            версия «1.0» → в поле «Версия» сверху заменить <b>1.0</b> на <b>1.4</b> и
+            сохранить (иначе сборку 6 нельзя будет выбрать). Затем заменить в карточке
             «Описание», «Что нового» и «Заметку для проверяющего» новыми текстами из
             раздела «Тексты карточки» выше. В блоке «Сборка» выбрать сборку 6. В блоке
             «Встроенные покупки и подписки» добавить «Полный доступ».
