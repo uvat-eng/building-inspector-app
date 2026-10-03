@@ -174,9 +174,71 @@ const CheckBlock = () => {
           className="mt-4 w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-[0.78rem] leading-relaxed text-slate-700"
         />
       </div>
+      <ProductBlock />
     </>
   );
 };
+
+const PRODUCT_FIELDS: { label: string; value: string }[] = [
+  { label: 'Название', value: 'Полный доступ' },
+  {
+    label: 'Описание',
+    value:
+      'Полная версия «Инспектор СК» для всей компании: без ограничений демо-режима по объектам, сотрудникам, проверкам, автомобилям и площадкам. Оплачивается один раз.',
+  },
+  { label: 'ProductID', value: 'inspector_sk_full' },
+  { label: 'Тип товара', value: 'Непотребляемый' },
+  { label: 'Цена', value: '90000' },
+];
+
+const CopyField = ({ label, value }: { label: string; value: string }) => {
+  const [done, setDone] = useState(false);
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="min-w-0">
+        <div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
+        <div className="mt-0.5 break-words text-sm font-semibold text-slate-800">{value}</div>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard.writeText(value);
+          setDone(true);
+          window.setTimeout(() => setDone(false), 1500);
+        }}
+        className="shrink-0 rounded-md p-1.5 text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+        aria-label="Скопировать"
+      >
+        <Icon name={done ? 'Check' : 'Copy'} size={15} />
+      </button>
+    </div>
+  );
+};
+
+const ProductBlock = () => (
+  <>
+    <h2 className="mt-9 border-b-2 border-primary pb-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+      Покупка «Полный доступ»
+    </h2>
+    <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+      <div className="text-sm leading-relaxed text-slate-500">
+        Разовая покупка, а не подписка: заводится в разделе «Монетизация → Товары».
+        Компания платит один раз — и вся компания получает полную версию навсегда.
+        Пробного периода нет, его роль играет демо-режим.
+      </div>
+      <div className="mt-4 grid gap-2">
+        {PRODUCT_FIELDS.map((f) => (
+          <CopyField key={f.label} label={f.label} value={f.value} />
+        ))}
+      </div>
+      <div className="mt-4 text-sm leading-relaxed text-slate-500">
+        Иконка — <a href="/rustore/icon-256.png" download className="text-primary underline">значок приложения 256×256</a>.
+        Товар можно создать и опубликовать уже сейчас: кнопка
+        оплаты появится в приложении следующим обновлением, после модерации версии 1.5.1.
+      </div>
+    </div>
+  </>
+);
 
 const SHOTS: Shot[] = [
   { file: 'screen-1-cabinet.png', title: 'Мой кабинет' },
