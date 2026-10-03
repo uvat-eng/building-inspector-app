@@ -20,7 +20,7 @@ env:
   BUNDLE_ID: ru.globalstroy.inspector
   SITE_URL: https://xn--e1afhkhdkdm.su
   APP_VERSION: "1.4"
-  BUILD_NUMBER: "5"
+  BUILD_NUMBER: "6"
 
 jobs:
   build:
@@ -165,6 +165,7 @@ jobs:
           import UIKit
           import WebKit
           import CoreLocation
+          import StoreKit
 
           /// Главный экран: рабочий стол инспектора внутри веб-контейнера.
           final class ViewController: UIViewController {
@@ -179,6 +180,8 @@ jobs:
               private var offlineView: UIView?
               private var progressObs: NSKeyValueObservation?
               private var locationAsked = false
+              private lazy var purchases = Purchases(owner: self)
+              private lazy var printer = DocPrinter(owner: self)
 
               override func viewDidLoad() {
                   super.viewDidLoad()
@@ -213,6 +216,14 @@ jobs:
                   if #available(iOS 14.0, *) {
                       cfg.defaultWebpagePreferences.allowsContentJavaScript = true
                   }
+
+                  // Встроенная покупка полного доступа: страница зовёт App Store
+                  // через мост «iap», ответ возвращаем в window.__iapResult.
+                  cfg.userContentController.add(purchases, name: "iap")
+
+                  // Печать документов: системное окно печати iOS (принтер AirPrint
+                  // или «Сохранить в Файлы» как PDF).
+                  cfg.userContentController.add(printer, name: "docPrint")
 
                   web = WKWebView(frame: .zero, configuration: cfg)
                   web.translatesAutoresizingMaskIntoConstraints = false
@@ -292,6 +303,11 @@ jobs:
                   req.cachePolicy = .useProtocolCachePolicy
                   req.timeoutInterval = 25
                   web.load(req)
+              }
+
+              /// Передаёт ответ странице.
+              func runScript(_ js: String) {
+                  web.evaluateJavaScript(js, completionHandler: nil)
               }
 
               @objc private func reloadTapped() {
@@ -494,6 +510,123 @@ jobs:
                   present(a, animated: true)
               }
           }
+
+          /// Печать документа, присланного страницей (HTML).
+          final class DocPrinter: NSObject, WKScriptMessageHandler {
+              private weak var owner: UIViewController?
+
+              init(owner: UIViewController) {
+                  self.owner = owner
+                  super.init()
+              }
+
+              func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
+                  guard let body = m.body as? [String: Any],
+                        let html = body["html"] as? String else { return }
+                  let title = (body["title"] as? String) ?? "Документ"
+                  DispatchQueue.main.async {
+                      let info = UIPrintInfo(dictionary: nil)
+                      info.outputType = .general
+                      info.jobName = title
+                      let pc = UIPrintInteractionController.shared
+                      pc.printInfo = info
+                      pc.printFormatter = UIMarkupTextPrintFormatter(markupText: html)
+                      if UIDevice.current.userInterfaceIdiom == .pad, let v = self.owner?.view {
+                          let r = CGRect(x: v.bounds.midX, y: v.bounds.midY, width: 1, height: 1)
+                          pc.present(from: r, in: v, animated: true, completionHandler: nil)
+                      } else {
+                          pc.present(animated: true, completionHandler: nil)
+                      }
+                  }
+              }
+          }
+
+          /// Покупка полного доступа через App Store (StoreKit 2).
+          ///
+          /// Окно оплаты показывает система. Странице возвращаем подписанную
+          /// Apple транзакцию — сервер сам проверяет подпись и открывает доступ.
+          /// Подписка не используется: покупка разовая, для всей компании.
+          final class Purchases: NSObject, WKScriptMessageHandler {
+              private weak var owner: ViewController?
+              private var updates: Task<Void, Never>?
+
+              init(owner: ViewController) {
+                  self.owner = owner
+                  super.init()
+                  // Покупки, подтверждённые позже (например, родителем через
+                  // «Попросить купить»), закрываем, чтобы App Store не повторял их.
+                  updates = Task.detached {
+                      for await result in Transaction.updates {
+                          if case .verified(let tx) = result { await tx.finish() }
+                      }
+                  }
+              }
+
+              deinit { updates?.cancel() }
+
+              func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
+                  guard let body = m.body as? [String: Any],
+                        let action = body["action"] as? String,
+                        let productId = body["productId"] as? String else { return }
+                  Task { @MainActor in
+                      let reply: [String: Any]
+                      switch action {
+                      case "buy": reply = await self.buy(productId)
+                      case "restore": reply = await self.restore(productId)
+                      case "price": reply = await self.price(productId)
+                      default: reply = ["ok": false, "error": "failed"]
+                      }
+                      self.send(reply)
+                  }
+              }
+
+              private func price(_ id: String) async -> [String: Any] {
+                  guard let p = try? await Product.products(for: [id]).first else {
+                      return ["ok": false, "error": "not_found"]
+                  }
+                  return ["ok": true, "price": p.displayPrice]
+              }
+
+              private func buy(_ id: String) async -> [String: Any] {
+                  do {
+                      guard let p = try await Product.products(for: [id]).first else {
+                          return ["ok": false, "error": "not_found"]
+                      }
+                      switch try await p.purchase() {
+                      case .success(let result):
+                          guard case .verified(let tx) = result else {
+                              return ["ok": false, "error": "failed"]
+                          }
+                          await tx.finish()
+                          return ["ok": true, "jws": result.jwsRepresentation]
+                      case .userCancelled:
+                          return ["ok": false, "error": "cancelled"]
+                      case .pending:
+                          return ["ok": false, "error": "pending"]
+                      @unknown default:
+                          return ["ok": false, "error": "failed"]
+                      }
+                  } catch {
+                      return ["ok": false, "error": "failed"]
+                  }
+              }
+
+              private func restore(_ id: String) async -> [String: Any] {
+                  try? await AppStore.sync()
+                  for await result in Transaction.currentEntitlements {
+                      if case .verified(let tx) = result, tx.productID == id {
+                          return ["ok": true, "jws": result.jwsRepresentation]
+                      }
+                  }
+                  return ["ok": false, "error": "not_found"]
+              }
+
+              @MainActor private func send(_ reply: [String: Any]) {
+                  guard let data = try? JSONSerialization.data(withJSONObject: reply),
+                        let json = String(data: data, encoding: .utf8) else { return }
+                  owner?.runScript("window.__iapResult && window.__iapResult(\(json))")
+              }
+          }
           EOF
 
       - name: Пишем настройки приложения
@@ -639,7 +772,7 @@ jobs:
           options:
             bundleIdPrefix: ru.globalstroy
             deploymentTarget:
-              iOS: "14.0"
+              iOS: "15.0"
             createIntermediateGroups: true
             developmentLanguage: ru
             # Формат файла проекта: новые версии генератора пишут вариант,
@@ -650,7 +783,7 @@ jobs:
           settings:
             base:
               MARKETING_VERSION: "1.4"
-              CURRENT_PROJECT_VERSION: "5"
+              CURRENT_PROJECT_VERSION: "6"
               SWIFT_VERSION: "5.0"
               ENABLE_USER_SCRIPT_SANDBOXING: "NO"
               ALWAYS_SEARCH_USER_PATHS: "NO"
