@@ -115,9 +115,18 @@ Product ID: inspector_sk_full
 Reference Name: Полный доступ
 Отображаемое название (рус.): Полный доступ
 Описание (рус.): Снимает ограничения демо-доступа для всей компании
-Цена: на ваше усмотрение
-Review Screenshot: снимок окна «Полный доступ» с кнопкой «Купить»
-Review Notes: Откройте «Создать компанию», затем кнопку «Полный доступ» вверху экрана. Покупка открывает полный доступ для компании пользователя.`;
+Цена: на ваше усмотрение`;
+
+/** Примечание к проверке встроенной покупки (поле «Примечания к проверке»). */
+const IAP_REVIEW_NOTES = `Non-consumable purchase "Full access" (product ID: inspector_sk_full) unlocks the full version of the app for the user's whole company. It removes the limits of the free demo: 2 sites, 3 employees, 10 inspection reports, 2 vehicles and 1 location.
+
+How to find it:
+1. Launch the app and accept the privacy notice.
+2. Tap "Создать компанию" (Create company). Enter any company name (e.g. "Test LLC"), any two-word name (e.g. "Ivan Petrov") and password 1234.
+3. A new company on the free demo opens. Tap "Полный доступ" (Full access) in the orange bar at the top of the screen.
+4. The purchase window shows the demo usage and the buttons "Купить" (Buy) and "Восстановить покупку" (Restore purchase).
+
+After a successful purchase the server verifies the signed App Store transaction and removes the limits immediately. The purchase is restored with "Восстановить покупку".`;
 
 /** Тексты запросов доступа. Apple отклоняет сборку, если их нет в Info.plist. */
 const PERMISSION_STRINGS = `NSLocationWhenInUseUsageDescription
@@ -455,9 +464,35 @@ const AppStoreAssets = () => (
             отправить. Затем «Отправить на проверку».
           </li>
         </ol>
+        <div className="mt-4 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-start">
+          <img
+            src="/iap-review-screenshot.png"
+            alt="Окно покупки полного доступа"
+            className="w-40 flex-none rounded-lg border border-slate-200"
+          />
+          <div className="text-sm leading-relaxed text-slate-600">
+            <p className="font-semibold text-slate-800">
+              Встроенная покупка — «Снимок экрана» (1284 × 2778)
+            </p>
+            <p className="mt-1">
+              Окно «Полный доступ» с кнопками «Купить» и «Восстановить покупку». Размер
+              подходит Apple. Скачайте и загрузите в поле «Снимок экрана» на странице
+              покупки.
+            </p>
+            <a
+              href="/iap-review-screenshot.png"
+              download="iap-review-screenshot.png"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700"
+            >
+              <Icon name="Download" size={14} />
+              Скачать снимок
+            </a>
+          </div>
+        </div>
         {[
           { title: 'Ответ проверяющему (Reply to App Review)', text: REJECTION_REPLY_OCT, rows: 22 },
-          { title: 'Встроенная покупка — карточка', text: IAP_SETUP, rows: 9 },
+          { title: 'Встроенная покупка — карточка', text: IAP_SETUP, rows: 7 },
+          { title: 'Встроенная покупка — «Примечания к проверке»', text: IAP_REVIEW_NOTES, rows: 14 },
         ].map((b) => (
           <div key={b.title} className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
