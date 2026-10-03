@@ -652,9 +652,9 @@ jobs:
               <key>CFBundlePackageType</key>
               <string>APPL</string>
               <key>CFBundleShortVersionString</key>
-              <string>1.4</string>
+              <string>$(MARKETING_VERSION)</string>
               <key>CFBundleVersion</key>
-              <string>5</string>
+              <string>$(CURRENT_PROJECT_VERSION)</string>
 
               <key>LSRequiresIPhoneOS</key>
               <true/>
@@ -687,6 +687,9 @@ jobs:
               <string>Геолокация используется для привязки фотофиксации нарушений к координатам строительного объекта и подтверждения присутствия инспектора на площадке.</string>
               <key>NSMicrophoneUsageDescription</key>
               <string>Микрофон используется для записи голосовых комментариев к замечаниям при обследовании объекта.</string>
+
+              <key>NSSpeechRecognitionUsageDescription</key>
+              <string>Распознавание речи переводит надиктованное замечание в текст акта. Запись голоса не сохраняется и не передаётся.</string>
 
               <key>ITSAppUsesNonExemptEncryption</key>
               <false/>
@@ -782,8 +785,8 @@ jobs:
 
           settings:
             base:
-              MARKETING_VERSION: "1.4"
-              CURRENT_PROJECT_VERSION: "6"
+              MARKETING_VERSION: "${{ env.APP_VERSION }}"
+              CURRENT_PROJECT_VERSION: "${{ env.BUILD_NUMBER }}"
               SWIFT_VERSION: "5.0"
               ENABLE_USER_SCRIPT_SANDBOXING: "NO"
               ALWAYS_SEARCH_USER_PATHS: "NO"
