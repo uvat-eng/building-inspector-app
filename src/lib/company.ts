@@ -146,6 +146,16 @@ export const installCompanyFetch = () => {
   };
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const res = await send(input, init);
+    // Пропуск компании больше не действует (компания закрыта) — на экран выбора.
+    if (res.status === 401 && readCompany()) {
+      res
+        .clone()
+        .json()
+        .then((d: { error?: string }) => {
+          if (d?.error === 'bad_company') leaveCompany();
+        })
+        .catch(() => undefined);
+    }
     // Демо-компания упёрлась в лимит — сразу предлагаем полный доступ.
     if (res.status === 402) {
       res

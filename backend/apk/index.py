@@ -49,3 +49,5 @@ def handler(event: dict, context) -> dict:
         'isBase64Encoded': True,
         'body': base64.b64encode(blob).decode('ascii'),
     }
+
+# deploy 1790997693

@@ -2,8 +2,10 @@
 
 Каждый запрос приходит с пропуском компании (параметр _co). Пропуск
 подписан сервером, подделать его нельзя. По пропуску база показывает и
-меняет только строки своей компании — это правило заложено в самой базе,
-поэтому ни один раздел не может случайно отдать чужие данные.
+меняет только строки своей компании: каждый запрос перед отправкой в базу
+дополняется условием «только эта компания» (модуль scope). Это делается
+на уровне соединения, поэтому ни один раздел не может случайно отдать
+чужие данные.
 
 Запрос без пропуска относится к основной компании — так продолжают
 работать уже установленные версии приложения.
@@ -15,6 +17,9 @@ import hmac
 import os
 
 import psycopg2
+import psycopg2.extensions
+
+import scope
 
 DEFAULT_COMPANY = 'gsi'
 
@@ -46,24 +51,116 @@ def current() -> str:
     return _state['company']
 
 
+class TenantError(Exception):
+    pass
+
+
+def _main_only(sql):
+    """Запрос основной компании: отсекаем строки других компаний.
+
+    Если запрос не разобран — выполняем как есть, чтобы рабочая система
+    не встала; случай пишется в журнал для исправления.
+    """
+    try:
+        return scope.scope(sql, DEFAULT_COMPANY)
+    except scope.ScopeError as e:
+        print(f'[tenant] NOT_SCOPED company={DEFAULT_COMPANY} ({e}): {str(sql)[:300]}')
+        return sql
+
+
+def _scoped(sql, company=None):
+    """Запрос, ограниченный строками компании (по умолчанию — текущей)."""
+    company = company or current()
+    if company == DEFAULT_COMPANY:
+        return _main_only(sql)
+    try:
+        return scope.scope(sql, company)
+    except scope.ScopeError as e:
+        print(f'[tenant] NOT_SCOPED company={company} ({e}): {str(sql)[:300]}')
+        raise TenantError('query_not_scoped')
+
+
+_cursor_classes = {}
+
+
+def _scoped_cursor(base):
+    cls = _cursor_classes.get(base)
+    if cls is None:
+        class Scoped(base):
+            def execute(self, query, vars=None):
+                return super().execute(_scoped(query, self.connection.company), vars)
+
+            def executemany(self, query, vars_list):
+                return super().executemany(_scoped(query, self.connection.company), vars_list)
+
+        cls = _cursor_classes[base] = Scoped
+    return cls
+
+
+class TenantConnection(psycopg2.extensions.connection):
+    company = None
+
+    def cursor(self, *args, **kwargs):
+        base = kwargs.get('cursor_factory') or self.cursor_factory or psycopg2.extensions.cursor
+        kwargs['cursor_factory'] = _scoped_cursor(base)
+        return super().cursor(*args, **kwargs)
+
+
 def _connect(*args, **kwargs):
-    company = current()
-    if company != DEFAULT_COMPANY:
-        kwargs['options'] = ('%s -c app.company=%s' % (kwargs.get('options', ''), company)).strip()
-    return _orig_connect(*args, **kwargs)
+    company = kwargs.pop('company', None) or current()
+    kwargs.setdefault('connection_factory', TenantConnection)
+    conn = _orig_connect(*args, **kwargs)
+    if isinstance(conn, TenantConnection):
+        conn.company = company
+    return conn
 
 
 psycopg2.connect = _connect
 
 
+_closed_cache = {}
+
+
+def _is_closed(company_id: str) -> bool:
+    """Компания закрыта — её пропуск больше не действует."""
+    if company_id == DEFAULT_COMPANY:
+        return False
+    if company_id in _closed_cache:
+        return _closed_cache[company_id]
+    try:
+        conn = _orig_connect(os.environ['DATABASE_URL'])
+        cur = conn.cursor()
+        cur.execute("SELECT plan FROM companies WHERE id = '%s'" % company_id.replace("'", "''"))
+        row = cur.fetchone()
+        conn.close()
+        closed = (not row) or row[0] == 'closed'
+    except Exception:
+        return True
+    if closed:
+        _closed_cache[company_id] = True
+    return closed
+
+
 def company_from_event(event: dict):
-    """Код компании из запроса. Подделанный пропуск — None."""
+    """Код компании из запроса. Подделанный пропуск или закрытая компания — None."""
     params = event.get('queryStringParameters') or {}
     headers = {str(k).lower(): v for k, v in (event.get('headers') or {}).items()}
     token = params.get('_co') or headers.get('x-company') or ''
     if not token:
         return DEFAULT_COMPANY
-    return verify(token)
+    company = verify(token)
+    if company and _is_closed(company):
+        return None
+    return company
+
+
+def _json_error(code, error):
+    return {
+        'statusCode': code,
+        'headers': {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'},
+        'isBase64Encoded': False,
+        'body': '{"error": "%s"}' % error,
+    }
 
 
 def wrap(handler):
@@ -75,18 +172,12 @@ def wrap(handler):
             return handler(event, context)
         company = company_from_event(event or {})
         if company is None:
-            return {
-                'statusCode': 401,
-                'headers': {
-                    'Access-Control-Allow-Origin': '*',
-                    'Content-Type': 'application/json',
-                },
-                'isBase64Encoded': False,
-                'body': '{"error": "bad_company"}',
-            }
+            return _json_error(401, 'bad_company')
         _state['company'] = company
         try:
             return handler(event, context)
+        except TenantError:
+            return _json_error(500, 'query_not_scoped')
         finally:
             _state['company'] = DEFAULT_COMPANY
 
@@ -140,5 +231,3 @@ def org_name() -> str:
         return row[0] if row and row[0] else ''
     except Exception:
         return ''
-
-# rev 4

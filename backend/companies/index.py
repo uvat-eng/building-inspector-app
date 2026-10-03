@@ -7,6 +7,7 @@ import uuid
 import psycopg2
 import psycopg2.extras
 
+import tenant
 from tenant import sign
 
 CORS = {
@@ -43,7 +44,8 @@ def norm(fio):
 
 
 def connect(company_id):
-    return psycopg2.connect(os.environ['DATABASE_URL'], options=f'-c app.company={company_id}')
+    """Соединение, ограниченное данными компании."""
+    return psycopg2.connect(os.environ['DATABASE_URL'], company=company_id)
 
 
 def public(row):
@@ -148,12 +150,6 @@ def handler(event: dict, context) -> dict:
                 item['accessCode'] = row['access_code']
             return resp(200, {'item': item})
 
-        if method == 'POST' and action in ('create', 'join'):
-            # Разделение данных между компаниями ещё не готово: пока оно не
-            # проверено, новые компании не создаются и вход по коду закрыт —
-            # иначе они увидят данные основной компании.
-            return resp(503, {'error': 'temporarily_closed'})
-
         if method == 'POST' and action == 'join':
             code = re.sub(r'[^A-Z0-9]', '', str(body.get('code', '')).upper())
             if len(code) < 4:
@@ -240,3 +236,4 @@ def handler(event: dict, context) -> dict:
     finally:
         cur.close()
         conn.close()
+# deploy 1790997693

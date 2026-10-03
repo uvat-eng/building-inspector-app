@@ -181,6 +181,7 @@ jobs:
               private var progressObs: NSKeyValueObservation?
               private var locationAsked = false
               private lazy var purchases = Purchases(owner: self)
+              private lazy var printer = DocPrinter(owner: self)
 
               override func viewDidLoad() {
                   super.viewDidLoad()
@@ -219,6 +220,10 @@ jobs:
                   // Встроенная покупка полного доступа: страница зовёт App Store
                   // через мост «iap», ответ возвращаем в window.__iapResult.
                   cfg.userContentController.add(purchases, name: "iap")
+
+                  // Печать документов: системное окно печати iOS (принтер AirPrint
+                  // или «Сохранить в Файлы» как PDF).
+                  cfg.userContentController.add(printer, name: "docPrint")
 
                   web = WKWebView(frame: .zero, configuration: cfg)
                   web.translatesAutoresizingMaskIntoConstraints = false
@@ -503,6 +508,36 @@ jobs:
                       done(a.textFields?.first?.text)
                   })
                   present(a, animated: true)
+              }
+          }
+
+          /// Печать документа, присланного страницей (HTML).
+          final class DocPrinter: NSObject, WKScriptMessageHandler {
+              private weak var owner: UIViewController?
+
+              init(owner: UIViewController) {
+                  self.owner = owner
+                  super.init()
+              }
+
+              func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
+                  guard let body = m.body as? [String: Any],
+                        let html = body["html"] as? String else { return }
+                  let title = (body["title"] as? String) ?? "Документ"
+                  DispatchQueue.main.async {
+                      let info = UIPrintInfo(dictionary: nil)
+                      info.outputType = .general
+                      info.jobName = title
+                      let pc = UIPrintInteractionController.shared
+                      pc.printInfo = info
+                      pc.printFormatter = UIMarkupTextPrintFormatter(markupText: html)
+                      if UIDevice.current.userInterfaceIdiom == .pad, let v = self.owner?.view {
+                          let r = CGRect(x: v.bounds.midX, y: v.bounds.midY, width: 1, height: 1)
+                          pc.present(from: r, in: v, animated: true, completionHandler: nil)
+                      } else {
+                          pc.present(animated: true, completionHandler: nil)
+                      }
+                  }
               }
           }
 

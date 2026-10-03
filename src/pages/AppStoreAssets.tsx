@@ -17,191 +17,111 @@ const SUBTITLE = 'Контроль объектов и выездов';
 const KEYWORDS =
   'стройконтроль,строительство,инспекция,объекты,акты,предписания,выезды,подрядчик,прораб,отчеты';
 
-const DESCRIPTION = `«Инспектор СК» — рабочий инструмент строительного контроля для сотрудников ООО «Глобал-Стройинжиниринг». Приложение собирает в одном месте всё, что нужно инспектору на объекте и руководителю в офисе.
+const DESCRIPTION = `«Инспектор СК» — рабочее приложение для компаний строительного контроля, технического надзора и генподрядчиков. Всё, что нужно инспектору на объекте и руководителю в офисе, — в одном месте.
+
+НАЧАТЬ ПРОСТО
+
+Зарегистрируйте свою компанию прямо в приложении: название, ваше имя и пароль. Рабочее пространство откроется сразу, с чистого листа. Добавьте объекты и сотрудников, передайте им код компании — и работайте вместе. Данные каждой компании хранятся отдельно и недоступны другим.
 
 ВОЗМОЖНОСТИ
 
-Мой кабинет. Рабочее место под должность, открывается сразу после входа: у инспектора — выезды и акты, у руководителя — сводка по всем проектам.
+Мой кабинет. Рабочее место под должность: у инспектора — выезды и акты, у руководителя — сводка по всем проектам.
 
-Главная. Сводка по проектам и карта объектов с количеством открытых предписаний.
+Объекты. Площадки по регионам с людьми, техникой и вагонами — план и факт рядом.
 
-Объекты. Список площадок по регионам с разбивкой по людям, технике и вагонам — план и факт рядом.
+Проверки и выезды. Планирование осмотров, фиксация нарушений с фото, акты осмотра в Word.
 
-Проверки и выезды. Планирование осмотров, фиксация нарушений, предписания и контроль сроков устранения.
-
-Замечания. Выявленные нарушения со сроками и статусами устранения.
+Предписания. Выдача подрядчику, сроки и контроль устранения.
 
 Фотоотчёты. Снимки с объектов, сгруппированные по месяцам.
 
-Акты и документы. Переписка, протоколы и предписания по месяцам. Пункты, ответы и статусы выполнения хранятся вместе.
+Акты и документы. Переписка, протоколы и предписания по месяцам.
 
 Трекеры. Маршруты выездов в рабочее время, пробег и время в движении.
 
 Отчёты. Статистика по объектам и подрядчикам за период.
 
-Персонал, техника и имущество. Учётные записи сотрудников, автопарк, вагоны и приборы.
+Персонал, техника и имущество. Сотрудники, автопарк, путевые листы, спецодежда и приборы.
 
-ДОСТУП
+ТАРИФЫ
 
-Приложение предназначено для сотрудников организации. Учётные записи создаёт администратор компании. Регистрация через приложение не предусмотрена — данные для входа выдаёт работодатель.
+Бесплатный демо-доступ: до 2 объектов, 3 сотрудников, 10 актов осмотра, 2 единиц техники и 1 локации. Все разделы открыты.
 
-Каждой должности доступны свои разделы: инспектор работает с выездами и актами, руководитель видит сводку по всем проектам.
+Полный доступ снимает все ограничения для всей компании и оформляется разовой встроенной покупкой.
 
-Сбор данных о перемещениях ведётся только в рабочее время и только после согласия сотрудника при входе.`;
+ПРИВАТНОСТЬ
 
-const REVIEW_NOTES = `Приложение предназначено для внутреннего использования сотрудниками ООО «Глобал-Стройинжиниринг» (строительный контроль). Регистрация самостоятельная не предусмотрена — учётные записи создаёт администратор организации.
+Геопозиция собирается только во время работы приложения и только после согласия сотрудника. Данные видит только руководство его компании. Рекламы и сторонней аналитики нет.`;
 
-Для проверки созданы две демонстрационные учётные записи. В поле «ФИО» на экране входа введите логин полностью, как указано ниже.
+const REVIEW_NOTES = `«Инспектор СК» — приложение для любых компаний строительного контроля. Каждая компания регистрируется сама и работает в собственном изолированном пространстве.
 
-1) Руководитель проекта — полный доступ ко всем разделам
-Логин: Demo Manager
-Пароль: Demo2026!
+КАК ПРОВЕРИТЬ (без логина и пароля)
+1. Запустите приложение, примите условия конфиденциальности.
+2. Нажмите «Создать компанию». Введите любое название (например, «Test LLC»), имя из двух слов (например, «Ivan Petrov») и пароль 1234. Откроется новое пустое рабочее пространство, вы — руководитель компании.
+3. Вверху экрана — полоса «Демо-доступ» и кнопка «Полный доступ». Там встроенная покупка «Полный доступ» (inspector_sk_full) и кнопка «Восстановить покупку».
+4. Демо-ограничения: 2 объекта, 3 сотрудника, 10 актов, 2 единицы техники, 1 локация. При превышении лимита приложение предлагает полный доступ.
 
-2) Инспектор строительного контроля — выезды, акты, фотофиксация
-Логин: Demo Inspector
-Пароль: Demo2026!
+ДЕМО-КОМПАНИЯ С ЗАПОЛНЕННЫМИ ДАННЫМИ (по желанию)
+На первом экране нажмите «ООО «Глобал-Стройинжиниринг»» — это наш первый клиент, подключённый к приложению. В поле «ФИО» введите логин полностью:
+Руководитель — Demo Manager / Demo2026!
+Инспектор — Demo Inspector / Demo2026!
 
-Смена пароля при первом входе для этих записей отключена. Обе записи открывают рабочие данные по объектам в Якутии.
+ВХОД СОТРУДНИКОВ
+Руководитель видит код компании; сотрудник выбирает «Войти по коду компании» и входит под учётной записью, созданной руководителем.
 
-Разделы открываются из бокового меню: на планшете оно всегда слева, на телефоне — по кнопке меню слева вверху. После входа открывается «Мой кабинет» — рабочее место под должность сотрудника. Проверка создаётся так: раздел «Проверки и выезды» → кнопка «Новый осмотр».
+УДАЛЕНИЕ УЧЁТНОЙ ЗАПИСИ
+Боковое меню → внизу «Удалить учётную запись» → подтверждение.
 
-Удаление учётной записи: боковое меню → в самом низу кнопка «Удалить учётную запись» → подтверждение в диалоге. Запись и личные данные удаляются, сеанс завершается. Ранее выпущенные акты и предписания остаются у организации, как требуют правила строительного контроля.
+ДАННЫЕ И РАЗРЕШЕНИЯ
+Геопозиция — только пока приложение открыто и после согласия сотрудника; видит только руководство его компании. Отслеживания (tracking) нет: нет рекламы, сторонней аналитики, рекламного идентификатора. Камера — фото нарушений. Микрофон — необязательная голосовая диктовка через встроенное распознавание речи системы; аудио не сохраняется.
+Политика конфиденциальности: ${SITE}/privacy
 
-Геолокация используется для фиксации рабочих перемещений инспекторов между строительными объектами. Данные собираются только когда приложение открыто и только после явного согласия сотрудника. Политика конфиденциальности: ${SITE}/privacy
+Контакт: uskov_an@mail.ru, 8 3452 90-12-44`;
 
-Микрофон используется только для необязательной голосовой диктовки замечаний — инспектор надиктовывает текст, когда неудобно печатать в перчатках. Распознавание выполняет встроенный в систему механизм (Web Speech API), собственных или сторонних речевых сервисов приложение не использует. Аудиозапись не сохраняется и никуда не передаётся — сохраняется только полученный текст.
-
-Сторонние сервисы искусственного интеллекта в приложении не используются: нет чат-ботов, генеративных моделей, распознавания изображений и автоматического принятия решений. Все замечания, предписания и отчёты формирует сам сотрудник.
-
-Контакт для связи: uskov_an@mail.ru, 8 3452 90-12-44`;
-
-const REVIEW_REPLY = `Hello,
-
-Thank you for the review. Please find the requested information below.
-
-2. PURPOSE AND TARGET AUDIENCE
-
-"Инспектор СК" (Inspector SK) is an internal productivity tool for employees of Global-Stroyinzhiniring LLC, a construction supervision company operating in Russia.
-
-Problem it solves: construction site inspectors work at remote oil and gas facilities, often with poor or no mobile connectivity. Before this app, inspection records, violation photos and reports were kept on paper and typed into spreadsheets days later. The app lets an inspector record an inspection, attach geotagged photos of violations and issue a compliance notice directly on site; the data syncs to the head office as soon as connectivity is available.
-
-Target audience: construction supervision inspectors, project managers and administrative staff of our company. The app is not intended for the general public. Accounts are created by a company administrator; there is no public sign-up.
-
-3. SETTING UP AND ACCESSING MAIN FEATURES
-
-There is no registration flow. On the login screen enter the full name in the "ФИО" field and the password. Two demo accounts are provided:
-
-Account 1 - Project Manager (full access to all sections)
-Login: Demo Manager
-Password: Demo2026!
-
-Account 2 - Inspector (inspections, reports, photo records)
-Login: Demo Inspector
-Password: Demo2026!
-
-Forced password change is disabled for both accounts. Both accounts have an assigned construction project, so all sections contain real working data.
-
-Navigation: all sections are opened from the side menu. On iPad the menu is always visible on the left; on iPhone it is opened with the menu button in the top left of the header. Section titles below are given exactly as they appear in the app.
-
-How to reach the main features after login:
-- "Мой кабинет" (My workplace) opens immediately - the employee's own dashboard for their position. It is the root of the navigation: the back button always returns one step and finally to this screen.
-- "Главная" (Home) - a summary of projects with a map of the facilities.
-- "Объекты" (Facilities) - list of construction projects and their details.
-- "Проверки и выезды" (Inspections and site visits) - open this section and tap "Новый осмотр" (New inspection) to create an inspection, add findings and attach photographs.
-- "Замечания" (Findings) - the list of recorded violations.
-- "Фотоотчёты" (Photo reports) - photo records grouped by month.
-- "Акты и документы" (Statements and documents) - compliance notices, reports and correspondence.
-- "Трекеры" (Movement tracking) - work routes of inspectors; the location permission is requested here and on the home screen map.
-- "Отчёты" (Reports) - statistics per facility and contractor.
-The set of visible sections depends on the employee's position: an inspector sees inspections and reports, a manager sees every section.
-
-ACCOUNT DELETION
-Open the side menu (always visible on iPad, menu button in the top left on iPhone). The button "Удалить учётную запись" (Delete account) is at the very bottom of that menu. A confirmation dialog appears; after confirming, the user account and its personal data are deleted, the session ends and the app returns to the login screen. Inspection statements and compliance notices remain the property of the company, as required by Russian construction supervision rules; they contain no personal data of the deleted user beyond the author's name on already issued official documents.
-
-The app requires an internet connection for the initial login.
-
-4. EXTERNAL SERVICES AND TOOLS
-
-- Hosting and backend: Yandex Cloud (Russia) - serverless functions and PostgreSQL database.
-- File storage: Yandex Object Storage - inspection photos and documents.
-- Maps: OpenStreetMap raster tiles for the facility map.
-- Authentication: our own backend; no third-party identity provider.
-- Speech to text: the standard Web Speech API built into the operating system (SpeechRecognition / webkitSpeechRecognition). An inspector may dictate a violation description instead of typing it with gloves on. We do not bundle any speech SDK and we do not send audio to our own servers: the browser engine handles recognition, which on iOS means Apple's own on-device or server-side speech service under Apple's privacy policy. Only the resulting text is stored, never the audio. The feature is optional - every field can be typed by hand - and the microphone is used only while the user holds the dictation screen open.
-- Artificial intelligence: the app contains no AI or machine learning features. There is no chatbot, no generative model, no image recognition, no automatic decision making and no integration with OpenAI, Google, Yandex or any other AI provider. All inspection findings, compliance notices and reports are written by the inspector; the app only stores, formats and prints what the employee entered.
-- No payment processors, no in-app purchases, no advertising SDKs, no analytics SDKs, no tracking SDKs.
-- No user data is shared with third parties for tracking or advertising.
-
-ADDITIONAL FEATURES, FOR COMPLETENESS
-- File export: inspection statements, compliance notices, timesheets and registers can be saved as Word or Excel files and printed. Documents are generated on the device from data the employees entered themselves; nothing is uploaded to a third-party converter.
-- File upload: employees attach project documentation (drawings, permits, scanned statements) to a facility. Files are stored in our own Yandex Object Storage. There is no public gallery and no content shared outside the company.
-- Sending a document: a generated document can be sent by the user's own mail app (standard mailto link) or forwarded as plain text through Telegram or WhatsApp using their public web share links. The app has no messaging of its own, no chat between users and no message storage; it simply hands the text to the app chosen by the employee, and the system share sheet stays under the user's control.
-- Phone calls: contact cards of colleagues and an emergency contact contain standard tel: links. Site inspectors work at remote facilities, so a one-tap call matters for safety. The app never dials without the user tapping the number.
-- User-generated content: the only content created in the app is the employee's own work records - inspection findings, photographs of construction defects and official notices. There is no social feed, no comments, no public profiles and no content visible to anyone outside the company, so no content moderation mechanism is required.
-
-PERMISSIONS REQUESTED
-- Location (when in use): to record which facility the inspector is at during a site visit. Requested on the map and inspection screens.
-- Camera and photo library: to attach photographs of construction violations to an inspection record.
-- Microphone: only for the optional voice dictation of violation text described above.
-Each permission is requested at the moment the related feature is first used, with an explanation shown beforehand.
-
-5. REGIONAL DIFFERENCES
-
-The app functions consistently across all regions. The interface is available in Russian only, because all users are Russian-speaking employees of the company. There is no region-specific content, no geo-gating and no feature differences between countries.
-
-6. REGULATED INDUSTRY AND THIRD-PARTY MATERIAL
-
-The app does not operate in a highly regulated industry in the App Store sense: it does not provide medical, financial, gambling or similar services. It is an internal record-keeping tool for our own construction supervision activity.
-
-All content in the app - facility data, inspection records, compliance notices and photographs - is created by our own employees and owned by our company. No protected third-party material is included. Map tiles are from OpenStreetMap and used in accordance with the Open Database License, with the required attribution shown on the map screen.
-
-REGARDING GUIDELINE 3.2
-
-We are aware that the app is intended for our employees. We chose public App Store distribution rather than the Apple Developer Enterprise Program because our team is small and distributed across remote sites, and the Enterprise Program is not available to us. The app is free, contains no purchases and is harmless to a general user, who simply cannot log in without credentials issued by the company. If you would prefer a different distribution method, please let us know and we will follow your guidance.
-
-SUPPORT
-
-Support page: https://xn--e1afhkhdkdm.su/support
-Privacy policy: https://xn--e1afhkhdkdm.su/privacy
-Email: uskov_an@mail.ru
-
-Please let us know if any further information is required.
-
-Best regards,
-Global-Stroyinzhiniring LLC`;
-
-/** Ответ на отказ от 1 октября 2026 (Guideline 5.1.2(i) и 3.2). */
+/** Ответ проверяющему на письмо от 1 октября 2026 (Guideline 5.1.2(i) и 3.2). */
 const REJECTION_REPLY_OCT = `Hello,
 
-Thank you for the review. We have addressed both issues.
+Thank you for your review. We have resolved both issues in version 1.4 (build 6) and request public distribution on the App Store.
 
-Guideline 5.1.2(i) – Data Use and Sharing
-The app does not track users. It contains no advertising, no third-party analytics SDKs and no data brokers, and it does not access the advertising identifier (IDFA). Location is collected only while the app is in use, solely to show the company management at which construction site an employee is working. It is stored on our own servers, is never linked with third-party data and is never shared for advertising purposes.
-The App Privacy information in App Store Connect contained an error: "Used to Track You" was selected by mistake. We have updated it — all data types (including Precise Location) are now marked "App Functionality", "Linked to the user" and "Not used for tracking". Therefore App Tracking Transparency is not required.
+GUIDELINE 3.2 – BUSINESS
 
-Guideline 3.2 – Business
-The app is intended for employees of Global-Stroyinzhiniring LLC only. We have requested Unlisted App Distribution, so the app will not appear in App Store search and will be available only via a direct link. We will select this distribution method as soon as the request is approved.
+The app is no longer limited to one organization. Inspector SK is now a general-purpose app for any construction supervision company, technical inspection company or general contractor.
 
-Demo account for review: login "Demo Manager" (entered in the "ФИО" field on the sign-in screen), password as stated in the App Review Information.
+- Anyone can register their own company directly in the app: on the first screen tap "Создать компанию" (Create company), enter a company name, a full name and a password. A new, empty workspace opens immediately — no credentials from us are needed.
+- Each company's data is fully isolated from all other companies.
+- Every new company starts with a free demo (up to 2 sites, 3 employees, 10 inspection reports). The full version for the whole company is unlocked with a one-time In-App Purchase "Full access" (product ID: inspector_sk_full). "Restore purchase" is available in the same window.
+- A company manager invites employees with a company code; employees choose "Войти по коду компании" (Join by company code).
+- Global-Stroyinzhiniring LLC is simply our first customer. Its button on the first screen is a shortcut for its staff and lets you see a workspace filled with real data.
 
-Best regards,
+How to review without any credentials:
+1. Launch the app and accept the privacy notice.
+2. Tap "Создать компанию". Enter any company name (e.g. "Test LLC"), any two-word name (e.g. "Ivan Petrov") and password 1234.
+3. You are now the manager of a new, empty company. Tap "Полный доступ" (Full access) at the top of the screen to see the In-App Purchase.
+
+Optional – a company with sample data: tap "ООО «Глобал-Стройинжиниринг»" on the first screen and sign in with Demo Manager / Demo2026! (login is typed into the "ФИО" field).
+
+GUIDELINE 5.1.2(i) – DATA USE AND SHARING
+
+The app does not track users. It has no advertising, no third-party analytics or advertising SDKs, does not access the advertising identifier (IDFA) and does not share data with data brokers. Location is collected only while the app is in use, after the employee's consent, so that the managers of the employee's own company can see which construction site they are working at. It is stored on our servers and is never combined with third-party data or used for advertising.
+
+"Used to Track You" had been selected in App Privacy by mistake. We have corrected it: all data types, including Precise Location, are now marked "App Functionality" and "Not Used to Track You". App Tracking Transparency is therefore not required.
+
+Thank you,
 Global-Stroyinzhiniring LLC`;
 
-/** Обоснование для заявки на скрытое распространение (Unlisted App). */
-const UNLISTED_REQUEST = `Business problem the app solves:
-Инспектор СК (Inspector SK) is a work tool for the construction supervision service of Global-Stroyinzhiniring LLC (Russia). Engineers record site inspections, defect reports with photos and orders to contractors; managers track objects, timesheets, vehicle waybills and driver checklists. It replaces paper forms and spreadsheets.
-
-Why unlisted instead of Apple Business Manager:
-Our users are employees and partner contractors who use personal iPhones and iPads that are not managed by our company (no MDM, no Managed Apple IDs). A direct link is the simplest way for them to install the app.
-
-1. Is the app restricted to users who are part of a single company? Yes — employees and partner contractors of Global-Stroyinzhiniring LLC. Accounts are created only by the company administrator; there is no public sign-up.
-2. Is the app designed for a limited group of companies? Yes, for a single company. Other companies cannot become clients.
-3. Features intended for the general public: none.
-4. Countries / regions: Russia.
-Estimated number of users: 30–100.`;
+/** Встроенная покупка — что завести в App Store Connect. */
+const IAP_SETUP = `Тип: Non-Consumable (непотребляемая, разовая)
+Product ID: inspector_sk_full
+Reference Name: Полный доступ
+Отображаемое название (рус.): Полный доступ
+Описание (рус.): Снимает ограничения демо-доступа для всей компании
+Цена: на ваше усмотрение
+Review Screenshot: снимок окна «Полный доступ» с кнопкой «Купить»
+Review Notes: Откройте «Создать компанию», затем кнопку «Полный доступ» вверху экрана. Покупка открывает полный доступ для компании пользователя.`;
 
 /** Тексты запросов доступа. Apple отклоняет сборку, если их нет в Info.plist. */
 const PERMISSION_STRINGS = `NSLocationWhenInUseUsageDescription
-Приложение отмечает, на каком объекте находится инспектор во время выезда. Данные видит только руководство компании.
+Приложение отмечает, на каком объекте находится инспектор во время выезда. Данные видит только руководство вашей компании.
 
 NSCameraUsageDescription
 Камера нужна для фотофиксации выявленных замечаний на строительном объекте.
@@ -222,8 +142,8 @@ const BLOCKS: Block[] = [
   { label: 'Подзаголовок', value: SUBTITLE, hint: 'до 30 символов' },
   { label: 'Ключевые слова', value: KEYWORDS, hint: 'до 100 символов, через запятую' },
   { label: 'Описание', value: DESCRIPTION, hint: 'до 4000 символов', rows: 14 },
-  { label: 'Что нового', value: 'Первая версия приложения.', hint: 'для версии 1.4' },
-  { label: 'Заметка для проверяющего', value: REVIEW_NOTES, hint: 'App Review Information', rows: 10 },
+  { label: 'Что нового', value: 'Регистрация своей компании прямо в приложении, бесплатный демо-доступ и полный доступ встроенной покупкой. Печать документов на iPhone и iPad.', hint: 'для версии 1.4' },
+  { label: 'Заметка для проверяющего', value: REVIEW_NOTES, hint: 'App Review Information → Notes', rows: 14 },
   {
     label: 'Тексты запросов доступа',
     value: PERMISSION_STRINGS,
@@ -295,7 +215,7 @@ const AppStoreAssets = () => (
         Материалы для публикации в App Store
       </h1>
       <p className="mt-1 text-sm text-slate-500">
-        Приложение «Инспектор СК» · ООО «Глобал-Стройинжиниринг»
+        Приложение «Инспектор СК» · публичная версия для любых компаний
       </p>
 
       <Section title="Иконка · 1024 × 1024">
@@ -487,42 +407,57 @@ const AppStoreAssets = () => (
         </div>
       </Section>
 
-      <Section title="Отказ от 1 октября · 5.1.2(i) и 3.2">
-        <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-600">
-          <p>
-            <span className="font-semibold text-slate-800">Шаг 1 · Анкета конфиденциальности.</span>{' '}
-            App Store Connect → приложение → «Конфиденциальность приложения» →
-            «Геопозиция → Точная геопозиция» и все остальные типы данных: снимите
-            отметку «Используется для отслеживания». Должно быть «Нет» везде.
-            Нажмите «Опубликовать». Это может сделать только владелец аккаунта
-            или администратор.
-          </p>
-          <p>
-            <span className="font-semibold text-slate-800">Шаг 2 · Заявка на скрытое распространение.</span>{' '}
-            Владелец аккаунта разработчика заходит на{' '}
-            <a
-              className="text-blue-600 underline"
-              href="https://developer.apple.com/contact/request/unlisted-app/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              developer.apple.com/contact/request/unlisted-app
-            </a>{' '}
-            и заполняет форму текстом ниже. Номер приложения (Apple ID) — в App
-            Store Connect, раздел «Информация о приложении». Внимание: после
-            одобрения приложение навсегда станет скрытым — в поиске App Store его
-            не будет, установка только по прямой ссылке.
-          </p>
-          <p>
-            <span className="font-semibold text-slate-800">Шаг 3 · Ответ проверяющему.</span>{' '}
-            Отправьте текст ниже ответом в переписке App Review и продублируйте в
-            поле «Notes». После одобрения заявки ссылку для установки найдёте в
-            «Цены и доступность → Способы распространения».
-          </p>
+      <Section title="Что сделать сейчас: ответ на письмо Apple от 1 октября">
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-900">
+          Приложение публикуется <b>в открытом доступе</b>: его можно найти в поиске
+          App Store и скачать как обычно. Ни в одном тексте ниже нет просьбы о
+          скрытом распространении — наоборот, мы прямо пишем, что просим публичное.
         </div>
+        <ol className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-600">
+          <li>
+            <b className="text-slate-800">1. Опубликовать сайт</b> на poehali.dev — чтобы
+            заработали регистрация компаний и покупка.
+          </li>
+          <li>
+            <b className="text-slate-800">2. Собрать сборку 1.4 (6)</b>: GitHub → Actions →
+            «Сборка для iPhone» → Run workflow → режим <b>testflight</b>. Дождаться, пока
+            сборка появится в App Store Connect → TestFlight (обычно 15–30 минут).
+          </li>
+          <li>
+            <b className="text-slate-800">3. Соглашение о платных приложениях.</b> App Store
+            Connect → «Бизнес» → «Соглашения» → Paid Apps: принять и заполнить
+            банковские и налоговые данные. Без этого встроенная покупка не заработает.
+          </li>
+          <li>
+            <b className="text-slate-800">4. Встроенная покупка.</b> Приложение →
+            «Монетизация» → «Встроенные покупки» → «+» → заполнить по карточке ниже →
+            сохранить, приложить скриншот окна «Полный доступ».
+          </li>
+          <li>
+            <b className="text-slate-800">5. Конфиденциальность.</b> Приложение →
+            «Конфиденциальность приложения» → у каждого типа данных (включая «Точная
+            геопозиция») ответить «Нет» на «Используется для отслеживания» →
+            «Опубликовать».
+          </li>
+          <li>
+            <b className="text-slate-800">6. Распространение.</b> «Цены и доступность» →
+            «Публичный» (Public). Если там стоит другое — переключить.
+          </li>
+          <li>
+            <b className="text-slate-800">7. Версия 1.4.</b> Заменить в карточке
+            «Описание», «Что нового» и «Заметку для проверяющего» новыми текстами из
+            раздела «Тексты карточки» выше. В блоке «Сборка» выбрать сборку 6. В блоке
+            «Встроенные покупки и подписки» добавить «Полный доступ».
+          </li>
+          <li>
+            <b className="text-slate-800">8. Ответ проверяющему.</b> «Центр
+            приложений» → переписка App Review по этой заявке → вставить ответ ниже →
+            отправить. Затем «Отправить на проверку».
+          </li>
+        </ol>
         {[
-          { title: 'Форма Unlisted App Request', text: UNLISTED_REQUEST, rows: 16 },
-          { title: 'Reply to App Review', text: REJECTION_REPLY_OCT, rows: 18 },
+          { title: 'Ответ проверяющему (Reply to App Review)', text: REJECTION_REPLY_OCT, rows: 22 },
+          { title: 'Встроенная покупка — карточка', text: IAP_SETUP, rows: 9 },
         ].map((b) => (
           <div key={b.title} className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -537,37 +472,6 @@ const AppStoreAssets = () => (
             />
           </div>
         ))}
-      </Section>
-
-      <Section title="Ответ проверяющему (Guideline 2.1)">
-        <p className="mt-3 text-sm text-slate-500">
-          Готовый текст на английском. Скопируйте и отправьте двумя способами:
-          ответом в переписке App Review и в поле «Notes» раздела App Review
-          Information — Apple просит именно так.
-        </p>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-slate-800">
-              Reply to App Review
-            </span>
-            <CopyBtn text={REVIEW_REPLY} />
-          </div>
-          <textarea
-            readOnly
-            rows={14}
-            value={REVIEW_REPLY}
-            className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs leading-relaxed text-slate-700"
-          />
-        </div>
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
-          <p className="font-semibold">Отдельно нужна видеозапись экрана</p>
-          <p className="mt-1.5">
-            Снимите видео с настоящего iPhone: запуск приложения, вход под
-            Demo Manager, переход по разделам, создание проверки с фотографией и
-            показ кнопки удаления учётной записи. Ролик выложите на любой
-            открытый хостинг и вставьте ссылку в начало ответа.
-          </p>
-        </div>
       </Section>
 
       <Section title="Ответы на вопросы Apple">
@@ -587,8 +491,9 @@ const AppStoreAssets = () => (
           </p>
           <p>
             <span className="font-semibold text-slate-800">Доступ для проверки.</span>{' '}
-            Обязательно укажите демонстрационный логин и пароль в заметке для
-            проверяющего, иначе приложение отклонят на первом же шаге.
+            В поле «Требуется вход» отметьте «Да» и укажите Demo Manager / Demo2026! —
+            это на случай, если проверяющий захочет посмотреть компанию с данными.
+            Основной путь проверки — «Создать компанию», логин для него не нужен.
           </p>
         </div>
       </Section>

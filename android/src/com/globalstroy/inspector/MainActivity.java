@@ -16,7 +16,11 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -134,6 +138,10 @@ public class MainActivity extends Activity {
             }
         });
 
+        // Печать документов: страница передаёт готовый HTML, система показывает
+        // штатное окно печати Android (принтер или «Сохранить как PDF»).
+        web.addJavascriptInterface(new PrintBridge(), "AndroidPrint");
+
         web.setDownloadListener(new android.webkit.DownloadListener() {
             public void onDownloadStart(String url, String ua, String cd,
                     String mime, long len) {
@@ -152,6 +160,35 @@ public class MainActivity extends Activity {
                 public void run() { checkUpdateSilently(); }
             }, 4000);
         }
+    }
+
+    /** Мост печати для страницы: window.AndroidPrint.print(html, title). */
+    private class PrintBridge {
+        @JavascriptInterface
+        public void print(final String html, final String title) {
+            runOnUiThread(new Runnable() {
+                public void run() { printHtml(html, title); }
+            });
+        }
+    }
+
+    private WebView printView;
+
+    /** Отрисовывает HTML в невидимом окне и отдаёт его системе печати. */
+    private void printHtml(String html, final String title) {
+        final WebView pv = new WebView(this);
+        printView = pv;
+        pv.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                PrintManager pm = (PrintManager) getSystemService(PRINT_SERVICE);
+                String name = (title == null || title.isEmpty()) ? "Документ" : title;
+                PrintDocumentAdapter ad = view.createPrintDocumentAdapter(name);
+                pm.print(name, ad, new PrintAttributes.Builder()
+                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4).build());
+            }
+        });
+        pv.loadDataWithBaseURL(HOST + "/", html, "text/html", "UTF-8", null);
     }
 
     /** Небольшая круглая кнопка обновления в правом нижнем углу. */
