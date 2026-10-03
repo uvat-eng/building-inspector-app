@@ -41,7 +41,8 @@ $LD --library-path $LP $BT/zipalign -p -f 4 unsigned.apk aligned.apk
 KS="$(cd "$(dirname "$0")" && pwd)"
 $BT/apksigner sign --ks /app/webapp/android/gs.keystore --ks-key-alias gs \
     --ks-pass pass:globalstroy2026 --key-pass pass:globalstroy2026 \
-    --min-sdk-version 24 --out signed.apk aligned.apk
+    --min-sdk-version 21 --v1-signing-enabled true --v2-signing-enabled true \
+    --v3-signing-enabled true --out signed.apk aligned.apk
 
 $BT/apksigner verify --print-certs signed.apk | head -2
 cp signed.apk /app/webapp/public/app/stroykontrol.apk

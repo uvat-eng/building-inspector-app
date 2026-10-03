@@ -95,15 +95,15 @@ const CheckBlock = () => {
       </h2>
       <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-semibold text-slate-800">stroykontrol-1.5.apk</span>
-          <span className="text-sm text-slate-500">версия 1.5 · код версии 6 · 101 КБ</span>
+          <span className="font-semibold text-slate-800">stroykontrol-1.5.1.apk</span>
+          <span className="text-sm text-slate-500">версия 1.5.1 · код версии 7 · 101 КБ</span>
         </div>
         <div className="mt-2 text-sm leading-relaxed text-slate-500">
           Подписан тем же сертификатом, что и прошлые версии, — обновление встанет поверх
           установленного приложения.
         </div>
         <a
-          href="/rustore/stroykontrol-1.5.apk"
+          href="/rustore/stroykontrol-1.5.1.apk"
           download
           className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"
         >
