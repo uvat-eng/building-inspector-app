@@ -30,6 +30,8 @@ shutil.copy('base.apk', 'tmp.apk')
 zin = zipfile.ZipFile('tmp.apk')
 zout = zipfile.ZipFile('unsigned.apk', 'w', zipfile.ZIP_DEFLATED)
 for it in zin.infolist():
+    if it.filename == 'resources.arsc' or it.filename.endswith('.png'):
+        it.compress_type = zipfile.ZIP_STORED
     zout.writestr(it, zin.read(it.filename))
 zout.write('classes.dex', 'classes.dex')
 zout.close(); zin.close()
