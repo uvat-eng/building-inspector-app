@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 
 const SITE = 'https://инспектор.su';
@@ -175,6 +175,38 @@ const CopyBtn = ({ text }: { text: string }) => {
       <Icon name={done ? 'Check' : 'Copy'} size={13} />
       {done ? 'Скопировано' : 'Копировать'}
     </button>
+  );
+};
+
+/** Файл сборки для GitHub: читаем в UTF-8 и копируем без порчи русских букв. */
+const BuildFileCard = () => {
+  const [text, setText] = useState('');
+  useEffect(() => {
+    fetch('/ios-build.yml.txt')
+      .then((r) => r.arrayBuffer())
+      .then((b) => setText(new TextDecoder('utf-8').decode(b)))
+      .catch(() => setText(''));
+  }, []);
+  const build = text.match(/BUILD_NUMBER: "(\d+)"/)?.[1];
+  return (
+    <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="text-sm font-semibold text-slate-800">
+          Файл сборки для GitHub — ios.yml{build ? ` · сборка ${build}` : ''}
+        </span>
+        {text ? <CopyBtn text={text} /> : <span className="text-xs text-slate-400">Загрузка…</span>}
+      </div>
+      <p className="mb-3 text-xs leading-relaxed text-slate-500">
+        Копируйте только этой кнопкой. Если открыть файл по прямой ссылке, браузер
+        может показать русские буквы «абракадаброй», и в GitHub попадёт испорченный текст.
+      </p>
+      <textarea
+        readOnly
+        rows={10}
+        value={text}
+        className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs leading-relaxed text-slate-700"
+      />
+    </div>
   );
 };
 
@@ -417,6 +449,7 @@ const AppStoreAssets = () => (
       </Section>
 
       <Section title="Что сделать сейчас: ответ на письмо Apple от 1 октября">
+        <BuildFileCard />
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-900">
           Приложение публикуется <b>в открытом доступе</b>: его можно найти в поиске
           App Store и скачать как обычно. Ни в одном тексте ниже нет просьбы о
